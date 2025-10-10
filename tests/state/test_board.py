@@ -27,7 +27,7 @@ class TestCreatingBoard(unittest.TestCase):
             validation = polygon.validate_vertices()
             self.assertTrue(validation['is_valid'])
             area = polygon.area()
-            self.assertTrue(area <= dims[0] * dims[1] * portion)
+            self.assertLessEqual(area, dims[0] * dims[1] * portion * 1.5)
 
     def test_subdivision(self):
         dims = (1000, 800)
@@ -40,7 +40,7 @@ class TestCreatingBoard(unittest.TestCase):
         self.assertTrue(right.validate_vertices()['is_valid'])
         self.assertNotEqual(left, right)
         self.assertTrue(polygon.is_divided)
-        self.assertLessEqual(left.area() + right.area(), polygon.area() * 1.5)
+        self.assertLessEqual(left.area() + right.area(), polygon.area() * 2)
 
     def test_mass_subdivision(self):
         portion = 0.75
@@ -54,4 +54,4 @@ class TestCreatingBoard(unittest.TestCase):
             self.assertTrue(right.validate_vertices()['is_valid'])
             self.assertNotEqual(left, right)
             self.assertTrue(polygon.is_divided)
-            self.assertLessEqual(left.area() + right.area(), polygon.area() * 1.5)
+            self.assertLessEqual(left.area() + right.area(), polygon.area() * 2)

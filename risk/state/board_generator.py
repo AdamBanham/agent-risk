@@ -122,10 +122,9 @@ class PolygonTerritory:
             lpivot = self.vertices[choice]
             rpivot = self.vertices[other]
 
-            print(choice, other)
 
             walk = random_walk(
-                lpivot, rpivot, num_steps=50, variation_strength=0.02
+                lpivot, rpivot, num_steps=25, variation_strength=0.02
             )
 
             if choice < other:
@@ -142,11 +141,17 @@ class PolygonTerritory:
                 right = PolygonTerritory(
                     self.vertices[other+1:choice] + walk
                 )
+            lvalidation = left.validate_vertices()
+            rvalidation = right.validate_vertices()
+            if not lvalidation['is_valid'] or not rvalidation['is_valid']:
+                left = None
+                right = None
+                continue
             sum_of_areas = left.area() + right.area()
-            print(left.area(), right.area(), sum_of_areas)
             lprop = left.area() / sum_of_areas if sum_of_areas > 0 else 0
             if attempts > 10:
                 raise ValueError("Failed to divide polygon into two valid parts after multiple attempts.")
+        self.is_divided = True
         return left, right
 
 
