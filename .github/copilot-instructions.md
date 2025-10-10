@@ -13,6 +13,8 @@
 - Does my implementation support dynamic board generation with configurable (g, p, s) parameters? ✅ **IMPLEMENTED**
 - Am I following the established separation of concerns (state management, rendering, input handling, etc.)? ✅ **CRITICAL**
 - Does my code preserve the modular architecture with proper imports and dependencies? ✅ **CRITICAL**
+- Do all my functions have proper docstrings following the `:param:` and `:returns:` format? ✅ **MANDATORY**
+- For functions >20 lines, have I asked the user about including examples? ✅ **REQUIRED**
 - Will my code support replay functionality through serializable events? (📋 **PLANNED** - not yet implemented)
 - Does my agent implementation follow one of the formal behavior representation methods? (📋 **PLANNED** - not yet implemented)
 - Does my implementation work with the keyboard shortcuts for rapid testing? ✅ **IMPLEMENTED**
@@ -72,12 +74,14 @@ The project follows a **modular architecture with clear separation of concerns**
   - `loop.py` - Main game event loop with keyboard shortcuts and parameter management
   - `renderer.py` - Pygame board rendering and visualization
   - `input.py` - User input handling with Ctrl+ shortcuts and event processing
+  - `selection.py` - Territory selection management and selection state handling
 - **`risk.state`** - Game state data structures, territory management, and board generation
   - `game_state.py` - Core GameState, Player classes, and game phase management
   - `territory.py` - Territory definitions, ownership states, and adjacency management
   - `board_generator.py` - Dynamic board generation using polygon subdivision algorithms
 - **`risk.utils`** - Shared utility functions and helper classes
-  - `distance.py` - Point geometry, distance calculations, polygon operations, and random walk algorithms
+  - `distance.py` - Point geometry, distance calculations, and random walk algorithms
+  - `polygon.py` - Polygon operations, area calculations, centroid finding, and bounding box computation
 
 **Planned Modules (📋 PLANNED):**
 - **`risk.handler`** - Event queue management for simulation actions
@@ -90,12 +94,22 @@ The codebase follows clear module boundaries that **MUST** be preserved:
 
 **1. Geometric/Mathematical Operations → `risk.utils.distance`**
 ```python
-# ✅ CORRECT: Put pure math functions here
+# ✅ CORRECT: Put point geometry and distance functions here
 def euclidean_distance(point1: Point, point2: Point) -> float
 def random_walk(start: Point, end: Point, ...) -> List[Point]
 def clean_sequence(vertices: List[Point]) -> List[Point]
 
-# ❌ WRONG: Don't put these in board_generator.py or other modules
+# ❌ WRONG: Don't put polygon operations here (now in risk.utils.polygon)
+```
+
+**1a. Polygon Operations → `risk.utils.polygon`**
+```python
+# ✅ CORRECT: Put polygon-specific operations here
+def compute_area(polygon: List[Point]) -> float
+def find_centroid(polygon: List[Point]) -> Point
+def compute_bounding_box(polygon: List[Point]) -> Tuple[float, float, float, float]
+
+# ❌ WRONG: Don't put these in board_generator.py or distance.py
 ```
 
 **2. Game State & Board Logic → `risk.state.*`**
@@ -126,6 +140,17 @@ def register_callback(self, event_type: str, callback: Callable) -> None:
 
 # ❌ WRONG: Don't put rendering code here
 # ❌ WRONG: Don't put game logic here
+```
+
+**4a. Selection Management → `risk.game.selection`**
+```python
+# ✅ CORRECT: Territory selection state and logic
+class TerritorySelectionHandler:
+def handle_territory_selected(self, input_event) -> None:
+def select_territory(self, territory_id: int) -> None:
+
+# ❌ WRONG: Don't put rendering logic here
+# ❌ WRONG: Don't put game state mutations here
 ```
 
 **5. Coordination & Lifecycle → `risk.game.loop`**
@@ -180,6 +205,16 @@ from ..state import GameState, Territory         # game uses state
 - **Dependencies**: pygame for events, minimal coupling to other modules
 - **Key Pattern**: Callback-based event system with clean abstractions
 
+### ✅ **Selection Management** (`risk.game.selection`)
+- **Purpose**: Territory selection state and logic management
+- **Responsibilities**:
+  - Managing selected territories and primary selection state
+  - Handling territory selection events and multi-select behavior
+  - Providing territory selection status and clearing selections
+  - Coordinating with input system for selection events
+- **Dependencies**: Depends on `risk.state` for territory and game state data
+- **Key Pattern**: Stateful selection handler with event-driven updates
+
 ### ✅ **Game Loop** (`risk.game.loop`)
 - **Purpose**: Main coordination and application lifecycle
 - **Responsibilities**:
@@ -209,14 +244,16 @@ risk/
 │   ├── __init__.py            # Module exports (GameLoop, GameRenderer, etc.)
 │   ├── loop.py                # Main game event loop with keyboard shortcuts
 │   ├── renderer.py            # Pygame board rendering and visualization
-│   └── input.py               # User input handling with Ctrl+ shortcuts
+│   ├── input.py               # User input handling with Ctrl+ shortcuts
+│   └── selection.py           # Territory selection management and state handling
 ├── state/                      # Game state management
 │   ├── __init__.py            # Module exports (GameState, Territory, etc.)
 │   ├── game_state.py          # GameState, Player classes, and game phases
 │   ├── territory.py           # Territory definitions and ownership management
 │   └── board_generator.py     # Dynamic board generation using polygon subdivision
 ├── utils/                      # Shared utility functions
-│   └── distance.py            # Point geometry, distance calculations, random walks
+│   ├── distance.py            # Point geometry, distance calculations, random walks
+│   └── polygon.py             # Polygon operations, area calculations, centroid finding
 └── tests/                      # Unit and integration tests
     ├── __init__.py
     └── state/
@@ -266,10 +303,12 @@ The codebase follows these essential architectural patterns:
 
 **Separation of Concerns:**
 - **Geometric calculations** (Point class, distance functions, random walks) → `risk.utils.distance`
-- **Polygon operations** (subdivision, validation, area calculations) → `risk.state.board_generator` 
+- **Polygon operations** (area, centroid, bounding box calculations) → `risk.utils.polygon`
 - **Game state management** (GameState, Player, Territory classes) → `risk.state`
+- **Board generation logic** (polygon subdivision, territory creation) → `risk.state.board_generator`
 - **Rendering logic** (pygame drawing, colors, visualization) → `risk.game.renderer`
 - **Input handling** (events, callbacks, keyboard shortcuts) → `risk.game.input`
+- **Selection management** (territory selection state and logic) → `risk.game.selection`
 - **Application lifecycle** (initialization, main loop, coordination) → `risk.game.loop`
 
 **Dependency Flow:**
@@ -277,6 +316,7 @@ The codebase follows these essential architectural patterns:
 risk.game.loop (coordinator)
 ├── risk.game.renderer (depends on state)
 ├── risk.game.input (minimal dependencies)
+├── risk.game.selection (depends on state)
 └── risk.state (depends on utils)
     └── risk.utils (no internal dependencies)
 ```
@@ -306,10 +346,17 @@ The board generation uses **polygon subdivision** with these key components:
 - Distance functions: Euclidean and Manhattan distance calculations
 - Pure mathematical functions with no side effects
 
+**In `risk.utils.polygon` (Polygon Utilities):**
+- `compute_area()`: Calculates polygon area using shoelace formula
+- `find_centroid()`: Computes geometric center of polygons
+- `compute_bounding_box()`: Determines axis-aligned bounding box
+- Pure geometric functions for polygon operations
+
 **Critical Separation Patterns:**
 ```python
 # ✅ GOOD: BoardGenerator uses utilities for geometry
 from ..utils.distance import Point, random_walk, clean_sequence
+from ..utils.polygon import compute_area, find_centroid
 
 # ✅ GOOD: GameLoop coordinates state generation
 from ..state.board_generator import generate_sample_board
@@ -324,6 +371,7 @@ from ..state.board_generator import generate_sample_board
 - **Shared Edge Detection**: Ensures territories properly connect via shared boundaries
 - **Army Distribution**: Each player gets exactly `s` armies distributed among their territories
 - **Validation**: Comprehensive polygon validation with error reporting
+- **Modular Geometry**: Clean separation between point operations (distance.py) and polygon operations (polygon.py)
 
 ### Event System Design (📋 **PLANNED**)
 - Use event queue in `handler` module for all game actions
@@ -398,12 +446,20 @@ class GameInputHandler:
         
     def handle_event(self, event: pygame.event.Event) -> None:
         # Event processing with callback pattern
+
+class TerritorySelectionHandler:
+    def __init__(self, game_state: GameState):
+        # Selection handler manages territory selection state
+        
+    def handle_territory_selected(self, input_event) -> None:
+        # Territory selection event processing
         
 class GameLoop:
     def __init__(self, ...):
         # Central coordinator - dependency injection pattern
         self.renderer = GameRenderer(self.screen, self.game_state)
         self.input_handler = GameInputHandler(self.renderer)
+        self.selection_handler = TerritorySelectionHandler(self.game_state)
 ```
 
 **Key Patterns:**
@@ -495,12 +551,86 @@ generated board
 - Property-based testing for game invariants
 - Agent vs agent testing for strategy validation
 
+## Documentation Standards
+
+### **Function Docstring Requirements (✅ MANDATORY)**
+All functions must follow this exact docstring format to ensure consistency and clarity:
+
+**Standard Format:**
+```python
+def function_name(param1: Type1, param2: Type2) -> ReturnType:
+    """Brief one-sentence description. Extended description if needed.
+    
+    :param param1: Description of parameter purpose and constraints
+    :param param2: Description of parameter purpose and constraints
+    :returns: Description of return value and its structure
+    :raises ExceptionType: When this exception is raised (if applicable)
+    """
+```
+
+**Key Requirements:**
+- **Two-sentence summary**: First sentence is brief function purpose, second provides context or constraints
+- **Parameter documentation**: Use `:param <fieldname>:` format for every parameter
+- **Return documentation**: Use `:returns:` to describe return value structure and meaning
+- **Exception documentation**: Use `:raises:` for any exceptions that may be raised
+- **Type hints**: Always include comprehensive type hints in function signature
+
+**Large Function Rule (>20 lines):**
+For functions longer than 20 lines, agents must:
+1. **Ask the user**: "This function is >20 lines. Should I include usage examples in the docstring?"
+2. **If yes**: Add `:examples:` section with realistic usage scenarios
+3. **If no**: Proceed with standard docstring format
+
+**Examples Section Format:**
+```python
+def complex_function(data: List[Point], config: Dict[str, Any]) -> ProcessedResult:
+    """Process complex polygon data with configuration options. Handles validation, transformation, and optimization.
+    
+    :param data: List of Point objects representing polygon vertices, must have at least 3 points
+    :param config: Configuration dictionary with keys 'algorithm', 'tolerance', and 'optimize'
+    :returns: ProcessedResult containing transformed data, metadata, and performance metrics
+    :raises ValueError: When data has fewer than 3 points or config is missing required keys
+    :examples:
+        >>> points = [Point(0, 0), Point(10, 0), Point(5, 10)]
+        >>> config = {'algorithm': 'fast', 'tolerance': 0.1, 'optimize': True}
+        >>> result = complex_function(points, config)
+        >>> print(f"Processed {len(result.vertices)} vertices in {result.time_ms}ms")
+        
+        # For large datasets with custom optimization
+        >>> large_points = generate_random_polygon(1000)  
+        >>> config = {'algorithm': 'precise', 'tolerance': 0.01, 'optimize': False}
+        >>> result = complex_function(large_points, config)
+    """
+```
+
+**Class Docstring Requirements:**
+```python
+class ClassName:
+    """Brief description of class purpose. Explanation of key responsibilities.
+    
+    :param init_param: Description of constructor parameter
+    :raises InitException: When initialization fails due to invalid parameters
+    :examples:
+        >>> handler = ClassName(game_state)
+        >>> handler.process_selection(territory_id=5)
+    """
+```
+
+**Documentation Quality Checklist:**
+- [ ] Function purpose is clear from first sentence
+- [ ] All parameters are documented with constraints/expectations
+- [ ] Return value structure is explained
+- [ ] Type hints match parameter documentation
+- [ ] Examples show realistic usage patterns (for >20 line functions)
+- [ ] Examples include variable names that match function context
+
 ## Common Patterns
 - Use type hints extensively for all interfaces and function signatures
 - Implement `__repr__` methods for debugging all data classes
 - Use dataclasses with clear field types and default factories
 - Create factory methods for complex object initialization
 - Follow consistent import patterns and module boundaries
+- **Follow documentation standards religiously** - well-documented code is maintainable code
 
 Current import patterns:
 ```python
