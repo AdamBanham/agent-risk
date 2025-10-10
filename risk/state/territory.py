@@ -32,6 +32,7 @@ class Territory:
     state: TerritoryState = TerritoryState.FREE
     owner: Optional[int] = None  # Player ID (None if FREE)
     armies: int = 0
+    selected: bool = False  # Whether this territory is currently selected
     
     # Adjacency and connectivity
     adjacent_territories: Set[int] = field(default_factory=set)  # Territory IDs
@@ -163,6 +164,23 @@ class Territory:
         """
         return (self.owner == player_id and 
                 self.state in (TerritoryState.OWNED, TerritoryState.CONTESTED))
+    
+    def set_selected(self, selected: bool = True) -> None:
+        """Set the selection state of this territory.
+        
+        Args:
+            selected: True to select, False to deselect
+        """
+        self.selected = selected
+    
+    def toggle_selected(self) -> bool:
+        """Toggle the selection state of this territory.
+        
+        Returns:
+            New selection state
+        """
+        self.selected = not self.selected
+        return self.selected
     
     def __repr__(self) -> str:
         """String representation for debugging."""

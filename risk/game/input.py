@@ -247,12 +247,42 @@ class GameInputHandler(InputHandler):
         territory = self.renderer.get_territory_at_position(input_event.position)
         if territory:
             self.selected_territory = territory
+            
+            # Emit territory selection event
+            territory_event = InputEvent(
+                event_type='territory_selected',
+                position=input_event.position,
+                data={
+                    'territory_id': territory.id,
+                    'territory': territory,
+                    'mouse_position': input_event.position
+                }
+            )
+            
+            # Trigger territory selection callback if registered
+            if 'territory_selected' in self.callbacks:
+                self.callbacks['territory_selected'](territory_event)
+            
             print(f"Selected territory: {territory.name} (ID: {territory.id})")
             print(f"  Owner: Player {territory.owner + 1 if territory.owner is not None else 'None'}")
             print(f"  Armies: {territory.armies}")
             print(f"  Continent: {territory.continent}")
         else:
             self.selected_territory = None
+            
+            # Emit territory deselection event
+            deselect_event = InputEvent(
+                event_type='territory_deselected',
+                position=input_event.position,
+                data={
+                    'mouse_position': input_event.position
+                }
+            )
+            
+            # Trigger territory deselection callback if registered
+            if 'territory_deselected' in self.callbacks:
+                self.callbacks['territory_deselected'](deselect_event)
+            
             print("Clicked on empty area")
     
     def _handle_key_press(self, input_event: InputEvent) -> None:
@@ -288,7 +318,8 @@ class GameInputHandler(InputHandler):
         """Print help information to console."""
         print("\\n=== Agent Risk Controls ===")
         print("Mouse:")
-        print("  - Click on territories to select them")
+        print("  - Click on territories to select them (yellow outline, red text)")
+        print("  - Click empty area to deselect all")
         print("Keyboard:")
         print("  - ESC: Quit game")
         print("  - Ctrl+R: Regenerate game state/board")

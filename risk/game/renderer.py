@@ -50,6 +50,8 @@ class GameRenderer:
                 (255, 165, 0),   # Orange
             ],
             'text': (255, 255, 255),
+            'selected_text': (255, 0, 0),  # Red text for selected territories
+            'selected_border': (255, 255, 0),  # Yellow border for selected territories
             'highlight': (255, 255, 100),
             'summary_bg': (40, 40, 60),
             'summary_border': (80, 80, 120),
@@ -94,14 +96,25 @@ class GameRenderer:
             if len(territory.vertices) >= 3:
                 pygame.draw.polygon(self.screen, fill_color, territory.vertices)
                 
-                # Draw special border for contested territories
-                border_color = self.colors['highlight'] if territory.state == TerritoryState.CONTESTED else self.colors['territory_border']
-                border_width = 3 if territory.state == TerritoryState.CONTESTED else 2
+                # Determine border color and width based on territory state
+                if territory.selected:
+                    # Selected territories get yellow outline with thicker border
+                    border_color = self.colors['selected_border']
+                    border_width = 4
+                elif territory.state == TerritoryState.CONTESTED:
+                    # Contested territories get highlight color
+                    border_color = self.colors['highlight']
+                    border_width = 3
+                else:
+                    # Normal territories get standard border
+                    border_color = self.colors['territory_border']
+                    border_width = 2
                 
                 pygame.draw.polygon(self.screen, border_color, territory.vertices, border_width)
             
-            # Draw territory name
-            text = self.small_font.render(territory.name, True, self.colors['text'])
+            # Draw territory name with appropriate text color
+            text_color = self.colors['selected_text'] if territory.selected else self.colors['text']
+            text = self.small_font.render(territory.name, True, text_color)
             text_rect = text.get_rect(center=territory.center)
             self.screen.blit(text, text_rect)
             
@@ -259,11 +272,11 @@ class GameRenderer:
         Returns:
             Territory at position, or None if no territory found
         """
+        from ..utils.distance import point_in_polygon_coords
+        
+        x, y = pos
         for territory in self.game_state.territories.values():
-            # Simple distance check to center for now
-            # In a full implementation, this would use proper polygon hit testing
-            distance = math.sqrt((pos[0] - territory.center[0])**2 + 
-                               (pos[1] - territory.center[1])**2)
-            if distance <= 50:  # Approximate territory radius
+            # Use proper point-in-polygon detection
+            if point_in_polygon_coords(x, y, territory.vertices):
                 return territory
         return None

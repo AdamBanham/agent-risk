@@ -152,3 +152,49 @@ def random_walk(
         points = clean_sequence(points)
 
     return points
+
+
+def point_in_polygon(point: Point, polygon_vertices: List[Tuple[float, float]]) -> bool:
+    """Check if a point is inside a polygon using the ray casting algorithm.
+    
+    Args:
+        point: Point to test
+        polygon_vertices: List of (x, y) tuples representing polygon vertices
+        
+    Returns:
+        True if point is inside polygon, False otherwise
+    """
+    if len(polygon_vertices) < 3:
+        return False
+    
+    x, y = point.x, point.y
+    n = len(polygon_vertices)
+    inside = False
+    
+    p1x, p1y = polygon_vertices[0]
+    for i in range(1, n + 1):
+        p2x, p2y = polygon_vertices[i % n]
+        
+        if y > min(p1y, p2y):
+            if y <= max(p1y, p2y):
+                if x <= max(p1x, p2x):
+                    if p1y != p2y:
+                        xinters = (y - p1y) * (p2x - p1x) / (p2y - p1y) + p1x
+                    if p1x == p2x or x <= xinters:
+                        inside = not inside
+        p1x, p1y = p2x, p2y
+    
+    return inside
+
+
+def point_in_polygon_coords(x: float, y: float, polygon_vertices: List[Tuple[float, float]]) -> bool:
+    """Check if coordinates are inside a polygon using the ray casting algorithm.
+    
+    Args:
+        x, y: Coordinates to test
+        polygon_vertices: List of (x, y) tuples representing polygon vertices
+        
+    Returns:
+        True if point is inside polygon, False otherwise
+    """
+    return point_in_polygon(Point(x, y), polygon_vertices)

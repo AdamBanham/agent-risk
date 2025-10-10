@@ -8,6 +8,7 @@ import sys
 from typing import Optional
 from .renderer import GameRenderer
 from .input import GameInputHandler
+from .selection import TerritorySelectionHandler
 from ..state.game_state import GameState, GamePhase
 
 
@@ -35,6 +36,7 @@ class GameLoop:
         self.running = False
         self.renderer: Optional[GameRenderer] = None
         self.input_handler: Optional[GameInputHandler] = None
+        self.selection_handler: Optional[TerritorySelectionHandler] = None
         
         # Store the current board layout for reuse
         self.current_board_layout = None
@@ -57,6 +59,7 @@ class GameLoop:
             # Initialize game components
             self.renderer = GameRenderer(self.screen, self.game_state)
             self.input_handler = GameInputHandler(self.renderer)
+            self.selection_handler = TerritorySelectionHandler(self.game_state)
             
             # Store the board layout after renderer potentially generates it
             if self.game_state.territories:
@@ -76,6 +79,10 @@ class GameLoop:
             self.input_handler.register_callback('increase_regions', self._handle_increase_regions)
             self.input_handler.register_callback('increase_players', self._handle_increase_players)
             self.input_handler.register_callback('increase_armies', self._handle_increase_armies)
+            
+            # Register territory selection callbacks
+            self.input_handler.register_callback('territory_selected', self.selection_handler.handle_territory_selected)
+            self.input_handler.register_callback('territory_deselected', self.selection_handler.handle_territory_deselected)
             
             # Set up the game state - start the first turn
             if self.game_state.players:
@@ -117,6 +124,11 @@ class GameLoop:
         # Update renderer with new game state
         if self.renderer:
             self.renderer.game_state = self.game_state
+        
+        # Update selection handler with new game state
+        if self.selection_handler:
+            self.selection_handler.game_state = self.game_state
+            self.selection_handler.clear_all_selections()
         
         # Set up the game state - start the first turn
         if self.game_state.players:
@@ -243,6 +255,11 @@ class GameLoop:
         if self.renderer:
             self.renderer.game_state = self.game_state
         
+        # Update selection handler with new game state
+        if self.selection_handler:
+            self.selection_handler.game_state = self.game_state
+            self.selection_handler.clear_all_selections()
+        
         # Set up the game state - start the first turn
         if self.game_state.players:
             self.game_state.set_current_player(0)
@@ -273,6 +290,11 @@ class GameLoop:
         # Update renderer with new game state
         if self.renderer:
             self.renderer.game_state = self.game_state
+        
+        # Update selection handler with new game state
+        if self.selection_handler:
+            self.selection_handler.game_state = self.game_state
+            self.selection_handler.clear_all_selections()
         
         # Set up the game state - start the first turn
         if self.game_state.players:
