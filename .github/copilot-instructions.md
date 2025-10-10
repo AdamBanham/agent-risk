@@ -559,7 +559,8 @@ All functions must follow this exact docstring format to ensure consistency and 
 **Standard Format:**
 ```python
 def function_name(param1: Type1, param2: Type2) -> ReturnType:
-    """Brief one-sentence description. Extended description if needed.
+    """
+    Brief one-sentence description. Extended description if needed.
     
     :param param1: Description of parameter purpose and constraints
     :param param2: Description of parameter purpose and constraints
@@ -569,6 +570,8 @@ def function_name(param1: Type1, param2: Type2) -> ReturnType:
 ```
 
 **Key Requirements:**
+- **80-character line limit**: All code and docstring lines must not exceed 80 characters
+- **Docstring formatting**: Docstrings must start on a new line after the opening triple quotes
 - **Two-sentence summary**: First sentence is brief function purpose, second provides context or constraints
 - **Parameter documentation**: Use `:param <fieldname>:` format for every parameter
 - **Return documentation**: Use `:returns:` to describe return value structure and meaning
@@ -584,12 +587,18 @@ For functions longer than 20 lines, agents must:
 **Examples Section Format:**
 ```python
 def complex_function(data: List[Point], config: Dict[str, Any]) -> ProcessedResult:
-    """Process complex polygon data with configuration options. Handles validation, transformation, and optimization.
+    """
+    Process complex polygon data with configuration options. Handles 
+    validation, transformation, and optimization.
     
-    :param data: List of Point objects representing polygon vertices, must have at least 3 points
-    :param config: Configuration dictionary with keys 'algorithm', 'tolerance', and 'optimize'
-    :returns: ProcessedResult containing transformed data, metadata, and performance metrics
-    :raises ValueError: When data has fewer than 3 points or config is missing required keys
+    :param data: List of Point objects representing polygon vertices, must 
+                have at least 3 points
+    :param config: Configuration dictionary with keys 'algorithm', 
+                  'tolerance', and 'optimize'
+    :returns: ProcessedResult containing transformed data, metadata, and 
+             performance metrics
+    :raises ValueError: When data has fewer than 3 points or config is 
+                       missing required keys
     :examples:
         >>> points = [Point(0, 0), Point(10, 0), Point(5, 10)]
         >>> config = {'algorithm': 'fast', 'tolerance': 0.1, 'optimize': True}
@@ -606,10 +615,12 @@ def complex_function(data: List[Point], config: Dict[str, Any]) -> ProcessedResu
 **Class Docstring Requirements:**
 ```python
 class ClassName:
-    """Brief description of class purpose. Explanation of key responsibilities.
+    """
+    Brief description of class purpose. Explanation of key responsibilities.
     
     :param init_param: Description of constructor parameter
-    :raises InitException: When initialization fails due to invalid parameters
+    :raises InitException: When initialization fails due to invalid 
+                          parameters
     :examples:
         >>> handler = ClassName(game_state)
         >>> handler.process_selection(territory_id=5)
@@ -623,6 +634,8 @@ class ClassName:
 - [ ] Type hints match parameter documentation
 - [ ] Examples show realistic usage patterns (for >20 line functions)
 - [ ] Examples include variable names that match function context
+- [ ] No line exceeds 80 characters in docstrings or code
+- [ ] Docstrings start on new line after opening triple quotes
 
 ## Common Patterns
 - Use type hints extensively for all interfaces and function signatures

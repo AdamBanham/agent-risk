@@ -19,11 +19,10 @@ class PolygonTerritory:
     """Represents a territory during the subdivision process."""
     
     def __init__(self, vertices: List[Point], territory_id: int = -1):
-        """Initialize a polygon territory.
+        """Initialize a polygon territory. Creates a polygon territory with vertices and calculates properties.
         
-        Args:
-            vertices: List of (x, y) points defining the polygon
-            territory_id: Unique ID for this territory (-1 if not finalized)
+        :param vertices: List of Point objects or (x, y) tuples defining the polygon
+        :param territory_id: Unique ID for this territory (-1 if not finalized)
         """
         self.vertices = [
             p if isinstance(p, Point) else Point(*p)
@@ -36,18 +35,16 @@ class PolygonTerritory:
         self._area = compute_area(self.vertices)
 
     def center(self) -> Tuple[int, int]:
-        """Calculate the centroid of the polygon.
+        """Calculate the centroid of the polygon. Returns the geometric center as integer coordinates.
         
-        Returns:
-            Center point (x, y)
+        :returns: Center point (x, y) as integer tuple
         """
         return self._center.to_tuple()
     
     def bounding_box(self) -> Tuple[int, int, int, int]:
-        """Get the bounding box of this polygon.
+        """Get the bounding box of this polygon. Returns the axis-aligned rectangle that encloses all vertices.
         
-        Returns:
-            Tuple of (min_x, min_y, max_x, max_y)
+        :returns: Tuple of (min_x, min_y, max_x, max_y) coordinates
         """
         return self._box
     
@@ -60,10 +57,9 @@ class PolygonTerritory:
         return self._area
     
     def signed_area(self) -> float:
-        """Calculate the signed area of the polygon.
+        """Calculate the signed area of the polygon. Positive for counter-clockwise vertices, negative for clockwise.
         
-        Returns:
-            Signed area (positive for counter-clockwise, negative for clockwise)
+        :returns: Signed area (positive for counter-clockwise, negative for clockwise)
         """
         if not self.vertices or len(self.vertices) < 3:
             return 0.0
@@ -79,19 +75,17 @@ class PolygonTerritory:
         return area / 2.0
     
     def is_clockwise(self) -> bool:
-        """Check if vertices are ordered clockwise.
+        """Check if vertices are ordered clockwise. Uses signed area to determine vertex ordering.
         
-        Returns:
-            True if clockwise, False if counter-clockwise
+        :returns: True if clockwise, False if counter-clockwise
         """
         return self.signed_area() < 0
     
     def divide(self) -> Tuple['PolygonTerritory', 'PolygonTerritory']:
-        """Divide this polygon into two smaller polygons using a random 
-        walk line.
+        """Divide this polygon into two smaller polygons using a random walk line. Uses random vertex selection and jagged division lines.
         
-        Returns:
-            Two new PolygonTerritory instances resulting from the division.
+        :returns: Two new PolygonTerritory instances resulting from the division
+        :raises ValueError: When polygon cannot be divided after multiple attempts
         """        
         left = None
         right = None
@@ -140,10 +134,9 @@ class PolygonTerritory:
 
 
     def is_valid(self) -> bool:
-        """Check if the polygon is valid (at least 3 vertices and non-zero area).
+        """Check if the polygon is valid (at least 3 vertices and non-zero area). Basic validity check for polygon geometry.
         
-        Returns:
-            True if valid, False otherwise
+        :returns: True if valid, False otherwise
         """
         return len(self.vertices) >= 3 and self.area() > 0.0
     
@@ -775,12 +768,11 @@ class BoardGenerator:
 
 
 def generate_sample_board(game_state: GameState, width: int = 1000, height: int = 600) -> None:
-    """Convenience function to generate a board for a game state using polygon subdivision.
+    """Convenience function to generate a board for a game state using polygon subdivision. Creates territories and assigns them to players.
     
-    Args:
-        game_state: GameState to populate
-        width: Board width
-        height: Board height
+    :param game_state: GameState to populate with generated territories and assignments
+    :param width: Board width in pixels for territory generation
+    :param height: Board height in pixels for territory generation
     """
     generator = BoardGenerator(width, height)
     generator.generate_board(game_state)

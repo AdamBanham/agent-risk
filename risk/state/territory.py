@@ -47,38 +47,32 @@ class Territory:
             self.state = TerritoryState.FREE
     
     def add_adjacent_territory(self, territory_id: int) -> None:
-        """Add a territory as adjacent to this one.
+        """Add a territory as adjacent to this one. Updates the adjacency set for pathfinding and movement rules.
         
-        Args:
-            territory_id: ID of the adjacent territory
+        :param territory_id: ID of the adjacent territory to add
         """
         self.adjacent_territories.add(territory_id)
     
     def remove_adjacent_territory(self, territory_id: int) -> None:
-        """Remove a territory from adjacency list.
+        """Remove a territory from adjacency list. Updates the adjacency set when territories are no longer connected.
         
-        Args:
-            territory_id: ID of the territory to remove
+        :param territory_id: ID of the territory to remove from adjacency
         """
         self.adjacent_territories.discard(territory_id)
     
     def is_adjacent_to(self, territory_id: int) -> bool:
-        """Check if this territory is adjacent to another.
+        """Check if this territory is adjacent to another. Used for movement and attack validation.
         
-        Args:
-            territory_id: ID of the territory to check
-            
-        Returns:
-            True if territories are adjacent
+        :param territory_id: ID of the territory to check adjacency with
+        :returns: True if territories are adjacent, False otherwise
         """
         return territory_id in self.adjacent_territories
     
     def set_owner(self, player_id: Optional[int], army_count: int = 0) -> None:
-        """Set the owner of this territory.
+        """Set the owner of this territory. Updates ownership and army count, handles state transitions.
         
-        Args:
-            player_id: ID of the owning player (None for free territory)
-            army_count: Number of armies to place (default 0)
+        :param player_id: ID of the owning player (None for free territory)
+        :param army_count: Number of armies to place on the territory
         """
         self.owner = player_id
         self.armies = army_count
@@ -90,36 +84,31 @@ class Territory:
             self.state = TerritoryState.OWNED
     
     def set_contested(self) -> None:
-        """Mark this territory as contested (under attack)."""
+        """Mark this territory as contested (under attack). Changes state to contested if territory has an owner."""
         if self.owner is not None:
             self.state = TerritoryState.CONTESTED
     
     def resolve_contest(self, winner_id: Optional[int], army_count: int = 0) -> None:
-        """Resolve a contest for this territory.
+        """Resolve a contest for this territory. Sets new owner and army count after battle resolution.
         
-        Args:
-            winner_id: ID of the winning player (None if territory becomes free)
-            army_count: Number of armies for the winner
+        :param winner_id: ID of the winning player (None if territory becomes free)
+        :param army_count: Number of armies for the winner after the contest
         """
         self.set_owner(winner_id, army_count)
     
     def add_armies(self, count: int) -> None:
-        """Add armies to this territory.
+        """Add armies to this territory. Increases the army count by the specified amount.
         
-        Args:
-            count: Number of armies to add
+        :param count: Number of armies to add (must be positive)
         """
         if count > 0:
             self.armies += count
     
     def remove_armies(self, count: int) -> int:
-        """Remove armies from this territory.
+        """Remove armies from this territory. Decreases army count up to the available amount.
         
-        Args:
-            count: Number of armies to remove
-            
-        Returns:
-            Actual number of armies removed
+        :param count: Number of armies to remove
+        :returns: Actual number of armies removed (limited by available armies)
         """
         if count <= 0:
             return 0
@@ -129,56 +118,48 @@ class Territory:
         return removed
     
     def can_attack_from(self) -> bool:
-        """Check if this territory can launch attacks.
+        """Check if this territory can launch attacks. Requires ownership and more than 1 army to attack.
         
-        Returns:
-            True if territory has owner and more than 1 army
+        :returns: True if territory has owner and more than 1 army, False otherwise
         """
         return (self.owner is not None and 
                 self.state == TerritoryState.OWNED and 
                 self.armies > 1)
     
     def can_be_attacked(self) -> bool:
-        """Check if this territory can be attacked.
+        """Check if this territory can be attacked. Any territory with an owner can be contested.
         
-        Returns:
-            True if territory has an owner (can be contested)
+        :returns: True if territory has an owner and can be contested, False otherwise
         """
         return self.owner is not None
     
     def is_free(self) -> bool:
-        """Check if territory is free (unowned).
+        """Check if territory is free (unowned). Free territories have no owner and can be claimed.
         
-        Returns:
-            True if territory has no owner
+        :returns: True if territory has no owner, False otherwise
         """
         return self.state == TerritoryState.FREE
     
     def is_owned_by(self, player_id: int) -> bool:
-        """Check if territory is owned by a specific player.
+        """Check if territory is owned by a specific player. Checks ownership regardless of contested state.
         
-        Args:
-            player_id: Player ID to check
-            
-        Returns:
-            True if territory is owned by the specified player
+        :param player_id: Player ID to check ownership against
+        :returns: True if territory is owned by the specified player, False otherwise
         """
         return (self.owner == player_id and 
                 self.state in (TerritoryState.OWNED, TerritoryState.CONTESTED))
     
     def set_selected(self, selected: bool = True) -> None:
-        """Set the selection state of this territory.
+        """Set the selection state of this territory. Used for UI highlighting and player interaction.
         
-        Args:
-            selected: True to select, False to deselect
+        :param selected: True to select, False to deselect the territory
         """
         self.selected = selected
     
     def toggle_selected(self) -> bool:
-        """Toggle the selection state of this territory.
+        """Toggle the selection state of this territory. Switches between selected and deselected states.
         
-        Returns:
-            New selection state
+        :returns: New selection state after toggling
         """
         self.selected = not self.selected
         return self.selected

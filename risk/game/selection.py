@@ -11,10 +11,9 @@ class TerritorySelectionHandler:
     """Handles territory selection logic and state management."""
     
     def __init__(self, game_state: GameState):
-        """Initialize the selection handler.
+        """Initialize the selection handler. Sets up selection state tracking for the given game state.
         
-        Args:
-            game_state: GameState to manage selections for
+        :param game_state: GameState to manage selections for
         """
         self.game_state = game_state
         self.selected_territories: Set[int] = set()  # Territory IDs
@@ -22,10 +21,9 @@ class TerritorySelectionHandler:
         self.multi_select_enabled = False  # Allow multiple selections
     
     def handle_territory_selected(self, input_event) -> None:
-        """Handle territory selection events.
+        """Handle territory selection events. Processes territory selection and updates selection state.
         
-        Args:
-            input_event: Input event containing territory selection data
+        :param input_event: Input event containing territory selection data with territory_id and territory
         """
         if not input_event.data or 'territory_id' not in input_event.data:
             return
@@ -50,10 +48,9 @@ class TerritorySelectionHandler:
         print(f"  Total selected territories: {len(self.selected_territories)}")
     
     def handle_territory_deselected(self, input_event) -> None:
-        """Handle territory deselection events (clicking on empty space).
+        """Handle territory deselection events (clicking on empty space). Clears selections when clicking empty areas.
         
-        Args:
-            input_event: Input event containing deselection data
+        :param input_event: Input event containing deselection data
         """
         if not self.multi_select_enabled:
             # Clear all selections when clicking empty space in single-select mode
@@ -61,11 +58,10 @@ class TerritorySelectionHandler:
             print("Territory selection handler: Cleared all selections")
     
     def _handle_single_select(self, territory_id: int, territory: Territory) -> None:
-        """Handle single territory selection (clear others, select this one).
+        """Handle single territory selection (clear others, select this one). Implements single-selection behavior.
         
-        Args:
-            territory_id: ID of territory to select
-            territory: Territory object
+        :param territory_id: ID of territory to select
+        :param territory: Territory object to select
         """
         # Clear previous selections
         self.clear_all_selections()
@@ -76,11 +72,10 @@ class TerritorySelectionHandler:
         territory.set_selected(True)
     
     def _handle_multi_select(self, territory_id: int, territory: Territory) -> None:
-        """Handle multi-territory selection (toggle selection).
+        """Handle multi-territory selection (toggle selection). Implements multi-selection behavior with toggling.
         
-        Args:
-            territory_id: ID of territory to toggle
-            territory: Territory object
+        :param territory_id: ID of territory to toggle selection for
+        :param territory: Territory object to toggle selection for
         """
         if territory_id in self.selected_territories:
             # Deselect if already selected

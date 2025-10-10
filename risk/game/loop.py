@@ -13,18 +13,26 @@ from ..state.game_state import GameState, GamePhase
 
 
 class GameLoop:
-    """Main game loop for the Risk simulation."""
+    """
+    Main game loop for the Risk simulation. Coordinates pygame 
+    initialization, event handling, and rendering.
+    
+    This class serves as the central coordinator for the entire Risk 
+    simulation, managing the game state, rendering, input handling, and the 
+    main event loop.
+    """
     
     def __init__(self, width: int = 1800, height: int = 1028, 
                  regions: int = 27, num_players: int = 3, starting_armies: int = 10):
-        """Initialize pygame and create the game window.
+        """
+        Initialize pygame and create the game window. Sets up game 
+        parameters and creates initial game state.
         
-        Args:
-            width: Window width in pixels
-            height: Window height in pixels
-            regions: Number of territories to generate (g parameter)
-            num_players: Number of players (p parameter)
-            starting_armies: Starting army size per player (s parameter)
+        :param width: Window width in pixels
+        :param height: Window height in pixels
+        :param regions: Number of territories to generate (g parameter)
+        :param num_players: Number of players in the simulation (p parameter)
+        :param starting_armies: Starting army size per player (s parameter)
         """
         self.width = width
         self.height = height
@@ -45,10 +53,9 @@ class GameLoop:
         self.game_state = GameState.create_new_game(regions, num_players, starting_armies)
         
     def initialize(self) -> bool:
-        """Initialize pygame and create game components.
+        """Initialize pygame and create game components. Sets up screen, components, and registers callbacks.
         
-        Returns:
-            True if initialization successful, False otherwise
+        :returns: True if initialization successful, False otherwise
         """
         try:
             pygame.init()
@@ -97,7 +104,7 @@ class GameLoop:
             return False
     
     def handle_events(self) -> None:
-        """Process pygame events and user input."""
+        """Process pygame events and user input. Delegates event processing to input handler."""
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 self.running = False

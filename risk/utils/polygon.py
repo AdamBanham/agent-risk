@@ -1,11 +1,14 @@
 from .distance import Point
 from typing import List, Tuple
 
-def compute_area(polygon:List[Point]):
+def compute_area(polygon: List[Point]) -> float:
     """
-    Compute the area of a polygon using the Shoelace formula.
+    Compute the area of a polygon using the Shoelace formula. Uses the 
+    standard shoelace (surveyor's) formula.
     
-    :param polygon: List of `Point`'s representing the polygon vertices
+    :param polygon: List of Point objects representing the polygon vertices 
+                   in order
+    :returns: Area of the polygon as a positive float value
     """
     n = len(polygon)
     area = 0.0
@@ -16,14 +19,13 @@ def compute_area(polygon:List[Point]):
     area = abs(area) / 2.0
     return area
 
-def compute_bounding_box(
-        polygon:List[Point]
-        ) -> Tuple[float, float, float, float]:
+def compute_bounding_box(polygon: List[Point]) -> Tuple[float, float, float, float]:
     """
-    Compute the axis-aligned bounding box of a polygon.
+    Compute the axis-aligned bounding box of a polygon. Finds the minimum 
+    rectangle that encloses all vertices.
     
-    :param polygon: List of `Point`'s representing the polygon vertices
-    :returns: Tuple (min_x, min_y, max_x, max_y)
+    :param polygon: List of Point objects representing the polygon vertices
+    :returns: Tuple (min_x, min_y, max_x, max_y) defining the bounding box
     """
     if not polygon:
         return (0, 0, 0, 0)
@@ -35,12 +37,14 @@ def compute_bounding_box(
     
     return (min_x, min_y, max_x, max_y)
 
-def find_centroid(polygon:List[Point]):
+def find_centroid(polygon: List[Point]) -> Point:
     """
-    Compute the centroid (geometric center) of a polygon.
+    Compute the centroid (geometric center) of a polygon. Uses the standard 
+    centroid formula for polygons.
     
-    :param polygon: List of `Point`'s representing the polygon vertices
-    :returns: `Point` representing the centroid
+    :param polygon: List of Point objects representing the polygon vertices 
+                   in order
+    :returns: Point representing the centroid of the polygon
     """
     n = len(polygon)
     if n == 0:

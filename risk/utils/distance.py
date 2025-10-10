@@ -5,18 +5,45 @@ import math
 
 @dataclass
 class Point:
+    """
+    Represents a 2D point with x and y coordinates. Used for geometric 
+    calculations throughout the Risk simulation.
+    
+    :param x: X coordinate of the point
+    :param y: Y coordinate of the point
+    """
     x: float
     y: float
 
     def to_tuple(self) -> Tuple[float, float]:
+        """
+        Convert point to a tuple representation. Useful for pygame and other 
+        APIs expecting tuples.
+        
+        :returns: Tuple containing (x, y) coordinates
+        """
         return (self.x, self.y)
 
 def euclidean_distance(point1: Point, point2: Point) -> float:
-    """Calculate the Euclidean distance between two points."""
+    """
+    Calculate the Euclidean distance between two points. Uses the standard 
+    Euclidean distance formula.
+    
+    :param point1: First point for distance calculation
+    :param point2: Second point for distance calculation
+    :returns: Euclidean distance between the two points as a positive float
+    """
     return ((point1.x - point2.x) ** 2 + (point1.y - point2.y) ** 2) ** 0.5
 
 def manhattan_distance(point1: Point, point2: Point) -> float:
-    """Calculate the Manhattan distance between two points."""
+    """
+    Calculate the Manhattan distance between two points. Uses the L1 norm 
+    (sum of absolute differences).
+    
+    :param point1: First point for distance calculation
+    :param point2: Second point for distance calculation
+    :returns: Manhattan distance between the two points as a positive float
+    """
     return abs(point1.x - point2.x) + abs(point1.y - point2.y)
 
 DISTANCE_METHODS = {
@@ -29,7 +56,16 @@ def find_closest_point(
         points: List[Point], 
         method: Literal['euclidean', 'manhattan']
     ) -> Point:
-    """Find the closest point from a list to the target point."""
+    """
+    Find the closest point from a list to the target point. Uses the 
+    specified distance method for comparison.
+    
+    :param target: Target point to find closest match for
+    :param points: List of candidate points to search through
+    :param method: Distance calculation method ('euclidean' or 'manhattan')
+    :returns: Point from the list that is closest to the target
+    :raises ValueError: When points list is empty
+    """
     closest_point = min(points, key=lambda point: DISTANCE_METHODS[method](target, point))
     return closest_point
 
@@ -38,18 +74,28 @@ def find_farthest_point(
         points: List[Point], 
         method: Literal['euclidean', 'manhattan']
     ) -> Point:
-    """Find the farthest point from a list to the target point."""
+    """
+    Find the farthest point from a list to the target point. Uses the 
+    specified distance method for comparison.
+    
+    :param target: Target point to find farthest match from
+    :param points: List of candidate points to search through
+    :param method: Distance calculation method ('euclidean' or 'manhattan')
+    :returns: Point from the list that is farthest from the target
+    :raises ValueError: When points list is empty
+    """
     farthest_point = max(points, key=lambda point: DISTANCE_METHODS[method](target, point))
     return farthest_point
 
 def clean_sequence(vertices: List[Point]) -> List[Point]:
-    """Simple cleanup for polygon vertices.
+    """
+    Simple cleanup for polygon vertices. Removes consecutive duplicates and 
+    very close points to ensure valid polygons.
     
-    Args:
-        vertices: List of polygon vertices
-        
-    Returns:
-        Cleaned list of vertices
+    :param vertices: List of polygon vertices that may contain duplicates or 
+                    degenerate points
+    :returns: Cleaned list of vertices with duplicates and close points 
+             removed
     """
     if not vertices:
         return vertices
@@ -77,16 +123,18 @@ def random_walk(
         variation_strength: float = 0.2,
         clean: bool = True
     ) -> List[Point]:
-    """Generate a random walk path between two points.
+    """
+    Generate a random walk path between two points.
     
-    :param start: Starting point 
-    :param end: Ending point 
-    :param num_steps: Number of intermediate steps in the walk
-    :param variation_strength: How much the walk can deviate (0.0 = straight
-    line, 1.0 = high variation)
-
-    :return:
-      List of points forming the random walk from start to end (inclusive)
+    :param start: Starting point of the random walk
+    :param end: Ending point of the random walk
+    :param num_steps: Number of intermediate steps in the walk (default 5)
+    :param variation_strength: How much the walk can deviate from straight 
+                              line (0.0 = straight line, 1.0 = high variation)
+    :param clean: Whether to clean the resulting sequence by removing 
+                 duplicate/close vertices
+    :returns: List of points forming the random walk from start to end 
+             (inclusive)
     """
     if num_steps <= 0:
         return [start, end]
@@ -155,14 +203,14 @@ def random_walk(
 
 
 def point_in_polygon(point: Point, polygon_vertices: List[Tuple[float, float]]) -> bool:
-    """Check if a point is inside a polygon using the ray casting algorithm.
+    """
+    Check if a point is inside a polygon using the ray casting algorithm. 
+    Uses standard point-in-polygon test.
     
-    Args:
-        point: Point to test
-        polygon_vertices: List of (x, y) tuples representing polygon vertices
-        
-    Returns:
-        True if point is inside polygon, False otherwise
+    :param point: Point to test for inclusion in polygon
+    :param polygon_vertices: List of (x, y) tuples representing polygon 
+                            vertices in order
+    :returns: True if point is inside polygon, False otherwise
     """
     if len(polygon_vertices) < 3:
         return False
@@ -188,13 +236,14 @@ def point_in_polygon(point: Point, polygon_vertices: List[Tuple[float, float]]) 
 
 
 def point_in_polygon_coords(x: float, y: float, polygon_vertices: List[Tuple[float, float]]) -> bool:
-    """Check if coordinates are inside a polygon using the ray casting algorithm.
+    """
+    Check if coordinates are inside a polygon using the ray casting 
+    algorithm. Convenience wrapper for point_in_polygon.
     
-    Args:
-        x, y: Coordinates to test
-        polygon_vertices: List of (x, y) tuples representing polygon vertices
-        
-    Returns:
-        True if point is inside polygon, False otherwise
+    :param x: X coordinate to test
+    :param y: Y coordinate to test
+    :param polygon_vertices: List of (x, y) tuples representing polygon 
+                            vertices in order
+    :returns: True if point is inside polygon, False otherwise
     """
     return point_in_polygon(Point(x, y), polygon_vertices)

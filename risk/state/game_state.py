@@ -39,48 +39,56 @@ class Player:
     reinforcements_available: int = 0
     
     def add_territory(self, territory_id: int) -> None:
-        """Add a territory to this player's control.
+        """
+        Add a territory to this player's control. Updates the player's 
+        controlled territories set.
         
-        Args:
-            territory_id: ID of the territory to add
+        :param territory_id: ID of the territory to add to this player's 
+                            control
         """
         self.territories_controlled.add(territory_id)
     
     def remove_territory(self, territory_id: int) -> None:
-        """Remove a territory from this player's control.
+        """
+        Remove a territory from this player's control. Updates the player's 
+        controlled territories set.
         
-        Args:
-            territory_id: ID of the territory to remove
+        :param territory_id: ID of the territory to remove from this 
+                            player's control
         """
         self.territories_controlled.discard(territory_id)
     
     def get_territory_count(self) -> int:
-        """Get the number of territories controlled by this player.
+        """
+        Get the number of territories controlled by this player. Returns the 
+        size of the controlled territories set.
         
-        Returns:
-            Number of territories controlled
+        :returns: Number of territories controlled by this player
         """
         return len(self.territories_controlled)
     
     def calculate_reinforcements(self, base_reinforcement: int = 3, 
                                territory_bonus_divisor: int = 3) -> int:
-        """Calculate reinforcements for this player.
+        """
+        Calculate reinforcements for this player. Uses territory count and 
+        minimum reinforcement rules.
         
-        Args:
-            base_reinforcement: Minimum reinforcements per turn
-            territory_bonus_divisor: Territories needed per bonus army
-            
-        Returns:
-            Number of reinforcement armies
+        :param base_reinforcement: Minimum reinforcements per turn regardless 
+                                  of territory count
+        :param territory_bonus_divisor: Number of territories needed per 
+                                       bonus army
+        :returns: Number of reinforcement armies this player should receive
         """
         territory_bonus = max(1, self.get_territory_count() // territory_bonus_divisor)
         return max(base_reinforcement, territory_bonus)
     
     def is_eliminated(self) -> bool:
-        """Check if this player has been eliminated.
+        """
+        Check if this player has been eliminated. A player is eliminated 
+        when they control no territories.
         
-        Returns:
-            True if player controls no territories
+        :returns: True if player controls no territories and is eliminated, 
+                 False otherwise
         """
         return len(self.territories_controlled) == 0
     
@@ -121,15 +129,15 @@ class GameState:
     @classmethod
     def create_new_game(cls, regions: int, num_players: int, 
                        starting_armies: int) -> 'GameState':
-        """Create a new game state with the specified parameters.
+        """
+        Create a new game state with the specified parameters. Factory 
+        method for consistent initialization.
         
-        Args:
-            regions: Number of territories to generate (g parameter)
-            num_players: Number of players (p parameter)
-            starting_armies: Starting army size per player (s parameter)
-            
-        Returns:
-            New GameState instance
+        :param regions: Number of territories to generate (g parameter)
+        :param num_players: Number of players in the game (p parameter)
+        :param starting_armies: Starting army size per player (s parameter)
+        :returns: New GameState instance with initialized players and 
+                 default colors
         """
         game_state = cls(
             regions=regions,
@@ -160,81 +168,84 @@ class GameState:
         return game_state
     
     def add_territory(self, territory: Territory) -> None:
-        """Add a territory to the game state.
+        """
+        Add a territory to the game state. Updates the territories 
+        dictionary and timestamps.
         
-        Args:
-            territory: Territory to add
+        :param territory: Territory object to add to the game state
         """
         self.territories[territory.id] = territory
         self.last_updated = time.time()
     
     def get_territory(self, territory_id: int) -> Optional[Territory]:
-        """Get a territory by ID.
+        """
+        Get a territory by ID. Returns the territory from the game state 
+        dictionary.
         
-        Args:
-            territory_id: ID of the territory
-            
-        Returns:
-            Territory if found, None otherwise
+        :param territory_id: ID of the territory to retrieve
+        :returns: Territory if found, None otherwise
         """
         return self.territories.get(territory_id)
     
     def get_player(self, player_id: int) -> Optional[Player]:
-        """Get a player by ID.
+        """
+        Get a player by ID. Returns the player from the game state 
+        dictionary.
         
-        Args:
-            player_id: ID of the player
-            
-        Returns:
-            Player if found, None otherwise
+        :param player_id: ID of the player to retrieve
+        :returns: Player if found, None otherwise
         """
         return self.players.get(player_id)
     
     def get_active_players(self) -> List[Player]:
-        """Get all active (non-eliminated) players.
+        """
+        Get all active (non-eliminated) players. Filters players based on 
+        is_active flag and elimination status.
         
-        Returns:
-            List of active players
+        :returns: List of active players who are still in the game
         """
         return [player for player in self.players.values() 
                 if player.is_active and not player.is_eliminated()]
     
     def get_territories_owned_by(self, player_id: int) -> List[Territory]:
-        """Get all territories owned by a specific player.
+        """
+        Get all territories owned by a specific player. Filters territories 
+        by owner ID.
         
-        Args:
-            player_id: ID of the player
-            
-        Returns:
-            List of territories owned by the player
+        :param player_id: ID of the player whose territories to retrieve
+        :returns: List of territories owned by the specified player
         """
         return [territory for territory in self.territories.values()
                 if territory.is_owned_by(player_id)]
     
     def get_free_territories(self) -> List[Territory]:
-        """Get all unowned territories.
+        """
+        Get all unowned territories. Filters territories that are currently 
+        free (no owner).
         
-        Returns:
-            List of free territories
+        :returns: List of free territories that have no current owner
         """
         return [territory for territory in self.territories.values()
                 if territory.is_free()]
     
     def set_current_player(self, player_id: int) -> None:
-        """Set the current active player.
+        """
+        Set the current active player. Updates the game state to reflect 
+        whose turn it is.
         
-        Args:
-            player_id: ID of the player whose turn it is
+        :param player_id: ID of the player whose turn it is now
         """
         if player_id in self.players:
             self.current_player_id = player_id
             self.last_updated = time.time()
     
     def advance_turn(self) -> Optional[int]:
-        """Advance to the next player's turn.
+        """
+        Advance to the next player's turn. Cycles through active players 
+        and increments turn counter.
         
-        Returns:
-            ID of the next player, or None if game should end
+        :returns: ID of the next player, or None if game should end (less 
+                 than 2 active players)
         """
         # Get all players who are still active (not eliminated)
         active_players = [p for p in self.players.values() if p.is_active]
@@ -265,18 +276,17 @@ class GameState:
         return self.current_player_id
     
     def complete_turn(self) -> None:
-        """Mark the current turn as completed and increment total turns.
-        
-        This is useful for manual turn management in certain game scenarios.
+        """Mark the current turn as completed and increment total turns. Used for manual turn management in certain scenarios.
         """
         self.total_turns += 1
         self.last_updated = time.time()
     
     def check_victory_condition(self) -> Optional[int]:
-        """Check if any player has won the game.
+        """
+        Check if any player has won the game. Checks for single remaining 
+        player or total territory control.
         
-        Returns:
-            ID of winning player, or None if no winner yet
+        :returns: ID of winning player, or None if no winner yet
         """
         active_players = self.get_active_players()
         
@@ -295,7 +305,7 @@ class GameState:
         return None
     
     def update_player_statistics(self) -> None:
-        """Update all player statistics based on current territory ownership."""
+        """Update all player statistics based on current territory ownership. Recalculates territory counts and armies for all players."""
         # Reset all player territory sets
         for player in self.players.values():
             player.territories_controlled.clear()
@@ -316,10 +326,9 @@ class GameState:
         self.last_updated = time.time()
     
     def get_game_summary(self) -> Dict:
-        """Get a summary of the current game state.
+        """Get a summary of the current game state. Provides key information about the game's current status.
         
-        Returns:
-            Dictionary with game state summary
+        :returns: Dictionary with game state summary including phase, turns, players, and territories
         """
         return {
             'phase': self.phase.value,

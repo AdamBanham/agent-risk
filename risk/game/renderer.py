@@ -15,11 +15,10 @@ class GameRenderer:
     """Renders the Risk board and game state using pygame."""
     
     def __init__(self, screen: pygame.Surface, game_state: GameState):
-        """Initialize the renderer.
+        """Initialize the renderer. Sets up pygame rendering context and generates board if needed.
         
-        Args:
-            screen: Pygame surface to draw on
-            game_state: GameState to render
+        :param screen: Pygame surface to draw on
+        :param game_state: GameState to render
         """
         self.screen = screen
         self.game_state = game_state
@@ -68,14 +67,14 @@ class GameRenderer:
             generate_sample_board(self.game_state, self.width, self.height - 120)
     
     def draw_board(self) -> None:
-        """Draw the complete Risk board."""
+        """Draw the complete Risk board. Renders territories, continent labels, player summaries, and legend."""
         self._draw_territories()
         self._draw_continent_labels()
         self._draw_player_summaries()
         self._draw_legend()
     
     def _draw_territories(self) -> None:
-        """Draw all territories with their borders, colors, and armies."""
+        """Draw all territories with their borders, colors, and armies. Renders filled polygons, borders, and army counts."""
         selected_territories = []  # Keep track of selected territories for last
         
         # First pass: Draw all filled polygons
