@@ -95,7 +95,9 @@ class TerritorySelectionHandler:
                 self.primary_selection = territory_id
     
     def clear_all_selections(self) -> None:
-        """Clear all territory selections."""
+        """
+        Clear all territory selections.
+        """
         for territory_id in self.selected_territories:
             territory = self.game_state.territories.get(territory_id)
             if territory:
@@ -105,10 +107,10 @@ class TerritorySelectionHandler:
         self.primary_selection = None
     
     def set_multi_select_enabled(self, enabled: bool) -> None:
-        """Enable or disable multi-select mode.
+        """
+        Enable or disable multi-select mode.
         
-        Args:
-            enabled: True to enable multi-select, False for single-select
+        :param enabled: True to enable multi-select, False for single-select
         """
         # If disabling multi-select while multiple territories are selected,
         # keep only the primary selection
@@ -116,7 +118,8 @@ class TerritorySelectionHandler:
             primary_id = self.primary_selection
             self.clear_all_selections()
             
-            if primary_id and primary_id in self.game_state.territories:
+            if (primary_id and 
+                primary_id in self.game_state.territories):
                 self.selected_territories.add(primary_id)
                 self.primary_selection = primary_id
                 self.game_state.territories[primary_id].set_selected(True)

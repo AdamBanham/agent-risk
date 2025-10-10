@@ -1,7 +1,8 @@
 """
 Dynamic board generation for the Risk simulation.
 Creates territories using polygon subdivision - starts with a large continent
-and recursively divides it into smaller territories using random walk division lines.
+and recursively divides it into smaller territories using random walk 
+division lines.
 """
 
 import math
@@ -19,10 +20,14 @@ class PolygonTerritory:
     """Represents a territory during the subdivision process."""
     
     def __init__(self, vertices: List[Point], territory_id: int = -1):
-        """Initialize a polygon territory. Creates a polygon territory with vertices and calculates properties.
+        """
+        Initialize a polygon territory. Creates a polygon territory with 
+        vertices and calculates properties.
         
-        :param vertices: List of Point objects or (x, y) tuples defining the polygon
-        :param territory_id: Unique ID for this territory (-1 if not finalized)
+        :param vertices: List of Point objects or (x, y) tuples defining the 
+                        polygon
+        :param territory_id: Unique ID for this territory (-1 if not 
+                            finalized)
         """
         self.vertices = [
             p if isinstance(p, Point) else Point(*p)
@@ -35,31 +40,38 @@ class PolygonTerritory:
         self._area = compute_area(self.vertices)
 
     def center(self) -> Tuple[int, int]:
-        """Calculate the centroid of the polygon. Returns the geometric center as integer coordinates.
+        """
+        Calculate the centroid of the polygon. Returns the geometric center 
+        as integer coordinates.
         
         :returns: Center point (x, y) as integer tuple
         """
         return self._center.to_tuple()
     
     def bounding_box(self) -> Tuple[int, int, int, int]:
-        """Get the bounding box of this polygon. Returns the axis-aligned rectangle that encloses all vertices.
+        """
+        Get the bounding box of this polygon. Returns the axis-aligned 
+        rectangle that encloses all vertices.
         
         :returns: Tuple of (min_x, min_y, max_x, max_y) coordinates
         """
         return self._box
     
     def area(self) -> float:
-        """Returns the area of the polygon.
+        """
+        Returns the area of the polygon.
         
-        :returns:
-            Area of the polygon (always positive)
+        :returns: Area of the polygon (always positive)
         """
         return self._area
     
     def signed_area(self) -> float:
-        """Calculate the signed area of the polygon. Positive for counter-clockwise vertices, negative for clockwise.
+        """
+        Calculate the signed area of the polygon. Positive for 
+        counter-clockwise vertices, negative for clockwise.
         
-        :returns: Signed area (positive for counter-clockwise, negative for clockwise)
+        :returns: Signed area (positive for counter-clockwise, negative for 
+                 clockwise)
         """
         if not self.vertices or len(self.vertices) < 3:
             return 0.0
@@ -75,17 +87,23 @@ class PolygonTerritory:
         return area / 2.0
     
     def is_clockwise(self) -> bool:
-        """Check if vertices are ordered clockwise. Uses signed area to determine vertex ordering.
+        """
+        Check if vertices are ordered clockwise. Uses signed area to 
+        determine vertex ordering.
         
         :returns: True if clockwise, False if counter-clockwise
         """
         return self.signed_area() < 0
     
     def divide(self) -> Tuple['PolygonTerritory', 'PolygonTerritory']:
-        """Divide this polygon into two smaller polygons using a random walk line. Uses random vertex selection and jagged division lines.
+        """
+        Divide this polygon into two smaller polygons using a random walk 
+        line. Uses random vertex selection and jagged division lines.
         
-        :returns: Two new PolygonTerritory instances resulting from the division
-        :raises ValueError: When polygon cannot be divided after multiple attempts
+        :returns: Two new PolygonTerritory instances resulting from the 
+                 division
+        :raises ValueError: When polygon cannot be divided after multiple 
+                           attempts
         """        
         left = None
         right = None
@@ -114,7 +132,8 @@ class PolygonTerritory:
                 )
             else:
                 left = PolygonTerritory(
-                    self.vertices[choice+1:] + self.vertices[:other] + walk[::-1]
+                    self.vertices[choice+1:] + self.vertices[:other] + 
+                    walk[::-1]
                 )
                 right = PolygonTerritory(
                     self.vertices[other+1:choice] + walk
@@ -128,13 +147,16 @@ class PolygonTerritory:
             sum_of_areas = left.area() + right.area()
             lprop = left.area() / sum_of_areas if sum_of_areas > 0 else 0
             if attempts > 10:
-                raise ValueError("Failed to divide polygon into two valid parts after multiple attempts.")
+                raise ValueError("Failed to divide polygon into two valid "
+                               "parts after multiple attempts.")
         self.is_divided = True
         return left, right
 
 
     def is_valid(self) -> bool:
-        """Check if the polygon is valid (at least 3 vertices and non-zero area). Basic validity check for polygon geometry.
+        """
+        Check if the polygon is valid (at least 3 vertices and non-zero 
+        area). Basic validity check for polygon geometry.
         
         :returns: True if valid, False otherwise
         """
@@ -172,21 +194,26 @@ class PolygonTerritory:
             }
         
         if len(self.vertices) < 3:
-            errors.append(f"Insufficient vertices: {len(self.vertices)} (minimum 3 required)")
+            errors.append(f"Insufficient vertices: {len(self.vertices)} "
+                         f"(minimum 3 required)")
         
         # Check for finite coordinates
         for i, vertex in enumerate(self.vertices):
             if not isinstance(vertex, (Point)):
-                errors.append(f"Vertex {i} is not a valid 2D coordinate: {vertex}")
+                errors.append(f"Vertex {i} is not a valid 2D coordinate: "
+                             f"{vertex}")
                 continue
             
             x, y = vertex.x, vertex.y
-            if not (isinstance(x, (int, float)) and isinstance(y, (int, float))):
-                errors.append(f"Vertex {i} contains non-numeric coordinates: ({x}, {y})")
+            if not (isinstance(x, (int, float)) and 
+                   isinstance(y, (int, float))):
+                errors.append(f"Vertex {i} contains non-numeric "
+                             f"coordinates: ({x}, {y})")
                 continue
             
             if not (math.isfinite(x) and math.isfinite(y)):
-                errors.append(f"Vertex {i} contains non-finite coordinates: ({x}, {y})")
+                errors.append(f"Vertex {i} contains non-finite "
+                             f"coordinates: ({x}, {y})")
                 continue
         
         # If we have basic errors, return early
@@ -220,7 +247,8 @@ class PolygonTerritory:
             warnings.append(f"Very small polygon area: {area:.2f}")
         
         if bbox_area > 0 and area / bbox_area < 0.1:
-            warnings.append(f"Low area efficiency: {area/bbox_area:.2%} (polygon is very sparse)")
+            warnings.append(f"Low area efficiency: {area/bbox_area:.2%} "
+                           f"(polygon is very sparse)")
         
         # Check for duplicate consecutive vertices
         duplicate_count = 0
@@ -228,7 +256,9 @@ class PolygonTerritory:
             current = self.vertices[i]
             next_vertex = self.vertices[(i + 1) % len(self.vertices)]
             if current == next_vertex:
-                errors.append(f"Duplicate consecutive vertices at positions {i} and {(i+1)%len(self.vertices)}: {current}")
+                errors.append(f"Duplicate consecutive vertices at positions "
+                             f"{i} and {(i+1)%len(self.vertices)}: "
+                             f"{current}")
                 duplicate_count += 1
         
         properties['duplicate_vertices'] = duplicate_count
@@ -248,7 +278,9 @@ class PolygonTerritory:
                               (p2.y - p1.y) * (p3.x - p1.x))
 
             if abs(cross_product) < 1e-6:  # Essentially collinear
-                warnings.append(f"Collinear vertices found at positions {i}, {(i+1)%len(self.vertices)}, {(i+2)%len(self.vertices)}")
+                warnings.append(f"Collinear vertices found at positions "
+                               f"{i}, {(i+1)%len(self.vertices)}, "
+                               f"{(i+2)%len(self.vertices)}")
                 collinear_count += 1
         
         properties['collinear_vertices'] = collinear_count
@@ -258,7 +290,8 @@ class PolygonTerritory:
         properties['self_intersections'] = intersection_count
         
         if intersection_count > 0:
-            errors.append(f"Self-intersecting polygon: {intersection_count} intersections found")
+            errors.append(f"Self-intersecting polygon: "
+                         f"{intersection_count} intersections found")
         
         # Check vertex spacing and distribution
         edge_lengths = []
@@ -271,12 +304,15 @@ class PolygonTerritory:
         if edge_lengths:
             properties['min_edge_length'] = min(edge_lengths)
             properties['max_edge_length'] = max(edge_lengths)
-            properties['avg_edge_length'] = sum(edge_lengths) / len(edge_lengths)
+            properties['avg_edge_length'] = (sum(edge_lengths) / 
+                                             len(edge_lengths))
             
             # Check for very short edges
-            very_short_edges = [i for i, length in enumerate(edge_lengths) if length < 1.0]
+            very_short_edges = [i for i, length in enumerate(edge_lengths) 
+                               if length < 1.0]
             if very_short_edges:
-                warnings.append(f"Very short edges found at positions: {very_short_edges}")
+                warnings.append(f"Very short edges found at positions: "
+                               f"{very_short_edges}")
             
             # Check for highly irregular edge distribution
             if len(edge_lengths) > 1:

@@ -26,8 +26,10 @@ class InputHandler:
     """
     
     def __init__(self):
-        """Initialize the input handler. Sets up event mappings and state tracking."""
-        """Initialize the input handler."""
+        """
+        Initialize the input handler. Sets up event mappings and state 
+        tracking.
+        """
         self.callbacks: Dict[str, Callable] = {}
         self.mouse_position = (0, 0)
         self.mouse_pressed = False
@@ -43,17 +45,23 @@ class InputHandler:
         }
     
     def register_callback(self, event_type: str, callback: Callable) -> None:
-        """Register a callback function for a specific event type. Allows components to respond to input events.
+        """
+        Register a callback function for a specific event type. Allows 
+        components to respond to input events.
         
-        :param event_type: Type of event to listen for (e.g., 'mouse_down', 'key_down')
+        :param event_type: Type of event to listen for (e.g., 'mouse_down', 
+                          'key_down')
         :param callback: Function to call when event occurs
         """
         self.callbacks[event_type] = callback
     
     def handle_event(self, event: pygame.event.Event) -> None:
-        """Process a pygame event and trigger appropriate callbacks. Maps pygame events to internal event system.
+        """
+        Process a pygame event and trigger appropriate callbacks. Maps pygame 
+        events to internal event system.
         
-        :param event: Pygame event to process and potentially trigger callbacks for
+        :param event: Pygame event to process and potentially trigger 
+                     callbacks for
         """
         # Update input state
         self._update_input_state(event)
@@ -71,7 +79,9 @@ class InputHandler:
         self._handle_special_events(event)
     
     def _update_input_state(self, event: pygame.event.Event) -> None:
-        """Update internal input state tracking. Maintains current mouse position and key press state.
+        """
+        Update internal input state tracking. Maintains current mouse 
+        position and key press state.
         
         :param event: Pygame event to update state from
         """
@@ -314,7 +324,9 @@ class GameInputHandler(InputHandler):
             self._print_help()
     
     def _print_help(self) -> None:
-        """Print help information to console."""
+        """
+        Print help information to console.
+        """
         print("\\n=== Agent Risk Controls ===")
         print("Mouse:")
         print("  - Click on territories to select them (yellow outline, red text)")

@@ -104,7 +104,10 @@ class GameLoop:
             return False
     
     def handle_events(self) -> None:
-        """Process pygame events and user input. Delegates event processing to input handler."""
+        """
+        Process pygame events and user input. Delegates event processing to 
+        input handler.
+        """
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 self.running = False
@@ -114,15 +117,17 @@ class GameLoop:
                     self.input_handler.handle_event(event)
     
     def _handle_regenerate_game(self, input_event) -> None:
-        """Handle Ctrl+R to regenerate the game state.
+        """
+        Handle Ctrl+R to regenerate the game state.
         
-        Args:
-            input_event: Input event that triggered regeneration
+        :param input_event: Input event that triggered regeneration
         """
         print("Regenerating game state with same parameters...")
         
         # Create a new game state with original parameters
-        self.game_state = GameState.create_new_game(self.regions, self.num_players, self.starting_armies)
+        self.game_state = GameState.create_new_game(self.regions, 
+                                                    self.num_players, 
+                                                    self.starting_armies)
         
         # Generate the board for the new game state
         from ..state.board_generator import generate_sample_board
@@ -142,7 +147,8 @@ class GameLoop:
             self.game_state.set_current_player(0)
             self.game_state.phase = GamePhase.PLAYER_TURN
         
-        print(f"New game state created: {self.regions} regions, {self.num_players} players, {self.starting_armies} armies each")
+        print(f"New game state created: {self.regions} regions, "
+              f"{self.num_players} players, {self.starting_armies} armies each")
         print(f"Generated {len(self.game_state.territories)} territories")
         
         # Store the board layout for future reuse
@@ -152,7 +158,10 @@ class GameLoop:
         self._store_current_board_layout()
     
     def _store_current_board_layout(self) -> None:
-        """Store the current board layout for reuse when restarting with same map."""
+        """
+        Store the current board layout for reuse when restarting with same 
+        map.
+        """
         if not self.game_state.territories:
             return
             
@@ -173,10 +182,10 @@ class GameLoop:
             }
     
     def _restore_board_layout(self, game_state: GameState) -> None:
-        """Restore a previously stored board layout to a new game state.
+        """
+        Restore a previously stored board layout to a new game state.
         
-        Args:
-            game_state: GameState to restore the board layout to
+        :param game_state: GameState to restore the board layout to
         """
         if not self.current_board_layout:
             return
@@ -187,7 +196,8 @@ class GameLoop:
         game_state.territories.clear()
         
         # Restore territories from stored layout
-        for territory_id, territory_data in self.current_board_layout['territories'].items():
+        for territory_id, territory_data in (
+            self.current_board_layout['territories'].items()):
             territory = Territory(
                 id=territory_id,
                 name=territory_data['name'],
@@ -250,7 +260,9 @@ class GameLoop:
             print(f"Already at maximum starting armies ({self.starting_armies})")
     
     def _regenerate_with_new_parameters(self) -> None:
-        """Regenerate the game state with updated parameters."""
+        """
+        Regenerate the game state with updated parameters.
+        """
         # Create a new game state with updated parameters
         self.game_state = GameState.create_new_game(self.regions, self.num_players, self.starting_armies)
         
@@ -279,7 +291,9 @@ class GameLoop:
         self._store_current_board_layout()
     
     def _restart_with_same_board(self) -> None:
-        """Restart the game with the same board layout but updated parameters."""
+        """
+        Restart the game with the same board layout but updated parameters.
+        """
         if not self.current_board_layout:
             print("No board layout stored, regenerating new board...")
             self._regenerate_with_new_parameters()
@@ -312,7 +326,10 @@ class GameLoop:
         print(f"Reusing {len(self.game_state.territories)} territories")
     
     def _redistribute_territories_and_armies(self) -> None:
-        """Redistribute territories and armies among players on the existing board."""
+        """
+        Redistribute territories and armies among players on the existing 
+        board.
+        """
         if not self.game_state.territories or not self.game_state.players:
             return
         
@@ -362,14 +379,18 @@ class GameLoop:
                 print(f"WARNING: Player {player.id} has {total_armies} armies but should have {self.starting_armies}")
     
     def update(self) -> None:
-        """Update game state (placeholder for future implementation)."""
+        """
+        Update game state (placeholder for future implementation).
+        """
         # Update player statistics based on current territory ownership
         self.game_state.update_player_statistics()
         # TODO: Update game state, agent decisions, etc.
         pass
     
     def render(self) -> None:
-        """Render the current game state."""
+        """
+        Render the current game state.
+        """
         if self.renderer and self.screen:
             # Clear screen with dark blue background
             self.screen.fill((20, 30, 50))
@@ -381,7 +402,9 @@ class GameLoop:
             pygame.display.flip()
     
     def run(self) -> None:
-        """Main game loop."""
+        """
+        Main game loop.
+        """
         if not self.initialize():
             return
         
@@ -409,13 +432,21 @@ class GameLoop:
             self.cleanup()
     
     def cleanup(self) -> None:
-        """Clean up pygame resources."""
+        """
+        Clean up pygame resources.
+        """
         pygame.quit()
         print("Game loop terminated")
 
 
 def main(g=2, p=2, s=10):
-    """Entry point for running the game."""
+    """
+    Entry point for running the game.
+    
+    :param g: Number of regions/territories to generate
+    :param p: Number of players in the simulation  
+    :param s: Starting army size per player
+    """
     # Allow customization of game parameters
     regions = g  # Number of territories (g parameter)
     players = p  # Number of players (p parameter)

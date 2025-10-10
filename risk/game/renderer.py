@@ -67,14 +67,20 @@ class GameRenderer:
             generate_sample_board(self.game_state, self.width, self.height - 120)
     
     def draw_board(self) -> None:
-        """Draw the complete Risk board. Renders territories, continent labels, player summaries, and legend."""
+        """
+        Draw the complete Risk board. Renders territories, continent labels, 
+        player summaries, and legend.
+        """
         self._draw_territories()
         self._draw_continent_labels()
         self._draw_player_summaries()
         self._draw_legend()
     
     def _draw_territories(self) -> None:
-        """Draw all territories with their borders, colors, and armies. Renders filled polygons, borders, and army counts."""
+        """
+        Draw all territories with their borders, colors, and armies. Renders 
+        filled polygons, borders, and army counts.
+        """
         selected_territories = []  # Keep track of selected territories for last
         
         # First pass: Draw all filled polygons
@@ -84,12 +90,15 @@ class GameRenderer:
                 fill_color = self.colors['territory_fill']
             elif territory.state == TerritoryState.CONTESTED:
                 # Contested territories get a special highlight
-                if territory.owner is not None and territory.owner < len(self.colors['player_colors']):
+                if (territory.owner is not None and 
+                    territory.owner < len(self.colors['player_colors'])):
                     base_color = self.colors['player_colors'][territory.owner]
                 else:
                     base_color = self.colors['territory_fill']
-                fill_color = tuple(min(255, c + 50) for c in base_color)  # Brighten the color
-            elif territory.owner is not None and territory.owner < len(self.colors['player_colors']):
+                # Brighten the color
+                fill_color = tuple(min(255, c + 50) for c in base_color)
+            elif (territory.owner is not None and 
+                  territory.owner < len(self.colors['player_colors'])):
                 fill_color = self.colors['player_colors'][territory.owner]
             else:
                 fill_color = self.colors['territory_fill']
@@ -136,18 +145,25 @@ class GameRenderer:
             # Draw army count if > 0
             if territory.armies > 0:
                 army_text = str(territory.armies)
-                army_surface = self.font.render(army_text, True, self.colors['text'])
+                army_surface = self.font.render(army_text, True, 
+                                               self.colors['text'])
                 army_rect = army_surface.get_rect()
-                army_rect.center = (territory.center[0], territory.center[1] + 20)
+                army_rect.center = (territory.center[0], 
+                                   territory.center[1] + 20)
                 
                 # Draw circle background for army count
-                circle_color = (0, 0, 0) if territory.state != TerritoryState.CONTESTED else (50, 50, 0)
-                pygame.draw.circle(self.screen, circle_color, army_rect.center, 15)
-                pygame.draw.circle(self.screen, self.colors['text'], army_rect.center, 15, 2)
+                circle_color = (0, 0, 0) if (territory.state != 
+                                            TerritoryState.CONTESTED) else (50, 50, 0)
+                pygame.draw.circle(self.screen, circle_color, 
+                                 army_rect.center, 15)
+                pygame.draw.circle(self.screen, self.colors['text'], 
+                                 army_rect.center, 15, 2)
                 self.screen.blit(army_surface, army_rect)
     
     def _draw_continent_labels(self) -> None:
-        """Draw continent labels and borders."""
+        """
+        Draw continent labels and borders.
+        """
         # Group territories by continent
         continents: Dict[str, List[Territory]] = {}
         for territory in self.game_state.territories.values():
@@ -178,14 +194,19 @@ class GameRenderer:
             self.screen.blit(continent_text, continent_rect)
     
     def _draw_player_summaries(self) -> None:
-        """Draw player summary boxes at the bottom of the screen."""
+        """
+        Draw player summary boxes at the bottom of the screen.
+        """
         summary_height = 100
         summary_y = self.height - summary_height
         
         # Draw background for entire summary area
-        summary_bg_rect = pygame.Rect(0, summary_y, self.width, summary_height)
-        pygame.draw.rect(self.screen, self.colors['summary_bg'], summary_bg_rect)
-        pygame.draw.rect(self.screen, self.colors['summary_border'], summary_bg_rect, 2)
+        summary_bg_rect = pygame.Rect(0, summary_y, self.width, 
+                                     summary_height)
+        pygame.draw.rect(self.screen, self.colors['summary_bg'], 
+                        summary_bg_rect)
+        pygame.draw.rect(self.screen, self.colors['summary_border'], 
+                        summary_bg_rect, 2)
         
         # Calculate box dimensions
         box_width = self.width // len(self.game_state.players)
@@ -216,27 +237,34 @@ class GameRenderer:
             
             # Territory count
             territory_count = player.get_territory_count()
-            territory_text = self.small_font.render(f"Territories: {territory_count}", True, self.colors['text'])
+            territory_text = self.small_font.render(
+                f"Territories: {territory_count}", True, self.colors['text'])
             self.screen.blit(territory_text, (text_x, text_y + 25))
             
             # Total armies
             total_armies = player.total_armies
-            armies_text = self.small_font.render(f"Total Armies: {total_armies}", True, self.colors['text'])
+            armies_text = self.small_font.render(
+                f"Total Armies: {total_armies}", True, self.colors['text'])
             self.screen.blit(armies_text, (text_x, text_y + 45))
             
             # Active status indicator
             status_text = "ACTIVE" if player.is_active else "ELIMINATED"
-            status_color = self.colors['highlight'] if player.is_active else (150, 150, 150)
-            status_surface = self.small_font.render(status_text, True, status_color)
+            status_color = (self.colors['highlight'] if player.is_active 
+                           else (150, 150, 150))
+            status_surface = self.small_font.render(status_text, True, 
+                                                   status_color)
             self.screen.blit(status_surface, (text_x, text_y + 65))
     
     def _draw_legend(self) -> None:
-        """Draw game legend and information."""
+        """
+        Draw game legend and information.
+        """
         legend_x = self.width - 200
         legend_y = 20
         
         # Title
-        title_text = self.large_font.render("Agent Risk", True, self.colors['highlight'])
+        title_text = self.large_font.render("Agent Risk", True, 
+                                           self.colors['highlight'])
         self.screen.blit(title_text, (legend_x, legend_y))
         
         # Game information

@@ -19,7 +19,8 @@ def compute_area(polygon: List[Point]) -> float:
     area = abs(area) / 2.0
     return area
 
-def compute_bounding_box(polygon: List[Point]) -> Tuple[float, float, float, float]:
+def compute_bounding_box(polygon: List[Point]) -> Tuple[float, float, 
+                                                        float, float]:
     """
     Compute the axis-aligned bounding box of a polygon. Finds the minimum 
     rectangle that encloses all vertices.

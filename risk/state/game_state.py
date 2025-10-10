@@ -79,7 +79,8 @@ class Player:
                                        bonus army
         :returns: Number of reinforcement armies this player should receive
         """
-        territory_bonus = max(1, self.get_territory_count() // territory_bonus_divisor)
+        territory_bonus = max(1, self.get_territory_count() // 
+                              territory_bonus_divisor)
         return max(base_reinforcement, territory_bonus)
     
     def is_eliminated(self) -> bool:
@@ -276,7 +277,9 @@ class GameState:
         return self.current_player_id
     
     def complete_turn(self) -> None:
-        """Mark the current turn as completed and increment total turns. Used for manual turn management in certain scenarios.
+        """
+        Mark the current turn as completed and increment total turns. Used 
+        for manual turn management in certain scenarios.
         """
         self.total_turns += 1
         self.last_updated = time.time()
@@ -305,7 +308,10 @@ class GameState:
         return None
     
     def update_player_statistics(self) -> None:
-        """Update all player statistics based on current territory ownership. Recalculates territory counts and armies for all players."""
+        """
+        Update all player statistics based on current territory ownership. 
+        Recalculates territory counts and armies for all players.
+        """
         # Reset all player territory sets
         for player in self.players.values():
             player.territories_controlled.clear()
@@ -326,9 +332,12 @@ class GameState:
         self.last_updated = time.time()
     
     def get_game_summary(self) -> Dict:
-        """Get a summary of the current game state. Provides key information about the game's current status.
+        """
+        Get a summary of the current game state. Provides key information 
+        about the game's current status.
         
-        :returns: Dictionary with game state summary including phase, turns, players, and territories
+        :returns: Dictionary with game state summary including phase, turns, 
+                 players, and territories
         """
         return {
             'phase': self.phase.value,
@@ -345,6 +354,8 @@ class GameState:
     
     def __repr__(self) -> str:
         """String representation for debugging."""
-        return (f"GameState(regions={self.regions}, players={self.num_players}, "
+        return (f"GameState(regions={self.regions}, "
+                f"players={self.num_players}, "
                 f"phase={self.phase.value}, turn={self.current_turn}, "
-                f"total_turns={self.total_turns}, territories={len(self.territories)})")
+                f"total_turns={self.total_turns}, "
+                f"territories={len(self.territories)})")

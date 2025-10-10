@@ -1,4 +1,4 @@
-from typing import Tuple,Literal, List 
+from typing import Tuple, Literal, List 
 from dataclasses import dataclass
 import random
 import math
@@ -66,7 +66,8 @@ def find_closest_point(
     :returns: Point from the list that is closest to the target
     :raises ValueError: When points list is empty
     """
-    closest_point = min(points, key=lambda point: DISTANCE_METHODS[method](target, point))
+    closest_point = min(points, key=lambda point: DISTANCE_METHODS[method](
+        target, point))
     return closest_point
 
 def find_farthest_point(
@@ -84,7 +85,8 @@ def find_farthest_point(
     :returns: Point from the list that is farthest from the target
     :raises ValueError: When points list is empty
     """
-    farthest_point = max(points, key=lambda point: DISTANCE_METHODS[method](target, point))
+    farthest_point = max(points, key=lambda point: DISTANCE_METHODS[method](
+        target, point))
     return farthest_point
 
 def clean_sequence(vertices: List[Point]) -> List[Point]:
@@ -176,11 +178,12 @@ def random_walk(
             prev_base_y = start.y + ((i-1) / (num_steps + 1)) * dy
             prev_deviation_x = points[-1].x - prev_base_x
             prev_deviation_y = points[-1].y - prev_base_y
-            prev_deviation = (prev_deviation_x * perp_x + prev_deviation_y * perp_y)
+            prev_deviation = (prev_deviation_x * perp_x + 
+                              prev_deviation_y * perp_y)
             
-            # Add correlation to previous step (brownian motion)
             correlation = 0.3
-            deviation = deviation * (1 - correlation) + prev_deviation * correlation
+            deviation = (deviation * (1 - correlation) + 
+                        prev_deviation * correlation)
         
         # Apply perpendicular deviation
         varied_x = base_x + deviation * perp_x
@@ -202,7 +205,8 @@ def random_walk(
     return points
 
 
-def point_in_polygon(point: Point, polygon_vertices: List[Tuple[float, float]]) -> bool:
+def point_in_polygon(point: Point, 
+                     polygon_vertices: List[Tuple[float, float]]) -> bool:
     """
     Check if a point is inside a polygon using the ray casting algorithm. 
     Uses standard point-in-polygon test.
@@ -235,7 +239,8 @@ def point_in_polygon(point: Point, polygon_vertices: List[Tuple[float, float]]) 
     return inside
 
 
-def point_in_polygon_coords(x: float, y: float, polygon_vertices: List[Tuple[float, float]]) -> bool:
+def point_in_polygon_coords(x: float, y: float, 
+                           polygon_vertices: List[Tuple[float, float]]) -> bool:
     """
     Check if coordinates are inside a polygon using the ray casting 
     algorithm. Convenience wrapper for point_in_polygon.
