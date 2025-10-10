@@ -7,6 +7,7 @@ from dataclasses import dataclass, field
 from typing import List, Tuple, Optional, Set
 from enum import Enum
 
+from pygame.draw import polygon
 
 class TerritoryState(Enum):
     """Possible states for a territory."""
