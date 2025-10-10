@@ -9,8 +9,9 @@ import random
 from typing import List, Tuple, Dict, Set, Optional
 from .territory import Territory
 from .game_state import GameState
-from ..utils.distance import Point, find_closest_point, find_farthest_point
+from ..utils.distance import Point
 from ..utils.distance import random_walk, clean_sequence
+from ..utils.polygon import compute_area, find_centroid, compute_bounding_box
 from copy import deepcopy
 
 
@@ -29,51 +30,34 @@ class PolygonTerritory:
             for p in vertices
         ]
         self.territory_id = territory_id
-        self.center = self._calculate_center()
+        self._center = find_centroid(self.vertices)
+        self._box = compute_bounding_box(self.vertices)
         self.is_divided = False
-    
-    def _calculate_center(self) -> Tuple[int, int]:
+        self._area = compute_area(self.vertices)
+
+    def center(self) -> Tuple[int, int]:
         """Calculate the centroid of the polygon.
         
         Returns:
             Center point (x, y)
         """
-        if not self.vertices:
-            return (0, 0)
-        
-        # Simple centroid calculation
-        x_sum = sum(point.x for point in self.vertices)
-        y_sum = sum(point.y for point in self.vertices)
-        count = len(self.vertices)
-        
-        return (int(x_sum / count), int(y_sum / count))
+        return self._center.to_tuple()
     
-    def get_bounding_box(self) -> Tuple[int, int, int, int]:
+    def bounding_box(self) -> Tuple[int, int, int, int]:
         """Get the bounding box of this polygon.
         
         Returns:
             Tuple of (min_x, min_y, max_x, max_y)
         """
-        if not self.vertices:
-            return (0, 0, 0, 0)
-        
-        x_coords = [point.x for point in self.vertices]
-        y_coords = [point.y for point in self.vertices]
-        
-        return (min(x_coords), min(y_coords), max(x_coords), max(y_coords))
+        return self._box
     
     def area(self) -> float:
-        """Calculate the area of the polygon using the shoelace formula.
+        """Returns the area of the polygon.
         
-        Returns:
+        :returns:
             Area of the polygon (always positive)
         """
-        if not self.vertices or len(self.vertices) < 3:
-            return 0.0
-        
-        box = self.get_bounding_box()
-        area = (box[2] - box[0]) * (box[3] - box[1])
-        return area
+        return self._area
     
     def signed_area(self) -> float:
         """Calculate the signed area of the polygon.
@@ -234,7 +218,7 @@ class PolygonTerritory:
             errors.append(f"Invalid area: {area} (must be positive)")
         
         # Check for very small area that might indicate degenerate polygon
-        min_x, min_y, max_x, max_y = self.get_bounding_box()
+        min_x, min_y, max_x, max_y = self.bounding_box()
         bbox_area = (max_x - min_x) * (max_y - min_y)
         properties['bounding_box_area'] = bbox_area
         properties['area_efficiency'] = area / bbox_area if bbox_area > 0 else 0
