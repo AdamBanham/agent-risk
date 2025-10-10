@@ -10,6 +10,7 @@ from typing import List, Tuple, Dict, Set, Optional
 from .territory import Territory
 from .game_state import GameState
 from ..utils.distance import Point, find_closest_point, find_farthest_point
+from ..utils.distance import random_walk, clean_sequence
 from copy import deepcopy
 
 
@@ -123,7 +124,7 @@ class PolygonTerritory:
 
             print(choice, other)
 
-            walk = generate_random_walk_between_points(
+            walk = random_walk(
                 lpivot, rpivot, num_steps=50, variation_strength=0.02
             )
 
@@ -474,7 +475,7 @@ def create_polygon_to_fill_space(
         end_point = control_points[(i + 1) % len(control_points)]
         
         # Generate random walk between start and end points
-        walk_points = generate_random_walk_between_points(
+        walk_points = random_walk(
             Point(*start_point), Point(*end_point),
             num_steps=10,
             variation_strength=random.uniform(0.01, 0.15)
@@ -487,7 +488,7 @@ def create_polygon_to_fill_space(
     vertices = [Point(round(p.x, 3), round(p.y, 3)) for p in vertices]
 
     # Clean up any potential issues
-    vertices = _clean_polygon_vertices_simple(vertices)
+    vertices = clean_sequence(vertices)
 
     polygon = PolygonTerritory(vertices)
     validation = polygon.validate_vertices()
@@ -499,125 +500,6 @@ def create_polygon_to_fill_space(
     return polygon
 
 
-def generate_random_walk_between_points(
-        start: Point, 
-        end: Point,
-        num_steps: int = 5,
-        variation_strength: float = 0.2
-    ) -> List[Point]:
-    """Generate a random walk path between two points.
-    
-    Args:
-        start: Starting point (x, y)
-        end: Ending point (x, y)
-        num_steps: Number of intermediate steps in the walk
-        variation_strength: How much the walk can deviate (0.0 = straight line, 1.0 = high variation)
-        
-    Returns:
-        List of points forming the random walk from start to end (inclusive)
-    """
-    if num_steps <= 0:
-        return [start, end]
-    
-    # Calculate the direct path
-    dx = end.x - start.x
-    dy = end.y - start.y
-    path_length = math.sqrt(dx * dx + dy * dy)
-    
-    # Calculate perpendicular vector for random variation
-    if path_length > 0:
-        # Normalized perpendicular vector
-        perp_x = -dy / path_length
-        perp_y = dx / path_length
-    else:
-        perp_x, perp_y = 0, 0
-    
-    # Maximum deviation distance
-    max_deviation = path_length * variation_strength
-    
-    points = [start]
-    
-    # Generate intermediate points with random walk
-    for i in range(1, num_steps + 1):
-        # Linear interpolation factor
-        t = i / (num_steps + 1)
-        
-        # Base position along straight line
-        base_x = start.x + t * dx
-        base_y = start.y + t * dy
-
-        # Random deviation perpendicular to the line
-        deviation = random.uniform(-max_deviation, max_deviation)
-        
-        # Add some brownian motion (correlation with previous step)
-        if len(points) > 1:
-            # Get previous deviation
-            prev_base_x = start.x + ((i-1) / (num_steps + 1)) * dx
-            prev_base_y = start.y + ((i-1) / (num_steps + 1)) * dy
-            prev_deviation_x = points[-1].x - prev_base_x
-            prev_deviation_y = points[-1].y - prev_base_y
-            prev_deviation = (prev_deviation_x * perp_x + prev_deviation_y * perp_y)
-            
-            # Add correlation to previous step (brownian motion)
-            correlation = 0.3
-            deviation = deviation * (1 - correlation) + prev_deviation * correlation
-        
-        # Apply perpendicular deviation
-        varied_x = base_x + deviation * perp_x
-        varied_y = base_y + deviation * perp_y
-        
-        # Add some additional small random noise
-        noise_strength = max_deviation * 0.1
-        varied_x += random.uniform(-noise_strength, noise_strength)
-        varied_y += random.uniform(-noise_strength, noise_strength)
-
-        points.append(Point(varied_x, varied_y))
-
-    # Add end point
-    points.append(end)
-    
-    return points
-
-
-def _clean_polygon_vertices_simple(vertices: List[Point]) -> List[Point]:
-    """Simple cleanup for polygon vertices.
-    
-    Args:
-        vertices: List of polygon vertices
-        
-    Returns:
-        Cleaned list of vertices
-    """
-    if not vertices:
-        return vertices
-    
-    # Remove consecutive duplicates
-    cleaned = []
-    for vertex in vertices:
-        if not cleaned or vertex != cleaned[-1]:
-            cleaned.append(vertex)
-    
-    # Remove last vertex if it's the same as first
-    if len(cleaned) > 1 and cleaned[0] == cleaned[-1]:
-        cleaned.pop()
-    
-    # Ensure minimum 3 vertices
-    if len(cleaned) < 3:
-        # If we don't have enough vertices, create a simple triangle
-        if cleaned:
-            center_x = sum(v.x for v in cleaned) // len(cleaned)
-            center_y = sum(v.y for v in cleaned) // len(cleaned)
-        else:
-            center_x, center_y = 400, 300  # Default center
-        
-        # Create a simple triangle
-        cleaned = [
-            (center_x, center_y - 50),
-            (center_x + 50, center_y + 50),
-            (center_x - 50, center_y + 50)
-        ]
-    
-    return cleaned
 
 
 class BoardGenerator:
@@ -751,6 +633,7 @@ class BoardGenerator:
         else:
             continent_id = 4 if center_y < screen_thirds_y * 2 else 5
         
+        return continent_names[continent_id % len(continent_names)]
     def _calculate_adjacencies(self, territories: List[Territory]) -> None:
         """Calculate which territories are adjacent based on shared boundaries.
         
