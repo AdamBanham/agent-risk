@@ -75,10 +75,14 @@ The project follows a **modular architecture with clear separation of concerns**
   - `renderer.py` - Pygame board rendering and visualization
   - `input.py` - User input handling with Ctrl+ shortcuts and event processing
   - `selection.py` - Territory selection management and selection state handling
+  - `ui.py` - Turn-based UI components (buttons, labels, counters, attack popups)
+  - `ui_renderer.py` - Pygame rendering for turn UI elements with consistent styling
 - **`risk.state`** - Game state data structures, territory management, and board generation
   - `game_state.py` - Core GameState, Player classes, and game phase management
   - `territory.py` - Territory definitions, ownership states, and adjacency management
   - `board_generator.py` - Dynamic board generation using polygon subdivision algorithms
+  - `fight.py` - Dice-based combat system with Fight, DiceRoll, and battle resolution
+  - `turn_manager.py` - Turn progression, phase management, and player turn coordination
 - **`risk.utils`** - Shared utility functions and helper classes
   - `distance.py` - Point geometry, distance calculations, and random walk algorithms
   - `polygon.py` - Polygon operations, area calculations, centroid finding, and bounding box computation
@@ -117,6 +121,7 @@ def compute_bounding_box(polygon: List[Point]) -> Tuple[float, float, float, flo
 # ✅ CORRECT: Game entities and board generation
 class GameState, Player, Territory  # in game_state.py
 class PolygonTerritory, BoardGenerator  # in board_generator.py
+class Fight, DiceRoll, TurnManager, TurnState  # in fight.py, turn_manager.py
 
 # ❌ WRONG: Don't put pygame rendering code here
 # ❌ WRONG: Don't put input handling here
@@ -153,11 +158,24 @@ def select_territory(self, territory_id: int) -> None:
 # ❌ WRONG: Don't put game state mutations here
 ```
 
+**4b. Turn UI Components → `risk.game.ui` + `risk.game.ui_renderer`**
+```python
+# ✅ CORRECT: UI logic separated from rendering
+class TurnUI:  # UI state and interaction logic
+class UIRenderer:  # Pygame drawing of UI elements
+class AttackPopup:  # Attack dialog management
+
+# ❌ WRONG: Don't put game logic in UI components
+# ❌ WRONG: Don't put rendering in ui.py, use ui_renderer.py
+```
+
 **5. Coordination & Lifecycle → `risk.game.loop`**
 ```python
 # ✅ CORRECT: Orchestrates all components
 def __init__(self, ...): # dependency injection
 def run(self) -> None:   # main game loop
+def _register_turn_ui_callbacks(self) -> None:  # UI integration
+def _handle_resolve_attack(self) -> None:  # turn action handlers
 
 # ❌ WRONG: Don't put specific rendering/input logic here
 ```
@@ -222,6 +240,8 @@ from ..state import GameState, Territory         # game uses state
   - Main event loop and frame rate control
   - Parameter management and board regeneration
   - Coordination between renderer, input handler, and game state
+  - Turn management integration and UI callback registration
+  - Combat resolution and phase transitions
 - **Dependencies**: Orchestrates all other modules
 - **Key Pattern**: Central coordinator with dependency injection
 
@@ -235,6 +255,38 @@ from ..state import GameState, Territory         # game uses state
 - **Dependencies**: No internal dependencies, only standard library
 - **Key Pattern**: Pure functions with clear mathematical abstractions
 
+### ✅ **Fight System** (`risk.state.fight`)
+- **Purpose**: Dice-based combat mechanics and battle resolution
+- **Responsibilities**:
+  - Dice rolling and casualty calculation using Risk rules
+  - Round-by-round combat management with Fight class
+  - Battle history tracking and result reporting
+  - Combat phase management and completion detection
+- **Dependencies**: Only standard library for random number generation
+- **Key Pattern**: Immutable DiceRoll results with stateful Fight progression
+
+### ✅ **Turn Management** (`risk.state.turn_manager`)
+- **Purpose**: Player turn coordination and phase management
+- **Responsibilities**:
+  - Turn state tracking with TurnState class
+  - Phase transitions (placement → attacking → moving)
+  - Reinforcement calculation and distribution
+  - Attack state management and movement coordination
+  - Turn validation and completion detection
+- **Dependencies**: Depends on `risk.state` for game state and fight system
+- **Key Pattern**: Stateful turn progression with phase-specific validation
+
+### ✅ **Turn UI System** (`risk.game.ui` + `risk.game.ui_renderer`)
+- **Purpose**: Interactive turn-based user interface
+- **Responsibilities**:
+  - Button, label, and counter UI element management
+  - Attack popup dialogs with army selection
+  - Phase-specific UI layout and state management
+  - Keyboard shortcuts and mouse interaction handling
+  - UI action callback system for turn operations
+- **Dependencies**: Depends on pygame for rendering and `risk.state` for turn state
+- **Key Pattern**: Separation between UI logic (`ui.py`) and rendering (`ui_renderer.py`)
+
 ## Project Structure
 **Current Implementation (✅ IMPLEMENTED):**
 ```
@@ -245,12 +297,16 @@ risk/
 │   ├── loop.py                # Main game event loop with keyboard shortcuts
 │   ├── renderer.py            # Pygame board rendering and visualization
 │   ├── input.py               # User input handling with Ctrl+ shortcuts
-│   └── selection.py           # Territory selection management and state handling
+│   ├── selection.py           # Territory selection management and state handling
+│   ├── ui.py                  # Turn-based UI components (buttons, labels, counters, attack popups)
+│   └── ui_renderer.py         # Pygame rendering for turn UI elements with consistent styling
 ├── state/                      # Game state management
 │   ├── __init__.py            # Module exports (GameState, Territory, etc.)
 │   ├── game_state.py          # GameState, Player classes, and game phases
 │   ├── territory.py           # Territory definitions and ownership management
-│   └── board_generator.py     # Dynamic board generation using polygon subdivision
+│   ├── board_generator.py     # Dynamic board generation using polygon subdivision
+│   ├── fight.py               # Dice-based combat system with Fight, DiceRoll, and battle resolution
+│   └── turn_manager.py        # Turn progression, phase management, and player turn coordination
 ├── utils/                      # Shared utility functions
 │   ├── distance.py            # Point geometry, distance calculations, random walks
 │   └── polygon.py             # Polygon operations, area calculations, centroid finding
@@ -258,7 +314,9 @@ risk/
     ├── __init__.py
     └── state/
         ├── __init__.py
-        └── test_board.py       # Board generation tests
+        ├── test_board.py       # Board generation tests
+        ├── test_fight.py       # Combat system tests
+        └── test_turn_manager.py # Turn management tests
 ```
 
 **Planned Structure for Future Development (📋 PLANNED):**
@@ -296,6 +354,116 @@ Follow the specific game phases as defined:
   - **`game end`** - Victory condition met
 - **`score`** - Post-simulation agent performance evaluation
 
+## Turn-Based Game Flow Implementation (✅ **IMPLEMENTED**)
+The current implementation includes a complete turn-based system with dice-based combat and interactive UI:
+
+### Turn Management Architecture
+**TurnManager** coordinates player turns with three distinct phases:
+
+**1. Placement Phase (`TurnPhase.PLACEMENT`)**
+- Player receives reinforcements: `max(3, territories_controlled // 3)`
+- Must place all reinforcements before advancing to attacking phase
+- UI shows reinforcement counter and placement controls
+- Supports undo functionality for placement corrections
+- Click on owned territory to place 1 reinforcement army
+
+**2. Attacking Phase (`TurnPhase.ATTACKING`)**
+- Player can attack adjacent enemy territories
+- Uses Risk-standard dice-based combat through `Fight` system
+- Attack popup shows army selection and battle controls
+- Supports multi-round combat with casualty tracking
+- Can cancel attacks or continue until conquest/retreat
+
+**3. Moving Phase (`TurnPhase.MOVING`)**
+- Player can move armies between owned adjacent territories
+- Movement counter allows selecting number of armies to move
+- Must leave at least 1 army in source territory
+- Optional phase - can end turn without moving
+
+### Combat System (`risk.state.fight`)
+**Dice-Based Combat** following Risk rules:
+- Attacker rolls 1-3 dice based on attacking army count
+- Defender rolls 1-2 dice based on defending army count
+- Higher dice win, ties go to defender
+- **`Fight`** class manages multi-round combat progression
+- **`DiceRoll`** class tracks individual round results
+- Battle history preserved for replay and analysis
+
+### Turn UI System (`risk.game.ui` + `risk.game.ui_renderer`)
+**Interactive Turn Interface** with phase-specific controls:
+
+**Placement Phase UI:**
+- Reinforcement counter showing armies remaining
+- "Undo (U)" button for placement corrections
+- "Start Attacking" button (enabled when all reinforcements placed)
+
+**Attacking Phase UI:**
+- Attack popup dialog for target selection
+- Army count selector (1 to max available)
+- "Attack!" button for dice rolling
+- "End Attack" button to cancel current attack
+- Real-time dice roll display and casualty tracking
+
+**Moving Phase UI:**
+- Movement army counter with +/- controls
+- "Move Armies" button to execute movement
+- Visual feedback for valid movement pairs
+
+**Common UI Elements:**
+- Phase indicator showing current turn phase
+- "End Turn" button (always available)
+- Keyboard shortcuts: U (undo), Enter/Space (advance phase), 1-9 (army selection)
+- Mouse hover effects and visual feedback
+
+### UI Integration in Game Loop (`risk.game.loop`)
+**Central Coordination** of turn system components:
+
+```python
+# Turn system initialization in GameLoop.__init__()
+self.turn_manager = TurnManager(self.game_state)
+self.renderer = GameRenderer(self.screen, self.game_state)  # Includes turn UI
+self.input_handler = GameInputHandler(self.renderer, self.renderer.get_turn_ui())
+
+# Turn UI callback registration
+self._register_turn_ui_callbacks()  # Connects UI actions to turn logic
+
+# Turn progression
+self.turn_manager.start_player_turn(player_id)  # Starts turn with reinforcements
+current_turn = self.turn_manager.get_current_turn()
+self.renderer.set_turn_state(current_turn)  # Updates UI display
+```
+
+**Turn Action Handlers** in GameLoop:
+- `_handle_place_reinforcement()` - Places armies on selected territory
+- `_handle_undo_placement()` - Removes last reinforcement placement
+- `_handle_resolve_attack()` - Executes dice-based combat rounds
+- `_handle_advance_phase()` - Progresses through turn phases
+- `_handle_end_turn()` - Completes turn and advances to next player
+
+**Key Integration Patterns:**
+- **Callback-based UI**: UI actions trigger game loop handlers
+- **State synchronization**: Turn state changes update UI automatically  
+- **Separation of concerns**: UI manages display, turn manager handles logic
+- **Event-driven updates**: Territory selections and combat results flow through system
+
+### Combat Integration Example
+```python
+# User clicks "Attack!" in attack popup
+def _handle_resolve_attack(self) -> None:
+    result = current_turn.resolve_attack()  # Fight system calculates casualties
+    attacker_territory.armies -= result['attacker_casualties']
+    defender_territory.armies -= result['defender_casualties']
+    
+    if result.get('territory_conquered'):
+        # Handle territory conquest, move surviving armies
+        defender_territory.owner = current_turn.player_id
+        defender_territory.armies = result['surviving_attackers']
+    
+    # UI automatically updates to show new army counts and battle results
+```
+
+This turn-based system provides a complete foundation for human play and can be easily extended for AI agent integration through the same turn manager interface.
+
 ## Development Patterns
 
 ### Architectural Principles (✅ **CRITICAL PATTERNS**)
@@ -306,9 +474,13 @@ The codebase follows these essential architectural patterns:
 - **Polygon operations** (area, centroid, bounding box calculations) → `risk.utils.polygon`
 - **Game state management** (GameState, Player, Territory classes) → `risk.state`
 - **Board generation logic** (polygon subdivision, territory creation) → `risk.state.board_generator`
+- **Combat mechanics** (dice rolling, fight resolution, casualty tracking) → `risk.state.fight`
+- **Turn coordination** (phase management, reinforcement calculation, turn progression) → `risk.state.turn_manager`
 - **Rendering logic** (pygame drawing, colors, visualization) → `risk.game.renderer`
 - **Input handling** (events, callbacks, keyboard shortcuts) → `risk.game.input`
 - **Selection management** (territory selection state and logic) → `risk.game.selection`
+- **UI components** (buttons, labels, popups, phase-specific interfaces) → `risk.game.ui`
+- **UI rendering** (pygame drawing of UI elements with consistent styling) → `risk.game.ui_renderer`
 - **Application lifecycle** (initialization, main loop, coordination) → `risk.game.loop`
 
 **Dependency Flow:**
@@ -317,7 +489,10 @@ risk.game.loop (coordinator)
 ├── risk.game.renderer (depends on state)
 ├── risk.game.input (minimal dependencies)
 ├── risk.game.selection (depends on state)
+├── risk.game.ui + ui_renderer (depends on pygame + state)
 └── risk.state (depends on utils)
+    ├── risk.state.turn_manager (depends on fight + game_state)
+    ├── risk.state.fight (pure combat logic)
     └── risk.utils (no internal dependencies)
 ```
 
@@ -441,25 +616,36 @@ class GameRenderer:
         # Hit testing for user interaction
 
 class GameInputHandler:
-    def __init__(self, renderer: GameRenderer):
+    def __init__(self, renderer: GameRenderer, turn_ui: TurnUI):
         # Input handler coordinates with renderer for hit testing
         
     def handle_event(self, event: pygame.event.Event) -> None:
         # Event processing with callback pattern
 
 class TerritorySelectionHandler:
-    def __init__(self, game_state: GameState):
+    def __init__(self, game_state: GameState, turn_manager: TurnManager):
         # Selection handler manages territory selection state
         
     def handle_territory_selected(self, input_event) -> None:
         # Territory selection event processing
+
+class TurnUI:
+    def __init__(self, screen_width: int, screen_height: int):
+        # Turn UI manages interactive turn-based interface
+        
+    def handle_click(self, pos: Tuple[int, int]) -> bool:
+        # UI element interaction handling
         
 class GameLoop:
     def __init__(self, ...):
         # Central coordinator - dependency injection pattern
+        self.turn_manager = TurnManager(self.game_state)
         self.renderer = GameRenderer(self.screen, self.game_state)
-        self.input_handler = GameInputHandler(self.renderer)
-        self.selection_handler = TerritorySelectionHandler(self.game_state)
+        self.input_handler = GameInputHandler(self.renderer, self.renderer.get_turn_ui())
+        self.selection_handler = TerritorySelectionHandler(self.game_state, self.turn_manager)
+        
+        # Register turn UI callbacks for turn actions
+        self._register_turn_ui_callbacks()
 ```
 
 **Key Patterns:**
@@ -467,6 +653,8 @@ class GameLoop:
 - **Callback Architecture**: Input handler uses callbacks for loose coupling
 - **Dependency Injection**: GameLoop provides dependencies to components
 - **Hit Testing**: Clean separation between coordinate math and game logic
+- **UI Integration**: Turn UI seamlessly integrates with input handling and state management
+- **Phase-based UI**: UI elements adapt to current turn phase (placement, attacking, moving)
 
 ### World State Management (✅ **IMPLEMENTED**)
 The current implementation features robust state management with clear patterns:
@@ -537,6 +725,15 @@ controlled
 - **Movement**: Movement between connected owned territories
 - **Victory**: Game ends when one player controls all territories on the 
 generated board
+
+**Combat System Implementation:**
+The current system implements classic Risk dice-based combat rules:
+- Attacker rolls 1-3 dice based on available attacking armies
+- Defender rolls 1-2 dice based on defending armies
+- Dice are compared in descending order (highest vs highest)
+- Attacker wins when dice is higher, defender wins ties
+- Combat continues until attacker withdraws or territory is conquered
+- Round-by-round progression with casualty tracking and battle history
 
 ## Key Dependencies to Consider
 - `pygame` for graphics and user interface (required)
