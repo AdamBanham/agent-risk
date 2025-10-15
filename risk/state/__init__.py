@@ -12,6 +12,7 @@ occur to create a new immutable game state.
 from .territory import Territory, TerritoryState
 from .game_state import GameState, Player, GamePhase
 from .turn_manager import TurnManager, TurnState, TurnPhase, AttackState, MovementState
+from .fight import Fight, FightPhase, FightResult, DiceRoll
 
 __all__ = [
     'Territory',
@@ -23,5 +24,9 @@ __all__ = [
     'TurnState', 
     'TurnPhase',
     'AttackState',
-    'MovementState'
+    'MovementState',
+    'Fight',
+    'FightPhase',
+    'FightResult',
+    'DiceRoll'
 ]
