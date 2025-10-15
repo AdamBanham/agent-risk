@@ -4,8 +4,10 @@ Processes pygame events, mouse clicks, and keyboard input.
 """
 
 import pygame
-from typing import Optional, Callable, Dict, Any
+from typing import Optional, Callable, Dict, Any, Tuple
 from dataclasses import dataclass
+
+from .ui import TurnUI
 
 
 @dataclass
@@ -229,14 +231,16 @@ class InputHandler:
 class GameInputHandler(InputHandler):
     """Extended input handler with game-specific functionality."""
     
-    def __init__(self, renderer=None):
+    def __init__(self, renderer=None, turn_ui: Optional[TurnUI] = None):
         """Initialize game input handler.
         
         Args:
             renderer: Game renderer for territory selection
+            turn_ui: Turn UI manager for turn-based interactions
         """
         super().__init__()
         self.renderer = renderer
+        self.turn_ui = turn_ui
         self.selected_territory = None
         
         # Register default game callbacks
@@ -249,7 +253,14 @@ class GameInputHandler(InputHandler):
         Args:
             input_event: Input event with click information
         """
-        if not self.renderer or not input_event.position:
+        if not input_event.position:
+            return
+        
+        # Check turn UI first (higher priority than territory selection)
+        if self.turn_ui and self.turn_ui.handle_click(input_event.position):
+            return  # UI handled the click
+        
+        if not self.renderer:
             return
         
         # Check if click is on a territory
@@ -303,6 +314,10 @@ class GameInputHandler(InputHandler):
         if not input_event.key:
             return
         
+        # Check turn UI first for turn-specific shortcuts
+        if self.turn_ui and self.turn_ui.handle_key_press(input_event.key):
+            return  # UI handled the key
+        
         # Print current selection info
         if input_event.key == pygame.K_i and self.selected_territory:
             print(f"\\nTerritory Info: {self.selected_territory.name}")
@@ -331,6 +346,7 @@ class GameInputHandler(InputHandler):
         print("Mouse:")
         print("  - Click on territories to select them (yellow outline, red text)")
         print("  - Click empty area to deselect all")
+        print("  - Click on UI buttons to perform actions")
         print("Keyboard:")
         print("  - ESC: Quit game")
         print("  - Ctrl+R: Regenerate game state/board")
@@ -342,4 +358,25 @@ class GameInputHandler(InputHandler):
         print("  - D: Show debug information")
         print("  - H: Show this help")
         print("  - 1-9: Quick actions (placeholder)")
+        print("Turn Controls:")
+        print("  - U: Undo last placement (in placement phase)")
+        print("  - Enter/Space: Advance to next phase")
+        print("  - 1-9: Set army count (in attack/move phases)")
         print("========================\\n")
+    
+    def update_mouse_hover(self, mouse_pos: Tuple[int, int]) -> None:
+        """
+        Update UI hover states based on mouse position.
+        
+        :param mouse_pos: Current mouse position (x, y)
+        """
+        if self.turn_ui:
+            self.turn_ui.update_hover_states(mouse_pos)
+    
+    def set_turn_ui(self, turn_ui: TurnUI) -> None:
+        """
+        Set the turn UI manager for this input handler.
+        
+        :param turn_ui: TurnUI instance to handle
+        """
+        self.turn_ui = turn_ui

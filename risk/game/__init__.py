@@ -8,5 +8,8 @@ from .loop import GameLoop, main
 from .renderer import GameRenderer
 from .input import InputHandler, GameInputHandler
 from .selection import TerritorySelectionHandler
+from .ui import TurnUI, UIAction
+from .ui_renderer import UIRenderer
 
-__all__ = ['GameLoop', 'GameRenderer', 'InputHandler', 'GameInputHandler', 'TerritorySelectionHandler', 'main']
+__all__ = ['GameLoop', 'GameRenderer', 'InputHandler', 'GameInputHandler', 
+           'TerritorySelectionHandler', 'TurnUI', 'UIAction', 'UIRenderer', 'main']

@@ -11,11 +11,17 @@ occur to create a new immutable game state.
 
 from .territory import Territory, TerritoryState
 from .game_state import GameState, Player, GamePhase
+from .turn_manager import TurnManager, TurnState, TurnPhase, AttackState, MovementState
 
 __all__ = [
     'Territory',
     'TerritoryState', 
     'GameState',
     'Player',
-    'GamePhase'
+    'GamePhase',
+    'TurnManager',
+    'TurnState', 
+    'TurnPhase',
+    'AttackState',
+    'MovementState'
 ]

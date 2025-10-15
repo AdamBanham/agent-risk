@@ -7,23 +7,32 @@ import pygame
 import math
 from typing import List, Tuple, Optional, Dict
 
-from ..state import Territory, TerritoryState, GameState, Player
+from ..state import Territory, TerritoryState, GameState, Player, TurnState
 from ..state.board_generator import generate_sample_board
+from .ui import TurnUI
+from .ui_renderer import UIRenderer
 
 
 class GameRenderer:
     """Renders the Risk board and game state using pygame."""
     
-    def __init__(self, screen: pygame.Surface, game_state: GameState):
+    def __init__(self, screen: pygame.Surface, game_state: GameState, 
+                 turn_state: Optional[TurnState] = None):
         """Initialize the renderer. Sets up pygame rendering context and generates board if needed.
         
         :param screen: Pygame surface to draw on
         :param game_state: GameState to render
+        :param turn_state: Optional TurnState for turn-based UI
         """
         self.screen = screen
         self.game_state = game_state
         self.width = screen.get_width()
         self.height = screen.get_height()
+        
+        # Initialize turn UI
+        self.turn_ui = TurnUI(self.width, self.height)
+        self.ui_renderer = UIRenderer(screen)
+        self.turn_state = turn_state
         
         # Colors
         self.colors = {
@@ -69,12 +78,33 @@ class GameRenderer:
     def draw_board(self) -> None:
         """
         Draw the complete Risk board. Renders territories, continent labels, 
-        player summaries, and legend.
+        player summaries, legend, and turn UI.
         """
         self._draw_territories()
         self._draw_continent_labels()
         self._draw_player_summaries()
         self._draw_legend()
+        
+        # Draw turn UI
+        self.turn_ui.set_turn_state(self.turn_state)
+        self.ui_renderer.draw_turn_ui(self.turn_ui)
+    
+    def set_turn_state(self, turn_state: Optional[TurnState]) -> None:
+        """
+        Update the renderer with new turn state.
+        
+        :param turn_state: Current TurnState or None if no active turn
+        """
+        self.turn_state = turn_state
+        self.turn_ui.set_turn_state(turn_state)
+    
+    def get_turn_ui(self) -> TurnUI:
+        """
+        Get the turn UI manager.
+        
+        :returns: TurnUI instance for interaction handling
+        """
+        return self.turn_ui
     
     def _draw_territories(self) -> None:
         """
@@ -195,65 +225,77 @@ class GameRenderer:
     
     def _draw_player_summaries(self) -> None:
         """
-        Draw player summary boxes at the bottom of the screen.
+        Draw player summary boxes along the left-hand side of the screen.
         """
-        summary_height = 100
-        summary_y = self.height - summary_height
+        summary_width = 180
+        summary_x = 10
         
-        # Draw background for entire summary area
-        summary_bg_rect = pygame.Rect(0, summary_y, self.width, 
-                                     summary_height)
-        pygame.draw.rect(self.screen, self.colors['summary_bg'], 
-                        summary_bg_rect)
-        pygame.draw.rect(self.screen, self.colors['summary_border'], 
-                        summary_bg_rect, 2)
-        
-        # Calculate box dimensions
-        box_width = self.width // len(self.game_state.players)
-        box_padding = 10
+        # Calculate box dimensions for vertical stacking
+        box_height = 80
+        box_spacing = 15
+        start_y = 50  # Start below the legend area
         
         for i, player in enumerate(self.game_state.players.values()):
             # Calculate box position
-            box_x = i * box_width + box_padding
-            box_y = summary_y + box_padding
-            box_w = box_width - 2 * box_padding
-            box_h = summary_height - 2 * box_padding
+            box_x = summary_x
+            box_y = start_y + i * (box_height + box_spacing)
+            box_w = summary_width
+            box_h = box_height
             
             # Player color
-            player_color = player.color if hasattr(player, 'color') else self.colors['player_colors'][player.id % len(self.colors['player_colors'])]
+            player_color = (player.color if hasattr(player, 'color') 
+                           else self.colors['player_colors'][player.id % len(self.colors['player_colors'])])
             
-            # Draw player box background
+            # Draw player box background with player's color
             box_rect = pygame.Rect(box_x, box_y, box_w, box_h)
             pygame.draw.rect(self.screen, player_color, box_rect)
             pygame.draw.rect(self.screen, self.colors['text'], box_rect, 2)
             
+            # Draw semi-transparent overlay for better text readability
+            overlay_surface = pygame.Surface((box_w, box_h))
+            overlay_surface.set_alpha(128)  # 50% transparency
+            overlay_surface.fill((0, 0, 0))
+            self.screen.blit(overlay_surface, (box_x, box_y))
+            
             # Draw player information
-            text_x = box_x + 10
+            text_x = box_x + 8
             text_y = box_y + 5
             
             # Player name
             name_text = self.font.render(player.name, True, self.colors['text'])
             self.screen.blit(name_text, (text_x, text_y))
             
-            # Territory count
+            # Territory count and army size with larger, clearer numbers
             territory_count = player.get_territory_count()
-            territory_text = self.small_font.render(
-                f"Territories: {territory_count}", True, self.colors['text'])
-            self.screen.blit(territory_text, (text_x, text_y + 25))
-            
-            # Total armies
             total_armies = player.total_armies
-            armies_text = self.small_font.render(
-                f"Total Armies: {total_armies}", True, self.colors['text'])
-            self.screen.blit(armies_text, (text_x, text_y + 45))
             
-            # Active status indicator
-            status_text = "ACTIVE" if player.is_active else "ELIMINATED"
-            status_color = (self.colors['highlight'] if player.is_active 
-                           else (150, 150, 150))
-            status_surface = self.small_font.render(status_text, True, 
-                                                   status_color)
-            self.screen.blit(status_surface, (text_x, text_y + 65))
+            # Create two-number display format
+            stats_y = text_y + 25
+            
+            # Territories label and number
+            territories_label = self.small_font.render("Territories:", True, 
+                                                      self.colors['text'])
+            self.screen.blit(territories_label, (text_x, stats_y))
+            
+            territory_num = self.large_font.render(str(territory_count), True, 
+                                                  self.colors['highlight'])
+            self.screen.blit(territory_num, (text_x + 85, stats_y - 2))
+            
+            # Armies label and number
+            armies_label = self.small_font.render("Armies:", True, 
+                                                 self.colors['text'])
+            self.screen.blit(armies_label, (text_x, stats_y + 20))
+            
+            armies_num = self.large_font.render(str(total_armies), True, 
+                                               self.colors['highlight'])
+            self.screen.blit(armies_num, (text_x + 85, stats_y + 18))
+            
+            # Active status indicator in corner
+            if player.is_active:
+                status_indicator = pygame.Rect(box_x + box_w - 15, box_y + 5, 
+                                             10, 10)
+                pygame.draw.circle(self.screen, self.colors['highlight'], 
+                                 status_indicator.center, 5)
     
     def _draw_legend(self) -> None:
         """

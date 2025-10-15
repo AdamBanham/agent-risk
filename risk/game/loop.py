@@ -9,7 +9,9 @@ from typing import Optional
 from .renderer import GameRenderer
 from .input import GameInputHandler
 from .selection import TerritorySelectionHandler
+from .ui import UIAction
 from ..state.game_state import GameState, GamePhase
+from ..state.turn_manager import TurnManager, TurnPhase
 
 
 class GameLoop:
@@ -45,6 +47,7 @@ class GameLoop:
         self.renderer: Optional[GameRenderer] = None
         self.input_handler: Optional[GameInputHandler] = None
         self.selection_handler: Optional[TerritorySelectionHandler] = None
+        self.turn_manager: Optional[TurnManager] = None
         
         # Store the current board layout for reuse
         self.current_board_layout = None
@@ -64,9 +67,20 @@ class GameLoop:
             self.clock = pygame.time.Clock()
             
             # Initialize game components
+            self.turn_manager = TurnManager(self.game_state)
             self.renderer = GameRenderer(self.screen, self.game_state)
-            self.input_handler = GameInputHandler(self.renderer)
-            self.selection_handler = TerritorySelectionHandler(self.game_state)
+            self.input_handler = GameInputHandler(self.renderer, self.renderer.get_turn_ui())
+            self.selection_handler = TerritorySelectionHandler(self.game_state, self.turn_manager)
+            
+            # Connect turn UI to input handler
+            self.input_handler.set_turn_ui(self.renderer.get_turn_ui())
+            
+            # Set up selection callbacks for turn actions
+            self.selection_handler.set_action_callbacks(
+                placement_callback=self._handle_place_reinforcement,
+                attack_callback=lambda: None,  # Attack is handled by UI popup
+                movement_callback=lambda: None  # Movement is handled by UI
+            )
             
             # Store the board layout after renderer potentially generates it
             if self.game_state.territories:
@@ -91,10 +105,19 @@ class GameLoop:
             self.input_handler.register_callback('territory_selected', self.selection_handler.handle_territory_selected)
             self.input_handler.register_callback('territory_deselected', self.selection_handler.handle_territory_deselected)
             
+            # Register turn UI callbacks
+            self._register_turn_ui_callbacks()
+            
             # Set up the game state - start the first turn
-            if self.game_state.players:
+            if self.game_state.players and self.turn_manager:
                 self.game_state.set_current_player(0)
                 self.game_state.phase = GamePhase.PLAYER_TURN
+                
+                # Start first player's turn
+                self.turn_manager.start_player_turn(0)
+                current_turn = self.turn_manager.get_current_turn()
+                if current_turn and self.renderer:
+                    self.renderer.set_turn_state(current_turn)
             
             self.running = True
             return True
@@ -106,7 +129,7 @@ class GameLoop:
     def handle_events(self) -> None:
         """
         Process pygame events and user input. Delegates event processing to 
-        input handler.
+        input handler and updates UI hover states.
         """
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
@@ -115,6 +138,11 @@ class GameLoop:
                 # Pass other events to input handler
                 if self.input_handler:
                     self.input_handler.handle_event(event)
+        
+        # Update UI hover states
+        if self.input_handler:
+            mouse_pos = pygame.mouse.get_pos()
+            self.input_handler.update_mouse_hover(mouse_pos)
     
     def _handle_regenerate_game(self, input_event) -> None:
         """
@@ -133,26 +161,31 @@ class GameLoop:
         from ..state.board_generator import generate_sample_board
         generate_sample_board(self.game_state, self.width, self.height - 120)
         
-        # Update renderer with new game state
+        # Update all components with new game state
+        if self.turn_manager:
+            self.turn_manager.game_state = self.game_state
+        
         if self.renderer:
             self.renderer.game_state = self.game_state
         
-        # Update selection handler with new game state
         if self.selection_handler:
             self.selection_handler.game_state = self.game_state
             self.selection_handler.clear_all_selections()
         
         # Set up the game state - start the first turn
-        if self.game_state.players:
+        if self.game_state.players and self.turn_manager:
             self.game_state.set_current_player(0)
             self.game_state.phase = GamePhase.PLAYER_TURN
+            
+            # Start first player's turn
+            self.turn_manager.start_player_turn(0)
+            current_turn = self.turn_manager.get_current_turn()
+            if current_turn and self.renderer:
+                self.renderer.set_turn_state(current_turn)
         
         print(f"New game state created: {self.regions} regions, "
               f"{self.num_players} players, {self.starting_armies} armies each")
         print(f"Generated {len(self.game_state.territories)} territories")
-        
-        # Store the board layout for future reuse
-        self._store_current_board_layout()
         
         # Store the board layout for future reuse
         self._store_current_board_layout()
@@ -437,6 +470,341 @@ class GameLoop:
         """
         pygame.quit()
         print("Game loop terminated")
+    
+    def _register_turn_ui_callbacks(self) -> None:
+        """
+        Register callbacks for turn UI actions.
+        """
+        if not self.renderer or not self.turn_manager:
+            return
+        
+        turn_ui = self.renderer.get_turn_ui()
+        
+        # Register all turn UI action callbacks
+        turn_ui.register_callback(UIAction.PLACE_REINFORCEMENT, self._handle_place_reinforcement)
+        turn_ui.register_callback(UIAction.UNDO_PLACEMENT, self._handle_undo_placement)
+        turn_ui.register_callback(UIAction.START_ATTACK, self._handle_start_attack)
+        turn_ui.register_callback(UIAction.RESOLVE_ATTACK, self._handle_resolve_attack)
+        turn_ui.register_callback(UIAction.END_ATTACK, self._handle_end_attack)
+        turn_ui.register_callback(UIAction.INCREASE_ATTACKING_ARMIES, self._handle_increase_attacking_armies)
+        turn_ui.register_callback(UIAction.DECREASE_ATTACKING_ARMIES, self._handle_decrease_attacking_armies)
+        turn_ui.register_callback(UIAction.START_MOVEMENT, self._handle_start_movement)
+        turn_ui.register_callback(UIAction.EXECUTE_MOVEMENT, self._handle_execute_movement)
+        turn_ui.register_callback(UIAction.END_MOVEMENT, self._handle_end_movement)
+        turn_ui.register_callback(UIAction.INCREASE_MOVING_ARMIES, self._handle_increase_moving_armies)
+        turn_ui.register_callback(UIAction.DECREASE_MOVING_ARMIES, self._handle_decrease_moving_armies)
+        turn_ui.register_callback(UIAction.ADVANCE_PHASE, self._handle_advance_phase)
+        turn_ui.register_callback(UIAction.END_TURN, self._handle_end_turn)
+    
+    # Turn Action Handlers
+    def _handle_place_reinforcement(self) -> None:
+        """Handle reinforcement placement on selected territory."""
+        if not self.turn_manager or not self.selection_handler:
+            return
+        
+        current_turn = self.turn_manager.get_current_turn()
+        if not current_turn or current_turn.phase != TurnPhase.PLACEMENT:
+            return
+        
+        selected_territory = self.selection_handler.get_primary_selected_territory()
+        if not selected_territory:
+            print("No territory selected for reinforcement placement")
+            return
+        
+        # Check if player owns the territory
+        if selected_territory.owner != current_turn.player_id:
+            print("Cannot place reinforcements on territory you don't own")
+            return
+        
+        # Place reinforcement
+        if current_turn.place_reinforcement(selected_territory.id, 1):
+            selected_territory.armies += 1
+            print(f"Placed 1 reinforcement on {selected_territory.name}")
+            
+            # Update renderer with new turn state
+            if self.renderer:
+                self.renderer.set_turn_state(current_turn)
+        else:
+            print("Cannot place reinforcement - no reinforcements available")
+    
+    def _handle_undo_placement(self) -> None:
+        """Handle undoing the last reinforcement placement."""
+        if not self.turn_manager:
+            return
+        
+        current_turn = self.turn_manager.get_current_turn()
+        if not current_turn or current_turn.phase != TurnPhase.PLACEMENT:
+            return
+        
+        undo_result = current_turn.undo_last_placement()
+        if undo_result:
+            territory_id, armies = undo_result
+            territory = self.game_state.get_territory(territory_id)
+            if territory:
+                territory.armies -= armies
+                print(f"Undid placement of {armies} armies from {territory.name}")
+                
+                # Update renderer with new turn state
+                if self.renderer:
+                    self.renderer.set_turn_state(current_turn)
+        else:
+            print("No placements to undo")
+    
+    def _handle_start_attack(self) -> None:
+        """Handle starting an attack between selected territories.""" 
+        if not self.turn_manager or not self.selection_handler:
+            return
+        
+        current_turn = self.turn_manager.get_current_turn()
+        if not current_turn or current_turn.phase != TurnPhase.ATTACKING:
+            return
+        
+        # Need exactly one selected territory to attack from
+        selected_territories = self.selection_handler.get_selected_territories()
+        if len(selected_territories) != 1:
+            print("Select exactly one territory to attack from")
+            return
+        
+        attacker_territory = self.selection_handler.get_primary_selected_territory()
+        if not attacker_territory:
+            return
+        
+        # For now, user needs to click on adjacent territory to attack
+        # This would be enhanced with better UI flow
+        print(f"Attack mode: {attacker_territory.name} ready to attack. Click on adjacent enemy territory.")
+    
+    def _handle_resolve_attack(self) -> None:
+        """Handle resolving the current attack."""
+        if not self.turn_manager:
+            return
+        
+        current_turn = self.turn_manager.get_current_turn()
+        if not current_turn or not current_turn.current_attack:
+            return
+        
+        # Resolve attack
+        result = current_turn.resolve_attack()
+        if result:
+            # Apply results to territories
+            attacker_territory = self.game_state.get_territory(result['attacker_territory_id'])
+            defender_territory = self.game_state.get_territory(result['defender_territory_id'])
+            
+            if attacker_territory and defender_territory:
+                # Apply casualties
+                attacker_territory.armies -= result['attacker_casualties']
+                defender_territory.armies -= result['defender_casualties']
+                
+                print(f"Attack result: Attacker lost {result['attacker_casualties']}, Defender lost {result['defender_casualties']}")
+                
+                # Check if territory was conquered
+                if result.get('territory_conquered', False):
+                    # Transfer territory ownership
+                    defender_territory.set_owner(current_turn.player_id, 1)  # Minimum 1 army
+                    # Move attacking armies to conquered territory 
+                    armies_to_move = min(result['attacking_armies_before'] - result['attacker_casualties'], 
+                                       attacker_territory.armies - 1)
+                    if armies_to_move > 0:
+                        attacker_territory.armies -= armies_to_move
+                        defender_territory.armies += armies_to_move
+                    
+                    print(f"Territory conquered! {defender_territory.name} now belongs to Player {current_turn.player_id + 1}")
+                
+                # Update game state
+                self.game_state.update_player_statistics()
+                
+                # Update renderer
+                if self.renderer:
+                    self.renderer.set_turn_state(current_turn)
+    
+    def _handle_end_attack(self) -> None:
+        """Handle ending the current attack."""
+        if not self.turn_manager:
+            return
+        
+        current_turn = self.turn_manager.get_current_turn()
+        if current_turn:
+            current_turn.end_attack()
+            print("Attack ended")
+            
+            # Update renderer
+            if self.renderer:
+                self.renderer.set_turn_state(current_turn)
+    
+    def _handle_increase_attacking_armies(self) -> None:
+        """Handle increasing attacking army count."""
+        if not self.turn_manager:
+            return
+        
+        current_turn = self.turn_manager.get_current_turn()
+        if current_turn and current_turn.current_attack:
+            attack = current_turn.current_attack
+            if attack.attacking_armies < attack.max_attacking_armies:
+                attack.attacking_armies += 1
+                
+                # Update renderer
+                if self.renderer:
+                    self.renderer.set_turn_state(current_turn)
+    
+    def _handle_decrease_attacking_armies(self) -> None:
+        """Handle decreasing attacking army count."""
+        if not self.turn_manager:
+            return
+        
+        current_turn = self.turn_manager.get_current_turn()
+        if current_turn and current_turn.current_attack:
+            attack = current_turn.current_attack
+            if attack.attacking_armies > 1:
+                attack.attacking_armies -= 1
+                
+                # Update renderer
+                if self.renderer:
+                    self.renderer.set_turn_state(current_turn)
+    
+    def _handle_start_movement(self) -> None:
+        """Handle starting troop movement between selected territories."""
+        if not self.turn_manager or not self.selection_handler:
+            return
+        
+        current_turn = self.turn_manager.get_current_turn()
+        if not current_turn or current_turn.phase != TurnPhase.MOVING:
+            return
+        
+        # Need exactly one selected territory to move from
+        selected_territories = self.selection_handler.get_selected_territories()
+        if len(selected_territories) != 1:
+            print("Select exactly one territory to move armies from")
+            return
+        
+        source_territory = self.selection_handler.get_primary_selected_territory()
+        if not source_territory:
+            return
+        
+        print(f"Movement mode: {source_territory.name} ready to move armies. Click on adjacent owned territory.")
+    
+    def _handle_execute_movement(self) -> None:
+        """Handle executing the current movement."""
+        if not self.turn_manager:
+            return
+        
+        current_turn = self.turn_manager.get_current_turn()
+        if not current_turn or not current_turn.current_movement:
+            return
+        
+        # Execute movement
+        result = current_turn.execute_movement()
+        if result:
+            # Apply movement to territories
+            source_territory = self.game_state.get_territory(result['source_territory_id'])
+            target_territory = self.game_state.get_territory(result['target_territory_id'])
+            
+            if source_territory and target_territory:
+                source_territory.armies -= result['armies_moved']
+                target_territory.armies += result['armies_moved']
+                
+                print(f"Moved {result['armies_moved']} armies from {source_territory.name} to {target_territory.name}")
+                
+                # Update renderer
+                if self.renderer:
+                    self.renderer.set_turn_state(current_turn)
+    
+    def _handle_end_movement(self) -> None:
+        """Handle ending the current movement."""
+        if not self.turn_manager:
+            return
+        
+        current_turn = self.turn_manager.get_current_turn()
+        if current_turn:
+            current_turn.end_movement()
+            print("Movement ended")
+            
+            # Update renderer
+            if self.renderer:
+                self.renderer.set_turn_state(current_turn)
+    
+    def _handle_increase_moving_armies(self) -> None:
+        """Handle increasing moving army count."""
+        if not self.turn_manager:
+            return
+        
+        current_turn = self.turn_manager.get_current_turn()
+        if current_turn and current_turn.current_movement:
+            movement = current_turn.current_movement
+            if movement.moving_armies < movement.max_moving_armies:
+                movement.moving_armies += 1
+                
+                # Update renderer
+                if self.renderer:
+                    self.renderer.set_turn_state(current_turn)
+    
+    def _handle_decrease_moving_armies(self) -> None:
+        """Handle decreasing moving army count."""
+        if not self.turn_manager:
+            return
+        
+        current_turn = self.turn_manager.get_current_turn()
+        if current_turn and current_turn.current_movement:
+            movement = current_turn.current_movement
+            if movement.moving_armies > 1:
+                movement.moving_armies -= 1
+                
+                # Update renderer
+                if self.renderer:
+                    self.renderer.set_turn_state(current_turn)
+    
+    def _handle_advance_phase(self) -> None:
+        """Handle advancing to the next turn phase."""
+        if not self.turn_manager:
+            return
+        
+        current_turn = self.turn_manager.get_current_turn()
+        if not current_turn:
+            return
+        
+        # Check if phase can be advanced
+        if not self.turn_manager.can_advance_phase():
+            print("Cannot advance phase yet")
+            return
+        
+        # Advance phase
+        phase_continued = self.turn_manager.advance_turn_phase()
+        if phase_continued:
+            print(f"Advanced to {current_turn.phase.value} phase")
+        else:
+            # Turn ended, advance to next player
+            self._handle_end_turn()
+            return
+        
+        # Update renderer
+        if self.renderer:
+            self.renderer.set_turn_state(current_turn)
+    
+    def _handle_end_turn(self) -> None:
+        """Handle ending the current player's turn."""
+        if not self.turn_manager:
+            return
+        
+        current_player_id = self.game_state.current_player_id
+        current_player = self.game_state.get_player(current_player_id) if current_player_id is not None else None
+        
+        # End current turn and start next player's turn
+        if self.turn_manager.end_current_turn():
+            next_player_id = self.game_state.current_player_id
+            next_player = self.game_state.get_player(next_player_id) if next_player_id is not None else None
+            
+            print(f"Turn ended for {current_player.name if current_player else 'Unknown'}")
+            print(f"Starting turn for {next_player.name if next_player else 'Unknown'}")
+            
+            # Update renderer with new turn state
+            if self.renderer:
+                new_turn = self.turn_manager.get_current_turn()
+                self.renderer.set_turn_state(new_turn)
+        else:
+            print("Game Over!")
+            # TODO: Handle game end
+        
+        # Clear selections
+        if self.selection_handler:
+            self.selection_handler.clear_all_selections()
 
 
 def main(g=2, p=2, s=10):
