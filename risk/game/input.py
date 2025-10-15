@@ -184,10 +184,17 @@ class InputHandler:
                     self.callbacks['increase_armies'](input_event)
                     print("Increasing starting armies (keeping same map)...")
             
-            # Space key for pause/unpause (placeholder)
+            # Space key for pause/unpause - but check turn UI first
             elif event.key == pygame.K_SPACE:
+                # If there's a turn UI, let it handle space first (for phase advancement)
+                # Otherwise, use space for global pause/unpause
                 if 'toggle_pause' in self.callbacks:
-                    self.callbacks['toggle_pause'](None)
+                    input_event = InputEvent(
+                        event_type='toggle_pause',
+                        key=event.key,
+                        data={'space_pressed': True}
+                    )
+                    self.callbacks['toggle_pause'](input_event)
             
             # Number keys for quick actions (placeholder)
             elif pygame.K_1 <= event.key <= pygame.K_9:
@@ -314,7 +321,15 @@ class GameInputHandler(InputHandler):
         if not input_event.key:
             return
         
-        # Check turn UI first for turn-specific shortcuts
+        # Special case for space key: turn UI takes priority over global pause
+        if input_event.key == pygame.K_SPACE:
+            # If turn UI can handle space (for phase advancement), let it do so
+            if self.turn_ui and self.turn_ui.handle_key_press(input_event.key):
+                return  # UI handled the space key for phase advancement
+            # Otherwise, let global pause handling occur (in parent _handle_special_events)
+            return
+        
+        # Check turn UI first for other turn-specific shortcuts
         if self.turn_ui and self.turn_ui.handle_key_press(input_event.key):
             return  # UI handled the key
         
@@ -353,7 +368,7 @@ class GameInputHandler(InputHandler):
         print("  - Ctrl+G: Increase regions (+1)")
         print("  - Ctrl+P: Increase players (+1, keeps same map)")
         print("  - Ctrl+S: Increase starting armies (+1, keeps same map)")
-        print("  - Space: Pause/unpause (placeholder)")
+        print("  - Space: Pause/unpause simulation (or advance phase in turns)")
         print("  - I: Show info for selected territory")
         print("  - D: Show debug information")
         print("  - H: Show this help")
@@ -362,6 +377,7 @@ class GameInputHandler(InputHandler):
         print("  - U: Undo last placement (in placement phase)")
         print("  - Enter/Space: Advance to next phase")
         print("  - 1-9: Set army count (in attack/move phases)")
+        print("Note: Space advances phase when turn UI is active, otherwise pauses simulation")
         print("========================\\n")
     
     def update_mouse_hover(self, mouse_pos: Tuple[int, int]) -> None:

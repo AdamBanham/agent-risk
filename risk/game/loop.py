@@ -44,6 +44,7 @@ class GameLoop:
         self.screen: Optional[pygame.Surface] = None
         self.clock: Optional[pygame.time.Clock] = None
         self.running = False
+        self.paused = False
         self.renderer: Optional[GameRenderer] = None
         self.input_handler: Optional[GameInputHandler] = None
         self.selection_handler: Optional[TerritorySelectionHandler] = None
@@ -100,6 +101,7 @@ class GameLoop:
             self.input_handler.register_callback('increase_regions', self._handle_increase_regions)
             self.input_handler.register_callback('increase_players', self._handle_increase_players)
             self.input_handler.register_callback('increase_armies', self._handle_increase_armies)
+            self.input_handler.register_callback('toggle_pause', self._handle_toggle_pause)
             
             # Register territory selection callbacks
             self.input_handler.register_callback('territory_selected', self.selection_handler.handle_territory_selected)
@@ -292,6 +294,22 @@ class GameLoop:
         else:
             print(f"Already at maximum starting armies ({self.starting_armies})")
     
+    def _handle_toggle_pause(self, input_event) -> None:
+        """
+        Handle spacebar to toggle pause/unpause state.
+        
+        :param input_event: Input event that triggered the pause toggle
+        """
+        self.paused = not self.paused
+        status = "PAUSED" if self.paused else "UNPAUSED"
+        print(f"Game {status}")
+        
+        # Update window title to show pause state
+        if self.paused:
+            pygame.display.set_caption("Agent Risk - Dynamic Board Simulation [PAUSED]")
+        else:
+            pygame.display.set_caption("Agent Risk - Dynamic Board Simulation")
+    
     def _regenerate_with_new_parameters(self) -> None:
         """
         Regenerate the game state with updated parameters.
@@ -413,12 +431,12 @@ class GameLoop:
     
     def update(self) -> None:
         """
-        Update game state (placeholder for future implementation).
+        Update game state (only when not paused).
         """
-        # Update player statistics based on current territory ownership
-        self.game_state.update_player_statistics()
-        # TODO: Update game state, agent decisions, etc.
-        pass
+        if not self.paused:
+            # Update player statistics based on current territory ownership
+            self.game_state.update_player_statistics()
+            # TODO: Update game state, agent decisions, etc.
     
     def render(self) -> None:
         """
@@ -431,8 +449,42 @@ class GameLoop:
             # Render the board
             self.renderer.draw_board()
             
+            # If paused, show pause overlay
+            if self.paused:
+                self._draw_pause_overlay()
+            
             # Update display
             pygame.display.flip()
+    
+    def _draw_pause_overlay(self) -> None:
+        """
+        Draw pause overlay on the screen.
+        """
+        if not self.screen:
+            return
+        
+        # Create semi-transparent overlay
+        overlay = pygame.Surface((self.width, self.height))
+        overlay.set_alpha(128)  # Semi-transparent
+        overlay.fill((0, 0, 0))  # Black overlay
+        self.screen.blit(overlay, (0, 0))
+        
+        # Initialize font if not already done
+        pygame.font.init()
+        
+        # Draw pause text
+        font_large = pygame.font.Font(None, 72)
+        font_small = pygame.font.Font(None, 36)
+        
+        # Main pause text
+        pause_text = font_large.render("PAUSED", True, (255, 255, 255))
+        pause_rect = pause_text.get_rect(center=(self.width // 2, self.height // 2 - 30))
+        self.screen.blit(pause_text, pause_rect)
+        
+        # Instruction text
+        instruction_text = font_small.render("Press SPACE to resume", True, (200, 200, 200))
+        instruction_rect = instruction_text.get_rect(center=(self.width // 2, self.height // 2 + 30))
+        self.screen.blit(instruction_text, instruction_rect)
     
     def run(self) -> None:
         """

@@ -46,9 +46,14 @@ class AIGameLoop(BaseGameLoop):
         """
         Enhanced update method that handles both human and AI player turns. 
         Automatically executes AI turns while preserving human interaction.
+        Respects pause state from parent GameLoop.
         """
-        # Update player statistics based on current territory ownership
-        self.game_state.update_player_statistics()
+        # Call parent update method (which respects pause state)
+        super().update()
+        
+        # Only execute AI logic when not paused
+        if self.paused:
+            return
         
         # Check if we have an active turn and agent controller
         if (self.agent_controller and self.turn_manager and 
