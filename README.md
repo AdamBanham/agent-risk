@@ -4,17 +4,14 @@ A modular event-driven simulation framework for the board game called "Risk"
 
 ## Quick Start
 
-To run the pygame Risk board visualization:
+To run the pygame for the risk simulation of using automated agent:
 
 ```bash
-# Using the direct script
 python run_game.py
-
-# Or using the module
-python -m risk.game.loop
 ```
 
 **Controls:**
+
 - **Mouse:** Click on territories to select them
 - **ESC:** Quit the game
 - **I:** Show info for selected territory
