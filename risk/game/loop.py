@@ -574,7 +574,7 @@ class GameLoop:
         print(f"Attack mode: {attacker_territory.name} ready to attack. Click on adjacent enemy territory.")
     
     def _handle_resolve_attack(self) -> None:
-        """Handle resolving the current attack."""
+        """Handle resolving the current attack using the Fight system."""
         if not self.turn_manager:
             return
         
@@ -582,7 +582,7 @@ class GameLoop:
         if not current_turn or not current_turn.current_attack:
             return
         
-        # Resolve attack
+        # Resolve attack using Fight system
         result = current_turn.resolve_attack()
         if result:
             # Apply results to territories
@@ -590,24 +590,59 @@ class GameLoop:
             defender_territory = self.game_state.get_territory(result['defender_territory_id'])
             
             if attacker_territory and defender_territory:
-                # Apply casualties
+                # Apply casualties from this round
                 attacker_territory.armies -= result['attacker_casualties']
                 defender_territory.armies -= result['defender_casualties']
                 
-                print(f"Attack result: Attacker lost {result['attacker_casualties']}, Defender lost {result['defender_casualties']}")
+                # Display dice roll results
+                dice_roll = result.get('dice_roll')
+                if dice_roll:
+                    print(f"Dice Roll - Attacker: {dice_roll.attacker_dice}, Defender: {dice_roll.defender_dice}")
+                    print(f"Round Casualties: Attacker -{result['attacker_casualties']}, Defender -{result['defender_casualties']}")
+                    print(f"Total Casualties: Attacker -{result['total_attacker_casualties']}, Defender -{result['total_defender_casualties']}")
+                    print(f"Fight Round {result['fight_rounds']} completed")
                 
-                # Check if territory was conquered
+                # Check if fight is complete
                 if result.get('territory_conquered', False):
-                    # Transfer territory ownership
-                    defender_territory.set_owner(current_turn.player_id, 1)  # Minimum 1 army
-                    # Move attacking armies to conquered territory 
-                    armies_to_move = min(result['attacking_armies_before'] - result['attacker_casualties'], 
-                                       attacker_territory.armies - 1)
-                    if armies_to_move > 0:
-                        attacker_territory.armies -= armies_to_move
-                        defender_territory.armies += armies_to_move
+                    # Handle territory conquest
+                    surviving_attackers = result.get('surviving_attackers', 1)
                     
-                    print(f"Territory conquered! {defender_territory.name} now belongs to Player {current_turn.player_id + 1}")
+                    # Transfer territory ownership
+                    defender_territory.set_owner(current_turn.player_id, surviving_attackers)
+                    
+                    # Move surviving armies from attacking territory
+                    armies_moved = min(surviving_attackers, attacker_territory.armies - 1)
+                    if armies_moved > 0:
+                        attacker_territory.armies -= armies_moved
+                        defender_territory.armies = armies_moved
+                    
+                    # Display fight summary
+                    fight_summary = result.get('fight_summary', '')
+                    if fight_summary:
+                        print("\n" + "="*50)
+                        print("FIGHT COMPLETED!")
+                        print("="*50)
+                        print(fight_summary)
+                        print("="*50)
+                    
+                    print(f"\nTerritory conquered! {defender_territory.name} now belongs to Player {current_turn.player_id + 1}")
+                    
+                elif result.get('fight_continues', False):
+                    # Fight continues - show current status
+                    print(f"Fight continues... (Round {result['fight_rounds']})")
+                    print(f"Attacker armies remaining: {attacker_territory.armies}")
+                    print(f"Defender armies remaining: {defender_territory.armies}")
+                else:
+                    # Fight ended with defender victory
+                    fight_summary = result.get('fight_summary', '')
+                    if fight_summary:
+                        print("\n" + "="*50)
+                        print("FIGHT COMPLETED!")
+                        print("="*50)
+                        print(fight_summary)
+                        print("="*50)
+                    
+                    print(f"Attack failed! {defender_territory.name} successfully defended")
                 
                 # Update game state
                 self.game_state.update_player_statistics()

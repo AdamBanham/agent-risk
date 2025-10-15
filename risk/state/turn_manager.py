@@ -9,6 +9,7 @@ from enum import Enum
 
 from .game_state import GameState, Player
 from .territory import Territory
+from .fight import Fight, FightResult
 
 
 class TurnPhase(Enum):
@@ -71,6 +72,7 @@ class TurnState:
     # Current action states
     current_attack: Optional[AttackState] = None
     current_movement: Optional[MovementState] = None
+    current_fight: Optional[Fight] = None
     
     def can_place_reinforcement(self, territory_id: int, armies: int = 1) -> bool:
         """
@@ -153,59 +155,87 @@ class TurnState:
     
     def resolve_attack(self) -> Optional[Dict]:
         """
-        Resolve the current attack using dice rolls. Simple implementation 
-        where both sides lose 1 army.
+        Resolve the current attack using the Fight system with dice-based 
+        combat mechanics.
         
-        :returns: Attack result dictionary with casualties and victory status, 
-                 or None if no active attack
+        :returns: Attack result dictionary with Fight results and territory 
+                 status, or None if no active attack
         """
         if not self.current_attack or not self.current_attack.can_attack():
             return None
         
-        # Simple resolution: both sides lose 1 army
-        attacker_casualties = 1
-        defender_casualties = 1
+        # Create or continue existing fight
+        if not self.current_fight:
+            # Start new fight
+            self.current_fight = Fight(
+                attacker_territory_id=self.current_attack.attacker_territory_id,
+                defender_territory_id=self.current_attack.defender_territory_id,
+                initial_attackers=self.current_attack.attacking_armies,
+                initial_defenders=self.current_attack.defending_armies
+            )
         
-        # Ensure we don't go below valid army counts
-        if self.current_attack.attacking_armies < attacker_casualties:
-            attacker_casualties = self.current_attack.attacking_armies
-        if self.current_attack.defending_armies < defender_casualties:
-            defender_casualties = self.current_attack.defending_armies
+        # Execute one round of combat
+        try:
+            dice_roll = self.current_fight.fight_round()
+        except ValueError:
+            # Fight cannot continue
+            self.current_fight = None
+            self.current_attack = None
+            return None
         
-        # Create result
+        # Create result dictionary
         result = {
             'attacker_territory_id': self.current_attack.attacker_territory_id,
             'defender_territory_id': self.current_attack.defender_territory_id,
-            'attacker_casualties': attacker_casualties,
-            'defender_casualties': defender_casualties,
+            'attacker_casualties': dice_roll.attacker_casualties,
+            'defender_casualties': dice_roll.defender_casualties,
             'attacking_armies_before': self.current_attack.attacking_armies,
             'defending_armies_before': self.current_attack.defending_armies,
+            'dice_roll': dice_roll,
+            'fight_rounds': self.current_fight.rounds_fought,
+            'total_attacker_casualties': self.current_fight.total_attacker_casualties,
+            'total_defender_casualties': self.current_fight.total_defender_casualties
         }
         
-        # Update attack state
-        self.current_attack.max_attacking_armies -= attacker_casualties
-        self.current_attack.defending_armies -= defender_casualties
+        # Update attack state with casualties
+        self.current_attack.max_attacking_armies -= dice_roll.attacker_casualties
+        self.current_attack.defending_armies -= dice_roll.defender_casualties
+        self.current_attack.attacking_armies = min(
+            self.current_attack.attacking_armies - dice_roll.attacker_casualties,
+            self.current_attack.max_attacking_armies
+        )
         
-        # Check if territory is conquered (no defending armies left)
-        if self.current_attack.defending_armies <= 0:
-            result['territory_conquered'] = True
-            self.current_attack = None  # End attack
+        # Check if fight is complete
+        if self.current_fight.is_completed():
+            fight_result = self.current_fight.get_result()
+            result['fight_result'] = fight_result
+            result['fight_winner'] = self.current_fight.get_winner()
+            result['fight_summary'] = self.current_fight.get_battle_summary()
+            
+            if fight_result == FightResult.ATTACKER_WINS:
+                result['territory_conquered'] = True
+                result['surviving_attackers'] = self.current_fight.current_attackers
+            else:
+                result['territory_conquered'] = False
+                result['surviving_defenders'] = self.current_fight.current_defenders
+            
+            # End fight and attack
+            self.current_fight = None
+            self.current_attack = None
         else:
             result['territory_conquered'] = False
-            # Update attacking armies if they still want to continue
-            self.current_attack.attacking_armies = min(
-                self.current_attack.attacking_armies, 
-                self.current_attack.max_attacking_armies
-            )
+            result['fight_continues'] = True
         
         self.attacks_made += 1
         return result
     
     def end_attack(self) -> None:
         """
-        End the current attack without resolution.
+        End the current attack without resolution. Clears both attack and 
+        fight states.
         """
         self.current_attack = None
+        self.current_fight = None
     
     def start_movement(self, source_territory: Territory, 
                       target_territory: Territory) -> bool:
