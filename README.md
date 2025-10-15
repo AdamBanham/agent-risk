@@ -109,7 +109,7 @@ The architecture is split into several modules:
 - The '`game`' module handles running the event loop, rendering, and user input
 - The '`handler`' module manages the event queue for simulation, where agents
 or the game can post actions to modify the state of the game
-- The '`agent`' module describes the agent behaviours for players, ideally
+- The '`agents`' module describes the agent behaviours for players, ideally
 versions of the same agent behaviour will be recorded, but the formalism used
 will change (following Action, Planning, and Learning by Malik Ghallab, Dana
 Nau, Paolo Traverso). Types of formalisms to be consider are:
@@ -117,7 +117,7 @@ Nau, Paolo Traverso). Types of formalisms to be consider are:
   - Behaviour Tree
   - Finite Automata
   - Petri nets
-- The '`world`' module handles the data structures for modelling the state of
+- The '`state`' module handles the data structures for modelling the state of
 the game and any other required state to ensure that each step of a simulation
 can be replayed.
 
