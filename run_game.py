@@ -33,14 +33,14 @@ def parse_arguments():
     parser.add_argument(
         '-g', '--regions',
         type=int,
-        default=15,
+        default=27,
         help='Number of territories/regions to generate (default: 15)'
     )
     
     parser.add_argument(
         '-p', '--players',
         type=int,
-        default=5,
+        default=3,
         help='Number of players in the simulation (default: 5)'
     )
     
@@ -54,14 +54,14 @@ def parse_arguments():
     parser.add_argument(
         '--attack-rate',
         type=float,
-        default=0.5,
+        default=0.85,
         help='AI attack probability 0.0-1.0 (default: 0.5)'
     )
     
     parser.add_argument(
         '--ai-delay',
         type=float,
-        default=5.0,
+        default=1,
         help='Delay between AI actions in seconds (default: 5.0)'
     )
     
