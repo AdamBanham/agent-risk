@@ -18,6 +18,10 @@ class TestAIGameLoopPause(unittest.TestCase):
         self.pygame_mock = patch('pygame.init')
         self.pygame_mock.start()
         
+        # Mock print to suppress pause messages during tests
+        self.print_mock = patch('builtins.print')
+        self.print_mock.start()
+        
         # Create AI game loop for testing
         self.ai_game_loop = AIGameLoop(width=800, height=600, regions=3, 
                                       num_players=2, starting_armies=5)
@@ -32,6 +36,7 @@ class TestAIGameLoopPause(unittest.TestCase):
     
     def tearDown(self):
         """Clean up test environment."""
+        self.print_mock.stop()
         self.pygame_mock.stop()
     
     def test_pause_prevents_ai_turn_execution(self):

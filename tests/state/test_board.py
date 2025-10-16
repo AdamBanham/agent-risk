@@ -1,9 +1,20 @@
 import unittest
+import warnings
 import random
 
 import  risk.state.board_generator as bg
 
 class TestCreatingBoard(unittest.TestCase):
+
+    def setUp(self):
+        """Set up test fixtures and suppress warnings for cleaner test output."""
+        # Suppress warnings during tests
+        warnings.filterwarnings('ignore', category=RuntimeWarning)
+        
+    def tearDown(self):
+        """Clean up after tests."""
+        # Reset warning filters
+        warnings.resetwarnings()
 
     def test_initial_polygon_creation(self):
        

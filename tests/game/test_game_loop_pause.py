@@ -17,6 +17,10 @@ class TestGameLoopPause(unittest.TestCase):
         self.pygame_mock = patch('pygame.init')
         self.pygame_mock.start()
         
+        # Mock print to suppress pause messages during tests
+        self.print_mock = patch('builtins.print')
+        self.print_mock.start()
+        
         # Create minimal game loop for testing
         self.game_loop = GameLoop(width=800, height=600, regions=3, 
                                  num_players=2, starting_armies=5)
@@ -31,6 +35,7 @@ class TestGameLoopPause(unittest.TestCase):
     
     def tearDown(self):
         """Clean up test environment."""
+        self.print_mock.stop()
         self.pygame_mock.stop()
     
     def test_initial_pause_state(self):
