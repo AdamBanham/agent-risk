@@ -4,12 +4,6 @@ from risk.state.event_stack import Event, Level, EventStack
 
 class TestEvents(unittest.TestCase):
 
-    def setUp(self):
-        pass
-
-    def tearDown(self):
-        pass
-
     def test_create(self):
         ev = Event("attack")
         ev2 = Event("defend")
@@ -67,12 +61,6 @@ class TestEvents(unittest.TestCase):
     
 
 class TestLevel(unittest.TestCase):
-
-    def setUp(self):
-        pass
-
-    def tearDown(self):
-        pass
 
     def test_create(self):
         
