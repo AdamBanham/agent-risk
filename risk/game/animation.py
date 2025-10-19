@@ -11,7 +11,7 @@ from enum import Enum
 from typing import List, Tuple, Optional, Callable
 from dataclasses import dataclass
 
-from ..utils.distance import Point, random_walk
+from ..utils.distance import Point, random_walk, euclidean_distance
 
 
 class AnimationState(Enum):
@@ -517,15 +517,29 @@ class RandomWalkAnimation(BaseAnimation):
         # Generate random walk path using distance.py functions
         start_point = Point(start_pos[0], start_pos[1])
         end_point = Point(end_pos[0], end_pos[1])
+        dist = euclidean_distance(start_point, end_point)
+        steps = 10 + int((dist // 10) * 10)
+        print("computing steps :: ", steps)
         
         # Generate random walk with moderate variation
-        walk_points = random_walk(
-            start=start_point,
-            end=end_point,
-            num_steps=50,
-            variation_strength=0.1,
-            clean=True
-        )
+        try :
+            walk_points = random_walk(
+                start=start_point,
+                end=end_point,
+                num_steps=steps,
+                variation_strength=0.05,
+                clean=True
+            ) 
+        except :
+            walk_points = random_walk(
+                start=start_point,
+                end=end_point,
+                num_steps=25,
+                variation_strength=0.05,
+                clean=True
+            ) 
+
+        print("computed_steps...", len(walk_points))
         
         # Convert to tuples for pygame
         self.path_points = [point.to_tuple() for point in walk_points]
@@ -563,24 +577,31 @@ class RandomWalkAnimation(BaseAnimation):
         if len(current_points) < 2:
             return
         
+        # Create temporary surface with per-pixel alpha for proper transparency
+        tmp_surface = pygame.Surface(surface.get_size(), pygame.SRCALPHA)
+        # Don't set global alpha - we'll use per-pixel alpha instead
+        
+        # Calculate alpha value for semi-transparent effect
+        alpha_value = int(255 * 0.66)  # 66% opacity
+        
         # Draw shadow first (offset by 2 pixels)
         shadow_offset = 2
-        shadow_color = (60, 60, 60)  # Gray shadow
+        shadow_color = (60, 60, 60, alpha_value)  # Gray shadow with alpha
         shadow_points = [(x + shadow_offset, y + shadow_offset) for x, y in current_points]
         
         if len(shadow_points) >= 2:
             pygame.draw.lines(
-                surface,
+                tmp_surface,
                 shadow_color,
                 False,  # Not closed
                 shadow_points,
                 max(1, self.width - 1)
             )
         
-        # Draw main path in black
-        path_color = (20, 20, 20)  # Dark black
+        # Draw main path in semi-transparent black
+        path_color = (20, 20, 20, alpha_value)  # Dark black with alpha
         pygame.draw.lines(
-            surface,
+            tmp_surface,
             path_color,
             False,  # Not closed
             current_points,
@@ -591,8 +612,8 @@ class RandomWalkAnimation(BaseAnimation):
         if len(current_points) >= 2:
             # Draw start point
             pygame.draw.circle(
-                surface,
-                (40, 40, 40),
+                tmp_surface,
+                (40, 40, 40, alpha_value),
                 (int(current_points[0][0]), int(current_points[0][1])),
                 max(2, self.width)
             )
@@ -600,11 +621,14 @@ class RandomWalkAnimation(BaseAnimation):
             # Draw end point if animation is complete or nearly complete
             if self.progress > 0.9:
                 pygame.draw.circle(
-                    surface,
-                    (10, 10, 10),
+                    tmp_surface,
+                    (10, 10, 10, alpha_value),
                     (int(current_points[-1][0]), int(current_points[-1][1])),
                     max(3, self.width + 1)
                 )
+        
+        # Blit the temporary surface to the main surface
+        surface.blit(tmp_surface, (0, 0))
     
     def _get_current_path(self) -> List[Tuple[float, float]]:
         """
