@@ -220,3 +220,13 @@ class EventStack:
         if isinstance(value, EventStack):
             return self.id == value.id
         return False 
+    
+    def __str__(self):
+        ret = "Stack:-\n"
+        depth = self.depth
+        for el in reversed(self.stack):
+            text = str(el)
+            ret += "  ".join(["" for _ in range(depth)]) + text + "\n"
+            if isinstance(el, Level):
+                depth -= 1
+        return ret

@@ -10,10 +10,23 @@ from enum import Enum
 from pygame.draw import polygon
 
 class TerritoryState(Enum):
-    """Possible states for a territory."""
-    FREE = "free"           # No owner, available for occupation
-    OWNED = "owned"         # Controlled by a single player
-    CONTESTED = "contested" # Under attack or disputed ownership
+    """
+    Possible states for a territory.
+
+    .. attributes::
+        FREE
+            No owner, available for occupation
+        OWNED
+            Controlled by a single player
+        CONTESTED
+            disputed ownership between many players
+    """
+    FREE = "free"           
+    OWNED = "owned"         
+    CONTESTED = "contested" 
+
+    def __repr__(self):
+        return f"{self.__class__.__name__}.{self.name}"
 
 
 @dataclass
@@ -30,7 +43,7 @@ class Territory:
     continent: str = "Unknown"
     
     # Game state properties
-    state: TerritoryState = TerritoryState.FREE
+    state: TerritoryState = field(default_factory=lambda : TerritoryState.FREE)
     owner: Optional[int] = None  # Player ID (None if FREE)
     armies: int = 0
     selected: bool = False  # Whether this territory is currently selected
@@ -200,6 +213,7 @@ class Territory:
     
     def __repr__(self) -> str:
         """String representation for debugging."""
-        return (f"Territory(id={self.id}, name='{self.name}', "
-                f"state={self.state.value}, owner={self.owner}, "
-                f"armies={self.armies}, adjacent={len(self.adjacent_territories)})")
+        ret = "Territory(" 
+        for key in vars(self):
+            ret+= f"{key}={repr(getattr(self, key))}, "
+        return ret + ")"
