@@ -518,8 +518,7 @@ class RandomWalkAnimation(BaseAnimation):
         start_point = Point(start_pos[0], start_pos[1])
         end_point = Point(end_pos[0], end_pos[1])
         dist = euclidean_distance(start_point, end_point)
-        steps = 10 + int((dist // 10) * 10)
-        print("computing steps :: ", steps)
+        steps = 10 + int((dist // 20) * 10)
         
         # Generate random walk with moderate variation
         try :
@@ -538,8 +537,6 @@ class RandomWalkAnimation(BaseAnimation):
                 variation_strength=0.05,
                 clean=True
             ) 
-
-        print("computed_steps...", len(walk_points))
         
         # Convert to tuples for pygame
         self.path_points = [point.to_tuple() for point in walk_points]
