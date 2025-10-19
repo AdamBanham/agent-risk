@@ -98,7 +98,7 @@ class AIGameLoop(BaseGameLoop):
         # Execute the agent's turn
         try:
             success = self.agent_controller.execute_agent_turn(
-                self.game_state, self.turn_manager
+                self.game_state, self.turn_manager, self.renderer
             )
             
             if success:

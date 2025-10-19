@@ -76,12 +76,13 @@ class BaseAgent(ABC):
 
 class RandomAgent(BaseAgent):
     """
-    Simple random AI agent that makes completely random decisions. Places 
-    troops randomly, attacks randomly with 50% probability, and never moves 
-    troops after attacking.
+    Simple random AI agent that makes strategic decisions for placement, 
+    attacking, and movement. Places troops randomly, attacks with configurable 
+    probability, and moves troops from safe territories to front-line positions.
     
     This agent serves as a baseline for testing the game mechanics and 
-    provides a simple opponent for other agents to compete against.
+    provides a simple opponent for other agents to compete against. Movement 
+    strategy consolidates forces near enemy borders for better positioning.
     """
     
     def __init__(self, player_id: int, attack_probability: float = 0.5):
@@ -166,17 +167,122 @@ class RandomAgent(BaseAgent):
     
     def decide_movement(self, game_state: GameState, turn_state: TurnState) -> Optional[Tuple[int, int, int]]:
         """
-        Never move troops after attacking. This agent follows the simple 
-        strategy of not repositioning forces during the movement phase.
+        Move troops from safe territories to front-line territories that 
+        border enemies. Finds connected groups and consolidates forces near 
+        enemy positions.
         
         :param game_state: Current state of the game including all 
                           territories and players
         :param turn_state: Current turn state including phase and movement 
                           history
-        :returns: Always returns None to skip movement phase
+        :returns: Tuple of (source_territory_id, target_territory_id, 
+                 army_count) for movement, or None if no beneficial movement 
+                 found
         """
-        # Simple agent never moves troops as specified in requirements
+        # Get all territories owned by this agent
+        owned_territories = []
+        for territory in game_state.territories.values():
+            if territory.is_owned_by(self.player_id):
+                owned_territories.append(territory)
+        
+        if len(owned_territories) <= 1:
+            return None  # Need at least 2 territories to move between
+        
+        # Find territories with and without adjacent enemies
+        front_line_territories = []  # Territories with adjacent enemies
+        safe_territories = []        # Territories without adjacent enemies
+        
+        for territory in owned_territories:
+            has_enemy_neighbor = False
+            
+            for adjacent_id in territory.adjacent_territories:
+                adjacent_territory = game_state.get_territory(adjacent_id)
+                if (adjacent_territory and 
+                    not adjacent_territory.is_owned_by(self.player_id)):
+                    has_enemy_neighbor = True
+                    break
+            
+            if has_enemy_neighbor:
+                front_line_territories.append(territory)
+            else:
+                safe_territories.append(territory)
+        
+        # Only move if we have safe territories with extra armies and front-line targets
+        if not safe_territories or not front_line_territories:
+            return None
+        
+        # Find safe territories that can move armies (have more than 1 army)
+        movable_safe_territories = [t for t in safe_territories if t.armies > 1]
+        if not movable_safe_territories:
+            return None
+        
+        # Find connected paths from safe territories to front-line territories
+        valid_movements = []
+        
+        for safe_territory in movable_safe_territories:
+            # Use breadth-first search to find connected front-line territories
+            reachable_frontline = self._find_connected_frontline_territories(
+                safe_territory, front_line_territories, owned_territories, game_state)
+            
+            for target_territory in reachable_frontline:
+                # Calculate how many armies to move (all but one)
+                armies_to_move = safe_territory.armies - 1
+                if armies_to_move > 0:
+                    valid_movements.append((safe_territory.id, target_territory.id, armies_to_move))
+        
+        # Randomly select a movement if any are available
+        if valid_movements:
+            return random.choice(valid_movements)
+        
         return None
+    
+    def _find_connected_frontline_territories(self, source_territory: Territory, 
+                                            front_line_territories: List[Territory],
+                                            owned_territories: List[Territory],
+                                            game_state: GameState) -> List[Territory]:
+        """
+        Find front-line territories reachable from source territory through 
+        owned territory connections using breadth-first search.
+        
+        :param source_territory: Starting territory for pathfinding
+        :param front_line_territories: List of target front-line territories
+        :param owned_territories: List of all owned territories for pathfinding
+        :param game_state: Game state for territory lookup
+        :returns: List of reachable front-line territories
+        """
+        # Create sets for faster lookup
+        owned_territory_ids = {t.id for t in owned_territories}
+        front_line_ids = {t.id for t in front_line_territories}
+        
+        # Breadth-first search to find connected territories
+        visited = set()
+        queue = [source_territory.id]
+        visited.add(source_territory.id)
+        reachable_frontline = []
+        
+        while queue:
+            current_id = queue.pop(0)
+            current_territory = game_state.get_territory(current_id)
+            
+            if not current_territory:
+                continue
+            
+            # Check if this is a front-line territory
+            if current_id in front_line_ids:
+                # Find the actual territory object
+                for frontline_territory in front_line_territories:
+                    if frontline_territory.id == current_id:
+                        reachable_frontline.append(frontline_territory)
+                        break
+            
+            # Add adjacent owned territories to search queue
+            for adjacent_id in current_territory.adjacent_territories:
+                if (adjacent_id in owned_territory_ids and 
+                    adjacent_id not in visited):
+                    visited.add(adjacent_id)
+                    queue.append(adjacent_id)
+        
+        return reachable_frontline
     
     def get_status(self) -> str:
         """
@@ -187,7 +293,7 @@ class RandomAgent(BaseAgent):
         """
         return (f"{self.name} (Player {self.player_id}): "
                 f"Random placement, {self.attack_probability:.0%} attack rate, "
-                f"no movement")
+                f"strategic movement to front-lines")
 
 
 class AgentController:
@@ -234,7 +340,8 @@ class AgentController:
         """
         return self.agents.get(player_id)
     
-    def execute_agent_turn(self, game_state: GameState, turn_manager: TurnManager) -> bool:
+    def execute_agent_turn(self, game_state: GameState, turn_manager: TurnManager, 
+                          renderer=None) -> bool:
         """
         Execute a complete turn for an AI agent. Handles all phases of the 
         turn (placement, attacking, movement) using agent decision-making.
@@ -243,6 +350,7 @@ class AgentController:
                           territories and players
         :param turn_manager: TurnManager instance for coordinating turn 
                             progression and state updates
+        :param renderer: Optional renderer for triggering animations
         :returns: True if turn was executed successfully, False if no agent 
                  or turn could not be completed
         """
@@ -329,13 +437,44 @@ class AgentController:
             current_turn.advance_phase()
             print("  Advanced to movement phase")
         
-        # Execute movement phase (this agent never moves)
+        # Execute movement phase
         movement_decision = agent.decide_movement(game_state, current_turn)
         if movement_decision is not None:
-            # This should never happen for RandomAgent, but included for completeness
             source_id, target_id, army_count = movement_decision
-            # Implementation would go here if agent supported movement
-            print(f"  Movement requested but not implemented for this agent")
+            source_territory = game_state.get_territory(source_id)
+            target_territory = game_state.get_territory(target_id)
+            
+            if (source_territory and target_territory and 
+                source_territory.is_owned_by(agent.player_id) and 
+                target_territory.is_owned_by(agent.player_id) and 
+                source_territory.armies > army_count):
+                
+                # Start the movement
+                if current_turn.start_movement(source_territory, target_territory):
+                    # Set the army count for movement
+                    if current_turn.current_movement:
+                        current_turn.current_movement.moving_armies = army_count
+                    
+                    # Execute the movement
+                    movement_result = current_turn.execute_movement()
+                    if movement_result:
+                        # Update territories based on movement result
+                        source_territory.armies -= army_count
+                        target_territory.armies += army_count
+                        
+                        print(f"  Moved {army_count} armies from {source_territory.name} to {target_territory.name}")
+                        print(f"    {source_territory.name}: {source_territory.armies + army_count} -> {source_territory.armies} armies")
+                        print(f"    {target_territory.name}: {target_territory.armies - army_count} -> {target_territory.armies} armies")
+                        
+                        # Trigger movement animation if renderer is available
+                        if renderer:
+                            renderer.start_movement_animation(
+                                source_territory_id=source_id,
+                                target_territory_id=target_id,
+                                duration=1.5
+                            )
+                else:
+                    print(f"  Movement from {source_territory.name} to {target_territory.name} failed - not adjacent or invalid")
         
         # End the turn
         print(f"  {agent.name} turn complete\n")
