@@ -42,6 +42,9 @@ The project currently includes a working pygame visualization showing:
 - ⏳ **Agent Module:** AI agent behaviors using formal methods (planned)
 - ⏳ **World Module:** Game state and replay functionality (planned)
 
+### Architecture design plans for the simulator
+![A brief overview for the game logic](./architecture.png)
+
 ## Risk: The Board Game
 
 Wikipedia (<https://en.wikipedia.org/wiki/Risk_(game)>) defines the board game of
