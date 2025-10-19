@@ -10,6 +10,8 @@ from abc import ABC, abstractmethod
 from ...state.game_state import GameState, Player
 from ...state.territory import Territory
 from ...state.turn_manager import TurnManager, TurnState, TurnPhase
+from ...utils.groups import find_connected_groups
+from ...utils.movement import find_movement_sequence, Movement
 
 
 class BaseAgent(ABC):
@@ -59,7 +61,8 @@ class BaseAgent(ABC):
         pass
     
     @abstractmethod
-    def decide_movement(self, game_state: GameState, turn_state: TurnState) -> Optional[Tuple[int, int, int]]:
+    def decide_movement(self, game_state: GameState, 
+                        turn_state: TurnState) -> Optional[List[Movement]]:
         """
         Decide whether to move armies between territories. Called during the 
         movement phase to determine if agent wants to relocate forces.
@@ -149,15 +152,14 @@ class RandomAgent(BaseAgent):
                 territory.can_attack_from()):
                 
                 # Check all adjacent territories for valid targets
-                for adjacent_id in territory.adjacent_territories:
-                    adjacent_territory = game_state.get_territory(adjacent_id)
+                for adjacent_territory in territory.adjacent_territories:
                     
                     # Can attack if adjacent territory is owned by someone else
                     if (adjacent_territory and 
                         not adjacent_territory.is_owned_by(self.player_id) and 
                         adjacent_territory.can_be_attacked()):
                         
-                        possible_attacks.append((territory.id, adjacent_id))
+                        possible_attacks.append((territory.id, adjacent_territory.id))
         
         # Return random attack if any possible, otherwise None
         if possible_attacks:
@@ -165,7 +167,8 @@ class RandomAgent(BaseAgent):
         
         return None
     
-    def decide_movement(self, game_state: GameState, turn_state: TurnState) -> Optional[Tuple[int, int, int]]:
+    def decide_movement(self, game_state: GameState, 
+                        turn_state: TurnState) -> Optional[List[Movement]]:
         """
         Move troops from safe territories to front-line territories that 
         border enemies. Finds connected groups and consolidates forces near 
@@ -195,8 +198,7 @@ class RandomAgent(BaseAgent):
         for territory in owned_territories:
             has_enemy_neighbor = False
             
-            for adjacent_id in territory.adjacent_territories:
-                adjacent_territory = game_state.get_territory(adjacent_id)
+            for adjacent_territory in territory.adjacent_territories:
                 if (adjacent_territory and 
                     not adjacent_territory.is_owned_by(self.player_id)):
                     has_enemy_neighbor = True
@@ -228,7 +230,9 @@ class RandomAgent(BaseAgent):
                 # Calculate how many armies to move (all but one)
                 armies_to_move = safe_territory.armies - 1
                 if armies_to_move > 0:
-                    valid_movements.append((safe_territory.id, target_territory.id, armies_to_move))
+                    valid_movements.append(
+                        find_movement_sequence(safe_territory, target_territory, armies_to_move)
+                    )
         
         # Randomly select a movement if any are available
         if valid_movements:
@@ -276,7 +280,8 @@ class RandomAgent(BaseAgent):
                         break
             
             # Add adjacent owned territories to search queue
-            for adjacent_id in current_territory.adjacent_territories:
+            for adjacent in current_territory.adjacent_territories:
+                adjacent_id = adjacent.id
                 if (adjacent_id in owned_territory_ids and 
                     adjacent_id not in visited):
                     visited.add(adjacent_id)
@@ -410,17 +415,31 @@ class AgentController:
                 
                 # Start the attack
                 if current_turn.start_attack(attacker, defender):
+                    current_turn.current_attack.attacking_armies = attacker.armies - 1
                     print(f"  Attacking {defender.name} from {attacker.name}")
+                    print(f"  {current_turn.current_attack.attacking_armies} vs {current_turn.current_attack.defending_armies}")
                     
                     # Resolve the attack
+                    atk_cas = 0
+                    def_cas = 0
                     attack_result = current_turn.resolve_attack()
-                    if attack_result:
-                        # Update territories based on attack result
+                    # Update territories based on attack result
+                    atk_cas += attack_result['attacker_casualties']
+                    def_cas += attack_result['defender_casualties']
+                    while attack_result['fight_continues']:
+                        attack_result = current_turn.resolve_attack()
                         attacker.armies -= attack_result['attacker_casualties']
                         defender.armies -= attack_result['defender_casualties']
-                        
-                        print(f"    Attacker casualties: {attack_result['attacker_casualties']}")
-                        print(f"    Defender casualties: {attack_result['defender_casualties']}")
+                        atk_cas += attack_result['attacker_casualties']
+                        def_cas += attack_result['defender_casualties']
+
+                    if attack_result:
+                        attacker.armies -= attack_result['attacker_casualties']
+                        defender.armies -= attack_result['defender_casualties']
+                        atk_cas += attack_result['attacker_casualties']
+                        def_cas += attack_result['defender_casualties']
+                        print(f"    Attacker casualties: {atk_cas}")
+                        print(f"    Defender casualties: {def_cas}")
                         
                         # Check if territory was conquered
                         if attack_result.get('territory_conquered', False):
@@ -428,7 +447,7 @@ class AgentController:
                                              attack_result.get('surviving_attackers', 1))
                             print(f"    Conquered {defender.name}!")
                         
-                        attack_count += 1
+                attack_count += 1
             else:
                 break
         
@@ -440,39 +459,39 @@ class AgentController:
         # Execute movement phase
         movement_decision = agent.decide_movement(game_state, current_turn)
         if movement_decision is not None:
-            source_id, target_id, army_count = movement_decision
-            source_territory = game_state.get_territory(source_id)
-            target_territory = game_state.get_territory(target_id)
-            
-            if (source_territory and target_territory and 
-                source_territory.is_owned_by(agent.player_id) and 
-                target_territory.is_owned_by(agent.player_id) and 
-                source_territory.armies > army_count):
-                
-                # Start the movement
-                if current_turn.start_movement(source_territory, target_territory):
-                    # Set the army count for movement
-                    if current_turn.current_movement:
-                        current_turn.current_movement.moving_armies = army_count
+            for step in movement_decision:
+                source_territory = step.src
+                target_territory = step.tgt 
+                army_count = step.amount
+                if (source_territory and target_territory and 
+                    source_territory.is_owned_by(agent.player_id) and 
+                    target_territory.is_owned_by(agent.player_id) and 
+                    source_territory.armies > army_count):
                     
-                    # Execute the movement
-                    movement_result = current_turn.execute_movement()
-                    if movement_result:
-                        # Update territories based on movement result
-                        source_territory.armies -= army_count
-                        target_territory.armies += army_count
+                    # Start the movement
+                    if current_turn.start_movement(source_territory, target_territory):
+                        # Set the army count for movement
+                        if current_turn.current_movement:
+                            current_turn.current_movement.moving_armies = army_count
                         
-                        print(f"  Moved {army_count} armies from {source_territory.name} to {target_territory.name}")
-                        print(f"    {source_territory.name}: {source_territory.armies + army_count} -> {source_territory.armies} armies")
-                        print(f"    {target_territory.name}: {target_territory.armies - army_count} -> {target_territory.armies} armies")
-                        
-                        # Trigger movement animation if renderer is available
-                        if renderer:
-                            renderer.start_movement_animation(
-                                source_territory_id=source_id,
-                                target_territory_id=target_id,
-                                duration=1.5
-                            )
+                        # Execute the movement
+                        movement_result = current_turn.execute_movement()
+                        if movement_result:
+                            # Update territories based on movement result
+                            source_territory.armies -= army_count
+                            target_territory.armies += army_count
+                            
+                            print(f"  Moved {army_count} armies from {source_territory.name} to {target_territory.name}")
+                            print(f"    {source_territory.name}: {source_territory.armies + army_count} -> {source_territory.armies} armies")
+                            print(f"    {target_territory.name}: {target_territory.armies - army_count} -> {target_territory.armies} armies")
+                            
+                            # Trigger movement animation if renderer is available
+                            if renderer:
+                                renderer.start_movement_animation(
+                                    source_territory_id=source_territory.id,
+                                    target_territory_id=target_territory.id,
+                                    duration=1.5
+                                )
                 else:
                     print(f"  Movement from {source_territory.name} to {target_territory.name} failed - not adjacent or invalid")
         
