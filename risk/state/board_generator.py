@@ -667,8 +667,8 @@ class BoardGenerator:
                 
                 # Check if territories share a boundary
                 if self._territories_share_boundary(territory_a, territory_b):
-                    territory_a.add_adjacent_territory(territory_b.id)
-                    territory_b.add_adjacent_territory(territory_a.id)
+                    territory_a.add_adjacent_territory(territory_b)
+                    territory_b.add_adjacent_territory(territory_a)
         
         # Report adjacency statistics
         total_adjacencies = sum(len(t.adjacent_territories) for t in territories)

@@ -142,7 +142,7 @@ class TurnState:
             return False
         
         # Check adjacency
-        if defender_territory.id not in attacker_territory.adjacent_territories:
+        if defender_territory not in attacker_territory.adjacent_territories:
             return False
         
         self.current_attack = AttackState(
@@ -246,6 +246,7 @@ class TurnState:
                     )
             
             # End fight and attack
+            result['fight_continues'] = False
             self.current_fight = None
             self.current_attack = None
         else:
@@ -286,7 +287,7 @@ class TurnState:
             return False
         
         # Check adjacency
-        if target_territory.id not in source_territory.adjacent_territories:
+        if target_territory not in source_territory.adjacent_territories:
             return False
         
         self.current_movement = MovementState(

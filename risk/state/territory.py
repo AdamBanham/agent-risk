@@ -49,7 +49,7 @@ class Territory:
     selected: bool = False  # Whether this territory is currently selected
     
     # Adjacency and connectivity
-    adjacent_territories: Set[int] = field(default_factory=set)  # Territory IDs
+    adjacent_territories: Set['Territory'] = field(default_factory=set)
     
     def __post_init__(self):
         """Validate territory state consistency after initialization."""
@@ -60,23 +60,23 @@ class Territory:
               self.state in (TerritoryState.OWNED, TerritoryState.CONTESTED)):
             self.state = TerritoryState.FREE
     
-    def add_adjacent_territory(self, territory_id: int) -> None:
+    def add_adjacent_territory(self, territory: 'Territory') -> None:
         """
         Add a territory as adjacent to this one. Updates the adjacency set 
         for pathfinding and movement rules.
         
         :param territory_id: ID of the adjacent territory to add
         """
-        self.adjacent_territories.add(territory_id)
+        self.adjacent_territories.add(territory)
     
-    def remove_adjacent_territory(self, territory_id: int) -> None:
+    def remove_adjacent_territory(self, territory: 'Territory') -> None:
         """
         Remove a territory from adjacency list. Updates the adjacency set 
         when territories are no longer connected.
         
         :param territory_id: ID of the territory to remove from adjacency
         """
-        self.adjacent_territories.discard(territory_id)
+        self.adjacent_territories.discard(territory)
     
     def is_adjacent_to(self, territory_id: int) -> bool:
         """
@@ -86,7 +86,7 @@ class Territory:
         :param territory_id: ID of the territory to check adjacency with
         :returns: True if territories are adjacent, False otherwise
         """
-        return territory_id in self.adjacent_territories
+        return territory_id in [ t.id  for t in self.adjacent_territories ]
     
     def set_owner(self, player_id: Optional[int], army_count: int = 0) -> None:
         """
@@ -217,3 +217,6 @@ class Territory:
         for key in vars(self):
             ret+= f"{key}={repr(getattr(self, key))}, "
         return ret + ")"
+    
+    def __hash__(self):
+        return hash(self.id)
