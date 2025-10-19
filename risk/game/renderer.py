@@ -11,6 +11,7 @@ from ..state import Territory, TerritoryState, GameState, Player, TurnState
 from ..state.board_generator import generate_sample_board
 from .ui import TurnUI
 from .ui_renderer import UIRenderer
+from .animation import AnimationManager
 
 
 class GameRenderer:
@@ -33,6 +34,9 @@ class GameRenderer:
         self.turn_ui = TurnUI(self.width, self.height)
         self.ui_renderer = UIRenderer(screen)
         self.turn_state = turn_state
+        
+        # Initialize animation system
+        self.animation_manager = AnimationManager()
         
         # Colors
         self.colors = {
@@ -75,10 +79,13 @@ class GameRenderer:
         if not self.game_state.territories:
             generate_sample_board(self.game_state, self.width, self.height - 120)
     
-    def draw_board(self) -> None:
+    def draw_board(self, delta_time: float = 0.0) -> None:
         """
         Draw the complete Risk board. Renders territories, continent labels, 
         player summaries, legend, and turn UI.
+        
+        :param delta_time: Time elapsed since last frame in seconds for 
+                          animation updates
         """
         self._draw_territories()
         self._draw_continent_labels()
@@ -88,6 +95,10 @@ class GameRenderer:
         # Draw turn UI
         self.turn_ui.set_turn_state(self.turn_state)
         self.ui_renderer.draw_turn_ui(self.turn_ui)
+        
+        # Update and draw animations with delta time
+        self.animation_manager.update_animations(delta_time)
+        self._draw_animations()
     
     def set_turn_state(self, turn_state: Optional[TurnState]) -> None:
         """
@@ -105,6 +116,134 @@ class GameRenderer:
         :returns: TurnUI instance for interaction handling
         """
         return self.turn_ui
+    
+    def start_attack_arrow_animation(self, attacker_territory_id: int, 
+                                   defender_territory_id: int,
+                                   player_id: int,
+                                   duration: float = 1.2) -> None:
+        """
+        Start an arrow animation from attacking territory to defending 
+        territory. Creates visual feedback for combat actions with player 
+        color matching.
+        
+        :param attacker_territory_id: ID of attacking territory
+        :param defender_territory_id: ID of defending territory
+        :param player_id: ID of attacking player for color matching
+        :param duration: Animation duration in seconds
+        """
+        attacker = self.game_state.get_territory(attacker_territory_id)
+        defender = self.game_state.get_territory(defender_territory_id)
+        
+        if attacker and defender:
+            # Get player color based on player ID
+            if player_id < len(self.colors['player_colors']):
+                arrow_color = self.colors['player_colors'][player_id]
+            else:
+                # Fallback to red if player ID exceeds available colors
+                arrow_color = (255, 80, 80)
+            
+            self.animation_manager.add_arrow_animation(
+                start_pos=attacker.center,
+                end_pos=defender.center,
+                duration=duration,
+                color=arrow_color
+            )
+    
+    def clear_animations(self) -> None:
+        """
+        Clear all active animations. Useful for game resets or state changes.
+        """
+        self.animation_manager.clear_all_animations()
+    
+    def start_movement_animation(self, source_territory_id: int, 
+                               target_territory_id: int,
+                               duration: float = 1.5) -> None:
+        """
+        Start a random walk animation for troop movement between territories.
+        
+        :param source_territory_id: ID of source territory
+        :param target_territory_id: ID of target territory
+        :param duration: Animation duration in seconds
+        """
+        source_territory = self.game_state.get_territory(source_territory_id)
+        target_territory = self.game_state.get_territory(target_territory_id)
+        
+        if source_territory and target_territory:
+            self.animation_manager.add_random_walk_animation(
+                start_pos=source_territory.center,
+                end_pos=target_territory.center,
+                duration=duration
+            )
+    
+    def start_attack_success_animation(self, territory_id: int, 
+                                     player_id: int,
+                                     arrow_duration: float = 1.2) -> None:
+        """
+        Start a tick animation at a territory to indicate successful attack. 
+        Displays green checkmark for conquered territory after arrow completes.
+        
+        :param territory_id: ID of conquered territory
+        :param player_id: ID of attacking player
+        :param arrow_duration: Duration of arrow animation for timing delay
+        """
+        territory = self.game_state.get_territory(territory_id)
+        if not territory:
+            return
+        
+        # Get player color based on player ID
+        if player_id < len(self.colors['player_colors']):
+            player_color = self.colors['player_colors'][player_id]
+        else:
+            # Fallback to green if player ID exceeds available colors
+            player_color = (0, 200, 0)
+        
+        self.animation_manager.add_tick_animation(
+            position=territory.center,
+            duration=2.0,
+            delay=arrow_duration,  # Wait for arrow to reach destination
+            color=player_color  # Use attacker's color
+        )
+    
+    def start_attack_failure_animation(self, territory_id: int, 
+                                     player_id: int,
+                                     arrow_duration: float = 1.2) -> None:
+        """
+        Start a cross animation at a territory to indicate failed attack. 
+        Displays red X symbol for defended territory after arrow completes.
+        
+        :param territory_id: ID of defended territory
+        :param player_id: ID of attacking player
+        :param arrow_duration: Duration of arrow animation for timing delay
+        """
+        territory = self.game_state.get_territory(territory_id)
+        if not territory:
+            return
+        
+        # Get player color based on player ID
+        if player_id < len(self.colors['player_colors']):
+            player_color = self.colors['player_colors'][player_id]
+        else:
+            # Fallback to red if player ID exceeds available colors
+            player_color = (200, 0, 0)
+        
+        self.animation_manager.add_cross_animation(
+            position=territory.center,
+            duration=2.0,
+            delay=arrow_duration,  # Wait for arrow to reach destination
+            color=player_color  # Use attacker's color
+        )
+    
+    def _draw_animations(self) -> None:
+        """
+        Draw all visible animations using the AnimationManager's centralized 
+        rendering approach. Delegates to AnimationManager.render() for 
+        optimized single-surface batch rendering.
+        """
+        if not self.animation_manager:
+            return
+        
+        # Use AnimationManager's centralized rendering
+        self.animation_manager.render(self.screen)
     
     def _draw_territories(self) -> None:
         """

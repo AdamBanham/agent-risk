@@ -10,6 +10,8 @@ from .input import InputHandler, GameInputHandler
 from .selection import TerritorySelectionHandler
 from .ui import TurnUI, UIAction
 from .ui_renderer import UIRenderer
+from .animation import AnimationManager, ArrowAnimation, CrossAnimation, TickAnimation, RandomWalkAnimation
 
 __all__ = ['GameLoop', 'GameRenderer', 'InputHandler', 'GameInputHandler', 
-           'TerritorySelectionHandler', 'TurnUI', 'UIAction', 'UIRenderer', 'main']
+           'TerritorySelectionHandler', 'TurnUI', 'UIAction', 'UIRenderer', 
+           'AnimationManager', 'ArrowAnimation', 'CrossAnimation', 'TickAnimation', 'RandomWalkAnimation', 'main']

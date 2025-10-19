@@ -4,7 +4,7 @@ Manages turn phases, placement, attacking, and movement phases.
 """
 
 from dataclasses import dataclass, field
-from typing import Dict, List, Optional, Set, Tuple
+from typing import Dict, List, Optional, Set, Tuple, Callable
 from enum import Enum
 
 from .game_state import GameState, Player
@@ -63,6 +63,7 @@ class MovementState:
 class TurnState:
     """Manages the current state of a player's turn."""
     player_id: int
+    turn_manager: 'TurnManager' = field(repr=False)  # Reference to parent turn manager
     phase: TurnPhase = TurnPhase.PLACEMENT
     reinforcements_remaining: int = 0
     placements_made: List[Tuple[int, int]] = field(default_factory=list)  # (territory_id, armies)
@@ -173,6 +174,15 @@ class TurnState:
                 initial_attackers=self.current_attack.attacking_armies,
                 initial_defenders=self.current_attack.defending_armies
             )
+            
+            # Trigger animation callback for new attacks through turn manager
+            if (self.turn_manager and 
+                self.turn_manager.attack_animation_callback):
+                self.turn_manager.attack_animation_callback(
+                    self.current_attack.attacker_territory_id,
+                    self.current_attack.defender_territory_id,
+                    self.player_id  # Include attacking player ID for color matching
+                )
         
         # Execute one round of combat
         try:
@@ -215,9 +225,25 @@ class TurnState:
             if fight_result == FightResult.ATTACKER_WINS:
                 result['territory_conquered'] = True
                 result['surviving_attackers'] = self.current_fight.current_attackers
+                
+                # Trigger success animation callback
+                if (self.turn_manager and 
+                    self.turn_manager.attack_success_callback):
+                    self.turn_manager.attack_success_callback(
+                        self.current_attack.defender_territory_id,
+                        self.player_id
+                    )
             else:
                 result['territory_conquered'] = False
                 result['surviving_defenders'] = self.current_fight.current_defenders
+                
+                # Trigger failure animation callback
+                if (self.turn_manager and 
+                    self.turn_manager.attack_failure_callback):
+                    self.turn_manager.attack_failure_callback(
+                        self.current_attack.defender_territory_id,
+                        self.player_id
+                    )
             
             # End fight and attack
             self.current_fight = None
@@ -337,6 +363,9 @@ class TurnManager:
         """
         self.game_state = game_state
         self.current_turn: Optional[TurnState] = None
+        self.attack_animation_callback: Optional[Callable[[int, int, int], None]] = None
+        self.attack_success_callback: Optional[Callable[[int, int], None]] = None
+        self.attack_failure_callback: Optional[Callable[[int, int], None]] = None
     
     def start_player_turn(self, player_id: int) -> bool:
         """
@@ -356,6 +385,7 @@ class TurnManager:
         # Create new turn state
         self.current_turn = TurnState(
             player_id=player_id,
+            turn_manager=self,
             reinforcements_remaining=reinforcements
         )
         
@@ -461,3 +491,31 @@ class TurnManager:
             return False
         
         return self.current_turn.advance_phase()
+    
+    def set_attack_animation_callback(self, callback: Callable[[int, int, int], None]) -> None:
+        """
+        Set callback function to be called when attacks are resolved. Callback 
+        receives attacker territory ID, defender territory ID, and attacking 
+        player ID.
+        
+        :param callback: Function that takes (attacker_id, defender_id, player_id) parameters
+        """
+        self.attack_animation_callback = callback
+    
+    def set_attack_success_callback(self, callback: Callable[[int, int], None]) -> None:
+        """
+        Set callback function to be called when attacks succeed. Callback 
+        receives conquered territory ID and attacking player ID.
+        
+        :param callback: Function that takes (territory_id, player_id) parameters
+        """
+        self.attack_success_callback = callback
+    
+    def set_attack_failure_callback(self, callback: Callable[[int, int], None]) -> None:
+        """
+        Set callback function to be called when attacks fail. Callback 
+        receives defended territory ID and attacking player ID.
+        
+        :param callback: Function that takes (territory_id, player_id) parameters
+        """
+        self.attack_failure_callback = callback

@@ -69,6 +69,16 @@ class GameLoop:
             
             # Initialize game components
             self.turn_manager = TurnManager(self.game_state)
+            # Register animation callbacks with turn manager
+            self.turn_manager.set_attack_animation_callback(
+                self._handle_attack_animation
+            )
+            self.turn_manager.set_attack_success_callback(
+                self._handle_attack_success_animation
+            )
+            self.turn_manager.set_attack_failure_callback(
+                self._handle_attack_failure_animation
+            )
             self.renderer = GameRenderer(self.screen, self.game_state)
             self.input_handler = GameInputHandler(self.renderer, self.renderer.get_turn_ui())
             self.selection_handler = TerritorySelectionHandler(self.game_state, self.turn_manager)
@@ -324,11 +334,26 @@ class GameLoop:
         # Update renderer with new game state
         if self.renderer:
             self.renderer.game_state = self.game_state
+            # Clear any ongoing animations when regenerating
+            self.renderer.clear_animations()
         
         # Update selection handler with new game state
         if self.selection_handler:
             self.selection_handler.game_state = self.game_state
             self.selection_handler.clear_all_selections()
+        
+        # Recreate turn manager with new game state and register animation callbacks
+        if self.game_state.players:
+            self.turn_manager = TurnManager(self.game_state)
+            self.turn_manager.set_attack_animation_callback(
+                self._handle_attack_animation
+            )
+            self.turn_manager.set_attack_success_callback(
+                self._handle_attack_success_animation
+            )
+            self.turn_manager.set_attack_failure_callback(
+                self._handle_attack_failure_animation
+            )
         
         # Set up the game state - start the first turn
         if self.game_state.players:
@@ -337,6 +362,47 @@ class GameLoop:
         
         print(f"New game created: {self.regions} regions, {self.num_players} players, {self.starting_armies} armies each")
         print(f"Generated {len(self.game_state.territories)} territories")
+    
+    def _handle_attack_animation(self, attacker_territory_id: int, 
+                                 defender_territory_id: int, player_id: int) -> None:
+        """
+        Handle attack animation trigger from turn manager. Creates arrow 
+        animation from attacking to defending territory with player color.
+        
+        :param attacker_territory_id: ID of attacking territory
+        :param defender_territory_id: ID of defending territory
+        :param player_id: ID of attacking player for color matching
+        """
+        if self.renderer:
+            self.renderer.start_attack_arrow_animation(
+                attacker_territory_id, 
+                defender_territory_id,
+                player_id
+            )
+    
+    def _handle_attack_success_animation(self, territory_id: int, 
+                                       player_id: int) -> None:
+        """
+        Handle attack success animation trigger from turn manager. Creates 
+        tick animation at conquered territory after arrow completes.
+        
+        :param territory_id: ID of conquered territory
+        :param player_id: ID of attacking player
+        """
+        if self.renderer:
+            self.renderer.start_attack_success_animation(territory_id, player_id, arrow_duration=1.2)
+    
+    def _handle_attack_failure_animation(self, territory_id: int, 
+                                       player_id: int) -> None:
+        """
+        Handle attack failure animation trigger from turn manager. Creates 
+        cross animation at defended territory after arrow completes.
+        
+        :param territory_id: ID of defended territory
+        :param player_id: ID of attacking player
+        """
+        if self.renderer:
+            self.renderer.start_attack_failure_animation(territory_id, player_id, arrow_duration=1.2)
         
         # Store the board layout for future reuse
         self._store_current_board_layout()
@@ -362,11 +428,26 @@ class GameLoop:
         # Update renderer with new game state
         if self.renderer:
             self.renderer.game_state = self.game_state
+            # Clear any ongoing animations when restarting
+            self.renderer.clear_animations()
         
         # Update selection handler with new game state
         if self.selection_handler:
             self.selection_handler.game_state = self.game_state
             self.selection_handler.clear_all_selections()
+        
+        # Recreate turn manager with new game state and register animation callbacks
+        if self.game_state.players:
+            self.turn_manager = TurnManager(self.game_state)
+            self.turn_manager.set_attack_animation_callback(
+                self._handle_attack_animation
+            )
+            self.turn_manager.set_attack_success_callback(
+                self._handle_attack_success_animation
+            )
+            self.turn_manager.set_attack_failure_callback(
+                self._handle_attack_failure_animation
+            )
         
         # Set up the game state - start the first turn
         if self.game_state.players:
@@ -438,16 +519,18 @@ class GameLoop:
             self.game_state.update_player_statistics()
             # TODO: Update game state, agent decisions, etc.
     
-    def render(self) -> None:
+    def render(self, delta_time: float) -> None:
         """
         Render the current game state.
+        
+        :param delta_time: Time elapsed since last frame in seconds
         """
         if self.renderer and self.screen:
             # Clear screen with dark blue background
             self.screen.fill((20, 30, 50))
             
-            # Render the board
-            self.renderer.draw_board()
+            # Render the board with delta time for animations
+            self.renderer.draw_board(delta_time)
             
             # If paused, show pause overlay
             if self.paused:
@@ -498,8 +581,8 @@ class GameLoop:
         
         try:
             while self.running:
-                # Maintain 60 FPS
-                self.clock.tick(60)
+                # Maintain 60 FPS and get delta time
+                delta_time = self.clock.tick(60) / 1000.0  # Convert milliseconds to seconds
                 
                 # Process events
                 self.handle_events()
@@ -507,8 +590,8 @@ class GameLoop:
                 # Update game state
                 self.update()
                 
-                # Render frame
-                self.render()
+                # Render frame with delta time
+                self.render(delta_time)
                 
         except KeyboardInterrupt:
             print("\nShutting down...")
@@ -638,8 +721,10 @@ class GameLoop:
         result = current_turn.resolve_attack()
         if result:
             # Apply results to territories
-            attacker_territory = self.game_state.get_territory(result['attacker_territory_id'])
-            defender_territory = self.game_state.get_territory(result['defender_territory_id'])
+            attacker_territory_id = result['attacker_territory_id']
+            defender_territory_id = result['defender_territory_id']
+            attacker_territory = self.game_state.get_territory(attacker_territory_id)
+            defender_territory = self.game_state.get_territory(defender_territory_id)
             
             if attacker_territory and defender_territory:
                 # Apply casualties from this round
@@ -789,6 +874,14 @@ class GameLoop:
                 target_territory.armies += result['armies_moved']
                 
                 print(f"Moved {result['armies_moved']} armies from {source_territory.name} to {target_territory.name}")
+                
+                # Add random walk animation for movement
+                if self.renderer:
+                    self.renderer.start_movement_animation(
+                        source_territory_id=result['source_territory_id'],
+                        target_territory_id=result['target_territory_id'],
+                        duration=1.5
+                    )
                 
                 # Update renderer
                 if self.renderer:
