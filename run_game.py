@@ -5,10 +5,10 @@ Usage:
     python run_game.py [-g REGIONS] [-p PLAYERS] [-s ARMY_SIZE] [--attack-rate RATE] [--ai-delay DELAY] [--human-player ID]
 
 Arguments:
-    -g, --regions        Number of territories/regions to generate (default: 15)
+    -g, --regions        Number of territories/regions to generate (default: 27)
     -p, --players        Number of players in the simulation (default: 3)
     -s, --army-size      Starting army size per player (default: 20)
-    --attack-rate        AI attack probability 0.0-1.0 (default: 0.5)
+    --attack-rate        AI attack probability 0.0-1.0 (default: 0.85)
     --ai-delay           Delay between AI actions in seconds (default: 1.0)
     --human-player       Player ID to be human (0 to players-1), others will be AI (default: all AI)
 """
@@ -34,14 +34,14 @@ def parse_arguments():
         '-g', '--regions',
         type=int,
         default=27,
-        help='Number of territories/regions to generate (default: 15)'
+        help='Number of territories/regions to generate (default: 27)'
     )
     
     parser.add_argument(
         '-p', '--players',
         type=int,
         default=3,
-        help='Number of players in the simulation (default: 5)'
+        help='Number of players in the simulation (default: 3)'
     )
     
     parser.add_argument(
@@ -55,14 +55,14 @@ def parse_arguments():
         '--attack-rate',
         type=float,
         default=0.85,
-        help='AI attack probability 0.0-1.0 (default: 0.5)'
+        help='AI attack probability 0.0-1.0 (default: 0.85)'
     )
     
     parser.add_argument(
         '--ai-delay',
         type=float,
         default=1,
-        help='Delay between AI actions in seconds (default: 5.0)'
+        help='Delay between AI actions in seconds (default: 1.0)'
     )
     
     parser.add_argument(

@@ -30,17 +30,20 @@ simulation parameters, not a fixed 1:1 recreation of the Risk board game.**
 The simulation can be started using the `run_game.py` script with configurable parameters:
 
 ```bash
-python run_game.py [-g REGIONS] [-p PLAYERS] [-s ARMY_SIZE]
+python run_game.py [-g REGIONS] [-p PLAYERS] [-s ARMY_SIZE] [--attack-rate RATE] [--ai-delay DELAY] [--human-player ID]
 ```
 
 **Command-line Arguments:**
-- `-g, --regions`: Number of territories/regions to generate (default: 15)
+- `-g, --regions`: Number of territories/regions to generate (default: 27)
 - `-p, --players`: Number of players in the simulation (default: 3) 
 - `-s, --army-size`: Starting army count **per player** (default: 20) - Each player gets exactly this many armies
+- `--attack-rate`: AI attack probability 0.0-1.0 (default: 0.85) - How aggressive AI agents are
+- `--ai-delay`: Delay between AI actions in seconds (default: 1.0) - Controls AI turn speed for visibility
+- `--human-player`: Player ID to be human (0 to players-1), others will be AI (default: all AI)
 
 **Examples:**
 ```bash
-# Run with default parameters (15 regions, 3 players, 20 armies each)
+# Run with default parameters (27 regions, 3 players, 20 armies each)
 python run_game.py
 
 # Run a larger simulation (30 regions, 4 players, 15 armies per player = 60 total armies)
@@ -48,6 +51,15 @@ python run_game.py -g 30 -p 4 -s 15
 
 # Run a smaller test simulation (8 regions, 2 players, 10 armies per player = 20 total armies)
 python run_game.py --regions 8 --players 2 --army-size 10
+
+# Run with AI agents (all AI players)
+python run_game.py -g 15 -p 4 --attack-rate 0.7 --ai-delay 2.0
+
+# Run with mixed human/AI players (player 0 is human, others are AI)
+python run_game.py -p 3 --human-player 0 --attack-rate 0.6
+
+# Run fast AI simulation for testing
+python run_game.py -g 10 -p 2 --ai-delay 0.5 --attack-rate 0.9
 ```
 
 The script includes validation to ensure minimum values (regions ≥ 1, players ≥ 2, army-size ≥ 1).
@@ -62,6 +74,7 @@ Once the simulation is running, you can use these keyboard shortcuts for real-ti
 - **H**: Show help with all available controls
 - **I**: Show info for selected territory (click to select)
 - **D**: Show debug information
+- **Space**: Pause/unpause game simulation
 - **ESC**: Quit game
 
 These shortcuts enable rapid iteration and testing of different board configurations without restarting the application.
@@ -71,9 +84,9 @@ The project follows a **modular architecture with clear separation of concerns**
 
 **Current Implementation (✅ IMPLEMENTED):**
 - **`risk.game`** - Event loop, pygame rendering, and user input handling
-  - `loop.py` - Main game event loop with keyboard shortcuts and parameter management
+  - `loop.py` - Main game event loop with keyboard shortcuts, parameter management, and pause functionality
   - `renderer.py` - Pygame board rendering and visualization
-  - `input.py` - User input handling with Ctrl+ shortcuts and event processing
+  - `input.py` - User input handling with Ctrl+ shortcuts, event processing, and pause controls
   - `selection.py` - Territory selection management and selection state handling
   - `ui.py` - Turn-based UI components (buttons, labels, counters, attack popups)
   - `ui_renderer.py` - Pygame rendering for turn UI elements with consistent styling
@@ -83,13 +96,24 @@ The project follows a **modular architecture with clear separation of concerns**
   - `board_generator.py` - Dynamic board generation using polygon subdivision algorithms
   - `fight.py` - Dice-based combat system with Fight, DiceRoll, and battle resolution
   - `turn_manager.py` - Turn progression, phase management, and player turn coordination
+  - `plan.py` - Goal and plan representation for agent behaviors (Plan, Step, Goal classes)
+  - `event_stack/` - Event queue management system
+    - `stack.py` - Event stack data structures and management
+    - `events/` - Event type definitions
+      - `turns.py` - Turn-based event definitions
 - **`risk.utils`** - Shared utility functions and helper classes
   - `distance.py` - Point geometry, distance calculations, and random walk algorithms
   - `polygon.py` - Polygon operations, area calculations, centroid finding, and bounding box computation
+- **`risk.agents`** - AI agent implementations and controllers ✅ **IMPLEMENTED**
+  - `simple/` - Basic AI agent implementations
+    - `random_agent.py` - Random decision-making agent with BaseAgent interface
+    - `ai_game_loop.py` - Extended game loop with AI agent integration
 
-**Planned Modules (📋 PLANNED):**
-- **`risk.handler`** - Event queue management for simulation actions
-- **`risk.agent`** - AI agent behaviors using formal methods
+**Planned Modules (📋 PLANNED - Formal Methods):**
+- **`risk.agents.htn`** - Hierarchical Task Network agents
+- **`risk.agents.bt`** - Behavior Tree agents  
+- **`risk.agents.fa`** - Finite Automata agents
+- **`risk.agents.pn`** - Petri Net agents
 
 ## Critical Architectural Patterns
 
@@ -292,11 +316,17 @@ from ..state import GameState, Territory         # game uses state
 ```
 risk/
 ├── __init__.py                 # Package version info
+├── agents/                     # AI agent implementations and controllers
+│   ├── __init__.py            # Module exports (RandomAgent, BaseAgent, etc.)
+│   └── simple/                # Basic AI agent implementations
+│       ├── __init__.py        # Simple agents module exports
+│       ├── random_agent.py    # Random decision-making agent with BaseAgent interface
+│       └── ai_game_loop.py    # Extended game loop with AI agent integration
 ├── game/                       # Pygame event loop and rendering
 │   ├── __init__.py            # Module exports (GameLoop, GameRenderer, etc.)
-│   ├── loop.py                # Main game event loop with keyboard shortcuts
+│   ├── loop.py                # Main game event loop with keyboard shortcuts, parameter management, and pause functionality
 │   ├── renderer.py            # Pygame board rendering and visualization
-│   ├── input.py               # User input handling with Ctrl+ shortcuts
+│   ├── input.py               # User input handling with Ctrl+ shortcuts, event processing, and pause controls
 │   ├── selection.py           # Territory selection management and state handling
 │   ├── ui.py                  # Turn-based UI components (buttons, labels, counters, attack popups)
 │   └── ui_renderer.py         # Pygame rendering for turn UI elements with consistent styling
@@ -306,33 +336,51 @@ risk/
 │   ├── territory.py           # Territory definitions and ownership management
 │   ├── board_generator.py     # Dynamic board generation using polygon subdivision
 │   ├── fight.py               # Dice-based combat system with Fight, DiceRoll, and battle resolution
-│   └── turn_manager.py        # Turn progression, phase management, and player turn coordination
+│   ├── turn_manager.py        # Turn progression, phase management, and player turn coordination
+│   ├── plan.py                # Goal and plan representation for agent behaviors (Plan, Step, Goal classes)
+│   └── event_stack/           # Event queue management system
+│       ├── __init__.py        # Event stack module exports
+│       ├── stack.py           # Event stack data structures and management
+│       └── events/            # Event type definitions
+│           ├── __init__.py    # Event types module exports
+│           └── turns.py       # Turn-based event definitions
 ├── utils/                      # Shared utility functions
 │   ├── distance.py            # Point geometry, distance calculations, random walks
 │   └── polygon.py             # Polygon operations, area calculations, centroid finding
 └── tests/                      # Unit and integration tests
     ├── __init__.py
-    └── state/
+    ├── game/                  # Game module tests
+    │   ├── __init__.py
+    │   ├── test_ai_game_loop_pause.py  # AI game loop pause functionality tests
+    │   └── test_game_loop_pause.py     # Game loop pause functionality tests
+    └── state/                 # State module tests
         ├── __init__.py
-        ├── test_board.py       # Board generation tests
-        ├── test_fight.py       # Combat system tests
-        └── test_turn_manager.py # Turn management tests
+        ├── test_board.py      # Board generation tests
+        ├── test_fight.py      # Combat system tests
+        ├── test_plans.py      # Plan and goal system tests
+        ├── test_turn_manager.py # Turn management tests
+        └── events/            # Event system tests
+            ├── __init__.py
+            ├── test_stacks.py # Event stack tests
+            └── test_turns.py  # Turn event tests
 ```
 
 **Planned Structure for Future Development (📋 PLANNED):**
 ```
 risk/
-├── handler/                    # Event queue system
-│   ├── __init__.py
-│   ├── queue.py               # Event queue management
-│   └── events.py              # Event type definitions
-├── agent/                      # AI agent implementations  
-│   ├── __init__.py
-│   ├── base.py                # Abstract agent interface
-│   ├── htn_agent.py           # Hierarchical Task Network agent
-│   ├── bt_agent.py            # Behavior Tree agent
-│   ├── fa_agent.py            # Finite Automata agent
-│   └── pn_agent.py            # Petri Net agent
+├── agents/                     # AI agent implementations (partially implemented)
+│   ├── htn/                   # Hierarchical Task Network agents
+│   │   ├── __init__.py
+│   │   └── htn_agent.py       # HTN-based agent implementation
+│   ├── bt/                    # Behavior Tree agents
+│   │   ├── __init__.py
+│   │   └── bt_agent.py        # Behavior Tree agent implementation
+│   ├── fa/                    # Finite Automata agents
+│   │   ├── __init__.py
+│   │   └── fa_agent.py        # Finite Automata agent implementation
+│   └── pn/                    # Petri Net agents
+│       ├── __init__.py
+│       └── pn_agent.py        # Petri Net agent implementation
 ```
 
 **Entry Point:**
@@ -464,6 +512,100 @@ def _handle_resolve_attack(self) -> None:
 
 This turn-based system provides a complete foundation for human play and can be easily extended for AI agent integration through the same turn manager interface.
 
+## AI Agent System Implementation (✅ **IMPLEMENTED**)
+The current implementation includes a complete AI agent framework with working random agents for testing and simulation:
+
+### AI Agent Architecture
+**BaseAgent Interface** defines the contract for all AI agents:
+
+**Core Decision Methods:**
+- `decide_placement()` - Choose where to place reinforcement armies during placement phase
+- `decide_attack()` - Select attack targets and decide whether to continue attacking
+- `decide_movement()` - Choose army movements between owned territories after attacking
+- `choose_attack_armies()` - Determine how many armies to use in specific attacks
+- `choose_movement_armies()` - Determine how many armies to move between territories
+
+**Agent Lifecycle Integration:**
+- Agents integrate seamlessly with existing TurnManager and turn phases
+- Each agent controls one player and makes decisions during that player's turn
+- Agents receive full GameState context for informed decision-making
+- Support for mixed human/AI games through `--human-player` parameter
+
+### Random Agent Implementation (`risk.agents.simple.random_agent`)
+**RandomAgent** provides baseline AI behavior for testing and simulation:
+
+**Placement Strategy:**
+- Randomly selects owned territories for reinforcement placement
+- Distributes armies evenly across controlled territories
+- Prioritizes territories with fewer armies for balanced distribution
+
+**Attack Strategy:**
+- Configurable attack probability (default 85% chance to attack each turn)
+- Randomly selects attack targets from adjacent enemy territories
+- Uses random army counts within valid constraints (1 to max available)
+- Continues attacking until probability threshold or no valid targets remain
+
+**Movement Strategy:**
+- Random chance to move armies after attacking phase
+- Selects random source and destination territories from owned adjacent pairs
+- Moves random number of armies while respecting minimum garrison requirements
+
+### AI Game Loop Extension (`risk.agents.simple.ai_game_loop`)
+**AIGameLoop** extends the base GameLoop with automatic AI turn execution:
+
+**AI Turn Management:**
+- Automatic execution of AI player turns with configurable timing delays
+- Seamless integration with human player turns (mixed human/AI games)
+- Respects pause state - AI turns halt when game is paused
+- Visual feedback showing AI decision-making process
+
+**Agent Controller Integration:**
+- `AgentController` manages multiple AI agents across different players
+- Automatic agent assignment during game initialization
+- Support for different agent types per player (future extensibility)
+- Clean separation between AI logic and game state management
+
+**Configuration Options:**
+- `--ai-delay`: Controls speed of AI actions for visualization (default 1.0 seconds)
+- `--attack-rate`: Sets AI aggression level (default 0.85 = 85% attack probability)
+- `--human-player`: Designates which player is human-controlled
+
+### AI Integration Example
+```python
+# Create AI-enabled game with mixed players
+from risk.agents.simple import create_ai_game
+
+# Game with player 0 as human, others as AI
+game = create_ai_game(
+    regions=15, 
+    players=3, 
+    army_size=20,
+    human_player_id=0,  # Player 0 is human
+    ai_delay=1.5,       # 1.5 second delays between AI actions
+    attack_rate=0.7     # 70% chance for AI to attack each turn
+)
+
+# All AI players
+game = create_ai_game(
+    regions=20,
+    players=4, 
+    army_size=15,
+    human_player_id=None,  # All players are AI
+    ai_delay=0.5,          # Fast AI for quick simulation
+    attack_rate=0.9        # Very aggressive AI
+)
+```
+
+**Key AI System Features:**
+- **Mixed Human/AI Games**: Seamless integration of human and AI players
+- **Configurable AI Behavior**: Attack rates, timing delays, and aggression levels
+- **Visual AI Feedback**: Watch AI decision-making with timing controls
+- **Extensible Architecture**: BaseAgent interface ready for formal method implementations
+- **Pause-Aware AI**: AI respects pause state and can be interrupted
+- **Turn Manager Integration**: AI agents use same turn system as human players
+
+This AI system provides a complete foundation for testing gameplay mechanics and serves as a baseline for implementing more sophisticated agent behaviors using formal methods (HTN, Behavior Trees, Finite Automata, Petri nets).
+
 ## Development Patterns
 
 ### Architectural Principles (✅ **CRITICAL PATTERNS**)
@@ -548,12 +690,42 @@ from ..state.board_generator import generate_sample_board
 - **Validation**: Comprehensive polygon validation with error reporting
 - **Modular Geometry**: Clean separation between point operations (distance.py) and polygon operations (polygon.py)
 
-### Event System Design (📋 **PLANNED**)
-- Use event queue in `handler` module for all game actions
-- Events should be serializable for replay functionality
-- Implement clear event types for each game action (place_troop, attack, etc.)
+### Event System Design (� **PARTIALLY IMPLEMENTED**)
+Event queue foundation has been implemented in `risk.state.event_stack`:
 
-Example event structure:
+**Current Implementation:**
+- **Event Stack System** (`event_stack/stack.py`) - Core event queue management with UUID-based event tracking
+- **Event Context** - Immutable context containers for event data
+- **Turn Events** (`event_stack/events/turns.py`) - Turn-based event definitions
+- **Serializable Design** - Events designed for replay functionality
+
+**Event Stack Features:**
+- UUID-based event identification for reliable tracking
+- Immutable EventContext for consistent event data
+- Namespace-based event organization (event, level, stack namespaces)
+- Foundation for complete event-driven simulation
+
+**Planned Extensions (📋 PLANNED):**
+- Complete event types for all game actions (place_troop, attack, movement)
+- Event replay system for game analysis and debugging
+- Integration with agent decision-making system
+- Serialization support for game state persistence
+
+Example current event structure:
+```python
+# Event foundation exists in event_stack/stack.py
+class Event:
+    def __init__(self, name: str, context: Dict[str, object] = None):
+        self.name = name
+        self.context = EventContext(context)
+
+class EventContext:
+    # Immutable context container with attribute access
+    def __init__(self, context: Dict[str, object] = None):
+        # Implementation provides immutable event data
+```
+
+Planned event types:
 ```python
 @dataclass
 class PlaceTroopEvent:
@@ -571,27 +743,51 @@ class AttackEvent:
     dice_results: List[int]
 ```
 
-### Agent Formal Methods (📋 **PLANNED**)
+### Agent Formal Methods (� **FOUNDATION IMPLEMENTED**)
+Plan and goal representation has been implemented in `risk.state.plan`:
+
+**Current Implementation:**
+- **Goal Class** - Represents agent objectives with achievement checking
+- **Plan Class** - Sequences of steps to achieve goals with step management
+- **Step Class** - Individual plan actions with execution framework
+- **State Integration** - Plan evaluation against GameState for goal completion
+
+**Plan System Features:**
+```python
+# Basic plan structure implemented in risk.state.plan
+class Goal:
+    def achieved(self, state: GameState) -> bool: # Goal completion checking
+        
+class Plan:
+    def add_step(self, step: Step) -> Plan:       # Step management
+    def goal_achieved(self, state: GameState) -> bool: # Goal evaluation
+    def pop_step(self) -> Union[None, Step]:     # Step execution ordering
+    
+class Step:
+    def execute(self, state: GameState) -> Union[GameState, None, Plan]:
+        # Returns: new state, None, or sub-plan for hierarchical planning
+```
+
+**Planned Formal Method Extensions (📋 PLANNED):**
 Implement agents using academic formalisms from "Action, Planning, and Learning":
-- **HTN (Hierarchical Task Networks)** - Decompose high-level strategies into 
-primitive actions
+- **HTN (Hierarchical Task Networks)** - Decompose high-level strategies into primitive actions using existing Plan/Step framework
 - **Behavior Trees** - Reactive decision-making with clear success/failure states  
 - **Finite Automata** - State-based decision making for different game phases
 - **Petri Nets** - Concurrent action modeling and resource management
 
 Example agent interface:
 ```python
-class BaseAgent(ABC):
+class BaseAgent(ABC):  # Already implemented in risk.agents.simple.random_agent
     @abstractmethod
-    def place_reinforcements(self, game_state: GameState, available_troops: int) -> List[PlacementAction]:
+    def decide_placement(self, game_state: GameState, turn_state: TurnState) -> Optional[int]:
         pass
     
     @abstractmethod
-    def choose_attacks(self, game_state: GameState) -> List[AttackAction]:
+    def decide_attack(self, game_state: GameState, turn_state: TurnState) -> Optional[Tuple[int, int]]:
         pass
     
     @abstractmethod
-    def end_turn_movements(self, game_state: GameState) -> List[MovementAction]:
+    def decide_movement(self, game_state: GameState, turn_state: TurnState) -> Optional[Tuple[int, int, int]]:
         pass
 ```
 
@@ -877,13 +1073,33 @@ class Player:
 # Callback registration for loose coupling (✅ IMPLEMENTED)
 def register_callback(self, event_type: str, callback: Callable) -> None:
     self.callbacks[event_type] = callback
+
+# Agent interface pattern (✅ IMPLEMENTED)
+class BaseAgent(ABC):
+    @abstractmethod
+    def decide_placement(self, game_state: GameState, turn_state: TurnState) -> Optional[int]:
+        pass
+
+# Plan/Goal/Step pattern for agent behaviors (✅ IMPLEMENTED)
+class Goal:
+    def achieved(self, state: GameState) -> bool:
+        return False
+
+class Plan:
+    def add_step(self, step: Step) -> Plan:
+        self.steps.append(step)
+        return self
+
+class Step:
+    def execute(self, state: GameState) -> Union[GameState, None, Plan]:
+        return None
 ```
 
 ## Testing and Development
 When testing new features:
 - Use `python run_game.py -g 5 -p 2 -s 5` for quick testing with minimal setup (2 players, 5 armies each = 10 total)
 - Use `python run_game.py -g 20 -p 4 -s 30` for comprehensive behavior testing (4 players, 30 armies each = 120 total)
-- Default parameters (`python run_game.py`) provide balanced simulation for development (3 players, 20 armies each = 60 total)
+- Default parameters (`python run_game.py`) provide balanced simulation for development (3 players, 20 armies each = 60 total, 27 regions)
 
 **Runtime Testing with Keyboard Shortcuts:**
 For rapid iteration and testing of different board configurations:
@@ -892,7 +1108,16 @@ For rapid iteration and testing of different board configurations:
 - Use **Ctrl+P** to add more players and see how territory distribution changes
 - Use **Ctrl+S** to increase armies and see how initial placement affects gameplay
 - Use **Ctrl+R** to regenerate the same configuration with different random layouts
+- Use **Space** to pause/unpause AI simulation for observation
 - All changes trigger immediate board regeneration for visual feedback
+
+**AI Testing Patterns:**
+For testing AI agent behavior and integration:
+- Use `python run_game.py --ai-delay 0.1 --attack-rate 0.9` for fast AI simulation testing
+- Use `python run_game.py --human-player 0 --ai-delay 2.0` to play against AI with visible decision timing
+- Use `python run_game.py -g 8 -p 2 --ai-delay 0.5` for quick AI vs AI testing
+- Pause functionality (`Space`) allows inspection of AI state mid-turn
+- Visual feedback shows AI decisions in real-time with configurable delays
 
 **Testing Separation of Concerns:**
 When adding new functionality, verify the architectural boundaries:
@@ -924,3 +1149,5 @@ assert game_state == original_state  # State unchanged
 - Polygon subdivision algorithm has O(n²) adjacency calculation complexity
 - Pygame rendering at 60 FPS works well for typical board sizes
 - Memory usage scales linearly with number of territories and game history
+- AI agent decision-making adds minimal overhead due to efficient BaseAgent interface
+- Pause functionality allows detailed inspection of AI behavior without performance impact
