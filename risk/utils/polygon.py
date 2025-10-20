@@ -40,33 +40,51 @@ def compute_bounding_box(polygon: List[Point]) -> Tuple[float, float,
 
 def find_centroid(polygon: List[Point]) -> Point:
     """
-    Compute the centroid (geometric center) of a polygon. Uses the standard 
-    centroid formula for polygons.
+    Compute the geometric median (Fermat point) of a polygon using numerical 
+    optimization. Finds the point that minimizes the sum of distances to all 
+    vertices.
     
     :param polygon: List of Point objects representing the polygon vertices 
                    in order
-    :returns: Point representing the centroid of the polygon
+    :returns: Point representing the geometric median centroid of the polygon
     """
-    n = len(polygon)
-    if n == 0:
-        return Point(0, 0)
+    if len(polygon) == 1:
+        return polygon[0]
     
-    cx = 0.0
-    cy = 0.0
-    area = compute_area(polygon)
+    # Start with arithmetic mean as initial guess
+    cx_init = sum(point.x for point in polygon) / len(polygon)
+    cy_init = sum(point.y for point in polygon) / len(polygon)
     
-    factor = 0.0
-    for i in range(n):
-        j = (i + 1) % n
-        factor = (polygon[i].x * polygon[j].y - polygon[j].x * polygon[i].y)
-        cx += (polygon[i].x + polygon[j].x) * factor
-        cy += (polygon[i].y + polygon[j].y) * factor
-
-    area *= 6.0
-    if area == 0:
-        return Point(0, 0)
+    # Iterative Weiszfeld algorithm to find geometric median
+    x, y = cx_init, cy_init
+    tolerance = 1e-7
+    max_iterations = 100
     
-    cx /= area
-    cy /= area
-    
-    return Point(cx, cy)
+    broke = False
+    for iter in range(max_iterations):
+        # Calculate weighted sum using inverse distances
+        numerator_x = 0.0
+        numerator_y = 0.0
+        denominator = 0.0
+        
+        for point in polygon:
+            distance = ((x - point.x) ** 2 + (y - point.y) ** 2) ** 0.5
+            if distance < tolerance:  # Avoid division by zero
+                return Point(x, y)
+            
+            weight = 1.0 / distance
+            numerator_x += weight * point.x
+            numerator_y += weight * point.y
+            denominator += weight
+        
+        new_x = numerator_x / denominator
+        new_y = numerator_y / denominator
+        
+        # Check for convergence
+        if abs(new_x - x) < tolerance and abs(new_y - y) < tolerance:
+            broke = True
+            break
+            
+        x, y = new_x, new_y
+    print(f"returned on {iter}/ {max_iterations}:", broke)
+    return Point(x, y)
