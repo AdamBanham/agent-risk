@@ -305,6 +305,7 @@ class GameRenderer:
         
         # Fourth pass: Draw territory names and army counts
         for territory in self.game_state.territories.values():
+
             # Draw territory name with appropriate text color
             text_color = self.colors['selected_text'] if territory.selected else self.colors['text']
             text = self.small_font.render(territory.name, True, text_color)
@@ -314,8 +315,13 @@ class GameRenderer:
             # Draw army count if > 0
             if territory.armies > 0:
                 army_text = str(territory.armies)
+                if (territory.owner is not None and 
+                    territory.owner < len(self.colors['player_colors'])):
+                    army_text_color = self.colors['player_colors'][territory.owner]
+                else:
+                    army_text_color = self.colors['text']
                 army_surface = self.font.render(army_text, True, 
-                                               self.colors['text'])
+                                               army_text_color)
                 army_rect = army_surface.get_rect()
                 army_rect.center = (territory.center[0], 
                                    territory.center[1] + 20)
