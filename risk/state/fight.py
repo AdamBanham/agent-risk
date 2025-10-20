@@ -21,6 +21,18 @@ class FightResult(Enum):
     DEFENDER_WINS = "defender_wins"    # Defender retains territory
     ONGOING = "ongoing"                # Fight continues
 
+    def attacker_won(self) -> bool:
+        """Check if the attacker won the fight."""
+        return self == FightResult.ATTACKER_WINS
+    
+    def defender_won(self) -> bool:
+        """Check if the defender won the fight."""
+        return self == FightResult.DEFENDER_WINS
+    
+    def is_ongoing(self) -> bool:
+        """Check if the fight is still ongoing."""
+        return self == FightResult.ONGOING
+
 
 @dataclass
 class DiceRoll:

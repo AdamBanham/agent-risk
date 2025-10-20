@@ -154,7 +154,7 @@ class TurnState:
         )
         return True
     
-    def resolve_attack(self) -> Optional[Dict]:
+    def resolve_attack(self) -> FightResult:
         """
         Resolve the current attack using the Fight system with dice-based 
         combat mechanics.
@@ -184,76 +184,9 @@ class TurnState:
                     self.player_id  # Include attacking player ID for color matching
                 )
         
-        # Execute one round of combat
-        try:
-            dice_roll = self.current_fight.fight_round()
-        except ValueError:
-            # Fight cannot continue
-            self.current_fight = None
-            self.current_attack = None
-            return None
+        # resolve fight
+        result = self.current_fight.fight_to_completion()
         
-        # Create result dictionary
-        result = {
-            'attacker_territory_id': self.current_attack.attacker_territory_id,
-            'defender_territory_id': self.current_attack.defender_territory_id,
-            'attacker_casualties': dice_roll.attacker_casualties,
-            'defender_casualties': dice_roll.defender_casualties,
-            'attacking_armies_before': self.current_attack.attacking_armies,
-            'defending_armies_before': self.current_attack.defending_armies,
-            'dice_roll': dice_roll,
-            'fight_rounds': self.current_fight.rounds_fought,
-            'total_attacker_casualties': self.current_fight.total_attacker_casualties,
-            'total_defender_casualties': self.current_fight.total_defender_casualties
-        }
-        
-        # Update attack state with casualties
-        self.current_attack.max_attacking_armies -= dice_roll.attacker_casualties
-        self.current_attack.defending_armies -= dice_roll.defender_casualties
-        self.current_attack.attacking_armies = min(
-            self.current_attack.attacking_armies - dice_roll.attacker_casualties,
-            self.current_attack.max_attacking_armies
-        )
-        
-        # Check if fight is complete
-        if self.current_fight.is_completed():
-            fight_result = self.current_fight.get_result()
-            result['fight_result'] = fight_result
-            result['fight_winner'] = self.current_fight.get_winner()
-            result['fight_summary'] = self.current_fight.get_battle_summary()
-            
-            if fight_result == FightResult.ATTACKER_WINS:
-                result['territory_conquered'] = True
-                result['surviving_attackers'] = self.current_fight.current_attackers
-                
-                # Trigger success animation callback
-                if (self.turn_manager and 
-                    self.turn_manager.attack_success_callback):
-                    self.turn_manager.attack_success_callback(
-                        self.current_attack.defender_territory_id,
-                        self.player_id
-                    )
-            else:
-                result['territory_conquered'] = False
-                result['surviving_defenders'] = self.current_fight.current_defenders
-                
-                # Trigger failure animation callback
-                if (self.turn_manager and 
-                    self.turn_manager.attack_failure_callback):
-                    self.turn_manager.attack_failure_callback(
-                        self.current_attack.defender_territory_id,
-                        self.player_id
-                    )
-            
-            # End fight and attack
-            result['fight_continues'] = False
-            self.current_fight = None
-            self.current_attack = None
-        else:
-            result['territory_conquered'] = False
-            result['fight_continues'] = True
-        
-        self.attacks_made += 1
         return result
     
     def end_attack(self) -> None:

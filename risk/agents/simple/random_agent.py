@@ -363,6 +363,8 @@ class AgentController:
         if not current_turn:
             return False
         
+        player = game_state.get_player(current_turn.player_id)
+        started_troops = player.total_armies if player else 0
         agent = self.get_agent(current_turn.player_id)
         if not agent:
             return False
@@ -370,6 +372,7 @@ class AgentController:
         print(f"\n=== {agent.name} Turn (Player {agent.player_id}) ===")
         
         # Execute placement phase
+        added_troops = 0
         while (current_turn.phase == TurnPhase.PLACEMENT and 
                current_turn.reinforcements_remaining > 0):
             
@@ -384,9 +387,12 @@ class AgentController:
                 # Place one army and update territory
                 if current_turn.place_reinforcement(territory_id, 1):
                     territory.add_armies(1)
+                    added_troops += 1
+                    player.total_armies
                     print(f"  Placed 1 army on {territory.name} "
                           f"(now {territory.armies} armies)")
         
+        game_state.update_player_statistics()
         # Advance to attacking phase if placement is complete
         if (current_turn.phase == TurnPhase.PLACEMENT and 
             current_turn.reinforcements_remaining == 0):
@@ -396,7 +402,7 @@ class AgentController:
         # Execute attacking phase
         attack_count = 0
         max_attacks = 10  # Prevent infinite attack loops
-        
+        lost_troops = 0
         while (current_turn.phase == TurnPhase.ATTACKING and 
                attack_count < max_attacks):
             
@@ -423,34 +429,37 @@ class AgentController:
                     atk_cas = 0
                     def_cas = 0
                     attack_result = current_turn.resolve_attack()
-                    # Update territories based on attack result
-                    atk_cas += attack_result['attacker_casualties']
-                    def_cas += attack_result['defender_casualties']
-                    while attack_result['fight_continues']:
-                        attack_result = current_turn.resolve_attack()
-                        attacker.armies -= attack_result['attacker_casualties']
-                        defender.armies -= attack_result['defender_casualties']
-                        atk_cas += attack_result['attacker_casualties']
-                        def_cas += attack_result['defender_casualties']
-
+        
                     if attack_result:
-                        attacker.armies -= attack_result['attacker_casualties']
-                        defender.armies -= attack_result['defender_casualties']
-                        atk_cas += attack_result['attacker_casualties']
-                        def_cas += attack_result['defender_casualties']
+                        attacker.remove_armies(current_turn.current_attack.attacking_armies)
+                        atk_cas += current_turn.current_fight.total_attacker_casualties
+                        lost_troops += atk_cas
+                        def_cas += current_turn.current_fight.total_defender_casualties
                         print(f"    Attacker casualties: {atk_cas}")
                         print(f"    Defender casualties: {def_cas}")
                         
                         # Check if territory was conquered
-                        if attack_result.get('territory_conquered', False):
-                            defender.set_owner(agent.player_id, 
-                                             attack_result.get('surviving_attackers', 1))
+                        atk_armies, def_armies  = current_turn.current_fight.get_surviving_armies()
+                        if attack_result.attacker_won():
+                            defender.set_owner(agent.player_id, atk_armies)
+                            player.add_territory(defender.id)
+                            game_state.get_player(defender.owner).remove_territory(defender.id)
                             print(f"    Conquered {defender.name}!")
+                            print(f"    Moved {atk_armies} armies to {defender.name}")    
+                        elif attack_result.defender_won():
+                            attacker.remove_armies(atk_cas)
+                            defender.remove_armies(def_cas)
+                            print(f"    Attack on {defender.name} failed.")
+                            if defender.armies == 0:
+                                game_state.get_player(defender.owner).remove_territory(defender.id)
+                                defender.set_owner(None, 0)
+                                print(f"    {defender.name} has no armies left!")
                         
+                        print(f"    Result of fight - Attacker: {attacker.armies}, Defender: {defender.armies} owned by {defender.owner}")
                 attack_count += 1
             else:
                 break
-        
+        game_state.update_player_statistics()
         # Advance to movement phase
         if current_turn.phase == TurnPhase.ATTACKING:
             current_turn.advance_phase()
@@ -494,8 +503,15 @@ class AgentController:
                                 )
                 else:
                     print(f"  Movement from {source_territory.name} to {target_territory.name} failed - not adjacent or invalid")
-        
+        game_state.update_player_statistics()
+
         # End the turn
+        print("Did the agent some how gain extra troops?")
+        print("Started with : {}".format(started_troops))
+        print("Added {} troops during placement.".format(added_troops))
+        print("Lost {} troops during attacks.".format(lost_troops))
+        print(f"Ended with : {player.total_armies} troops.")
+        print(f"Gained/Lost : {player.total_armies - (started_troops + added_troops - lost_troops)} troops.")
         print(f"  {agent.name} turn complete\n")
         return True
 
