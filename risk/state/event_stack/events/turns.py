@@ -1,6 +1,35 @@
 from ..stack import Event, Level
 from ...territory import Territory
 
+class PlayingEvent(Event):
+    """
+    An event representing the playing state of the game.
+    """
+    def __init__(self):
+        super().__init__("Playing State")
+
+class AgentTurnPhase(Level):
+    """
+    An event representing the turn phase of an agent.
+    """
+
+    def __init__(self, turn_number: int, player: str):
+        super().__init__(f"Agent Turn Phase - T{turn_number} - {player}")
+
+class AgentTurnEndEvent(Event):
+    """
+    A signal to the engines that the agent's turn is complete.
+    """
+
+    def __init__(self, turn_number: int, player: str):
+        super().__init__(
+            f"Agent Turn End - T{turn_number} - {player}", 
+            dict(
+                turn_number=turn_number,
+                player=player
+            )
+        )
+
 class PlacementPhase(Level):
     """
     An event representing the placement phase of a turn.
