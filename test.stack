@@ -1,0 +1,56 @@
+Stack:-
+                          Level: Placement Phase-T1-P1
+                        Level: Agent Turn Phase-T1-P1
+                      Event: Playing State, Context: {}
+                      Event: Agent Turn End - T1 - 0, Context: {'turn_number': 1, 'player': 0}
+                      Event: Movement Phase End-T1-P0, Context: {'turn_number': 1, 'player': 0}
+                      Level: Movement Phase-T1-P0
+                    Event: Attack Phase End-T1-P0, Context: {'turn_number': 1, 'player': 0}
+                    Level: Attack Phase-T1-P0
+                  Event: Placement Phase End - T1 - 0, Context: {'turn_number': 1, 'player': 0}
+                  Event: Reject-Troop-Placement-T0-L1-T1-RYou do not own this territory, Context: {'territory': 0, 'num_troops': 1, 'turn_number': 1, 'player': 0, 'reason': 'You do not own this territory'}
+                  Event: Troop Placement-T1-P0-R0x1, Context: {'territory': 0, 'num_troops': 1, 'turn': 1, 'player': 0}
+                  Event: Reject-Troop-Placement-T1-L3-T1-RNot your turn, Context: {'territory': 1, 'num_troops': 3, 'turn_number': 1, 'player': 1, 'reason': 'Not your turn'}
+                  Event: Troop Placement-T1-P1-R1x3, Context: {'territory': 1, 'num_troops': 3, 'turn': 1, 'player': 1}
+                  Event: Add -1 armies to territory 1, Context: {'territory_id': 1, 'num_armies': -1}
+                  Event: Troop Placement-T1-P0-R1x-1, Context: {'territory': 1, 'num_troops': -1, 'turn': 1, 'player': 0}
+                  Event: Add 2 armies to territory 1, Context: {'territory_id': 1, 'num_armies': 2}
+                  Event: Troop Placement-T1-P0-R1x2, Context: {'territory': 1, 'num_troops': 2, 'turn': 1, 'player': 0}
+                  Level: Placement Phase-T1-P0
+                Level: Agent Turn Phase-T1-P0
+              Event: Playing State, Context: {}
+              Event: Agent Turn End - T0 - 1, Context: {'turn_number': 0, 'player': 1}
+              Event: Movement Phase End-T0-P1, Context: {'turn_number': 0, 'player': 1}
+              Level: Movement Phase-T0-P1
+            Event: Attack Phase End-T0-P1, Context: {'turn_number': 0, 'player': 1}
+            Level: Attack Phase-T0-P1
+          Event: Placement Phase End - T0 - 1, Context: {'turn_number': 0, 'player': 1}
+          Event: Reject-Troop-Placement-T1-L1-T0-RYou do not own this territory, Context: {'territory': 1, 'num_troops': 1, 'turn_number': 0, 'player': 1, 'reason': 'You do not own this territory'}
+          Event: Troop Placement-T0-P1-R1x1, Context: {'territory': 1, 'num_troops': 1, 'turn': 0, 'player': 1}
+          Event: Reject-Troop-Placement-T0-L3-T0-RNot your turn, Context: {'territory': 0, 'num_troops': 3, 'turn_number': 0, 'player': 0, 'reason': 'Not your turn'}
+          Event: Troop Placement-T0-P0-R0x3, Context: {'territory': 0, 'num_troops': 3, 'turn': 0, 'player': 0}
+          Event: Add -1 armies to territory 0, Context: {'territory_id': 0, 'num_armies': -1}
+          Event: Troop Placement-T0-P1-R0x-1, Context: {'territory': 0, 'num_troops': -1, 'turn': 0, 'player': 1}
+          Event: Add 2 armies to territory 0, Context: {'territory_id': 0, 'num_armies': 2}
+          Event: Troop Placement-T0-P1-R0x2, Context: {'territory': 0, 'num_troops': 2, 'turn': 0, 'player': 1}
+          Level: Placement Phase-T0-P1
+        Level: Agent Turn Phase-T0-P1
+      Event: Playing State, Context: {}
+      Event: Agent Turn End - T0 - 0, Context: {'turn_number': 0, 'player': 0}
+      Event: Movement Phase End-T0-P0, Context: {'turn_number': 0, 'player': 0}
+      Level: Movement Phase-T0-P0
+    Event: Attack Phase End-T0-P0, Context: {'turn_number': 0, 'player': 0}
+    Level: Attack Phase-T0-P0
+  Event: Placement Phase End - T0 - 0, Context: {'turn_number': 0, 'player': 0}
+  Event: Reject-Troop-Placement-T0-L1-T0-RYou do not own this territory, Context: {'territory': 0, 'num_troops': 1, 'turn_number': 0, 'player': 0, 'reason': 'You do not own this territory'}
+  Event: Troop Placement-T0-P0-R0x1, Context: {'territory': 0, 'num_troops': 1, 'turn': 0, 'player': 0}
+  Event: Reject-Troop-Placement-T1-L3-T0-RNot your turn, Context: {'territory': 1, 'num_troops': 3, 'turn_number': 0, 'player': 1, 'reason': 'Not your turn'}
+  Event: Troop Placement-T0-P1-R1x3, Context: {'territory': 1, 'num_troops': 3, 'turn': 0, 'player': 1}
+  Event: Add -1 armies to territory 1, Context: {'territory_id': 1, 'num_armies': -1}
+  Event: Troop Placement-T0-P0-R1x-1, Context: {'territory': 1, 'num_troops': -1, 'turn': 0, 'player': 0}
+  Event: Add 2 armies to territory 1, Context: {'territory_id': 1, 'num_armies': 2}
+  Event: Troop Placement-T0-P0-R1x2, Context: {'territory': 1, 'num_troops': 2, 'turn': 0, 'player': 0}
+  Level: Placement Phase-T0-P0
+Level: Agent Turn Phase-T0-P0
+Event: Playing State, Context: {}
+Event: Game, Context: {}
