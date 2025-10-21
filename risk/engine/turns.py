@@ -5,7 +5,7 @@ the Risk simulation.
 
 from .base import Engine, Event, Level
 from ..state import GameState
-from typing import Union
+from typing import List, Union
 
 from ..state.event_stack import PlayingEvent, AgentTurnPhase, GameEvent
 
@@ -128,6 +128,7 @@ class RiskTurnEngine(Engine):
             ]
         elif isinstance(element, AgentTurnEndEvent):
             game_state.advance_turn()
+            game_state.update_player_statistics()
 
         return super().process(game_state, element)
 
@@ -161,43 +162,64 @@ class RiskPlacementEngine(Engine):
     def __init__(self):
         super().__init__("RiskPlacementEngine")
 
-    def process(self, game_state: GameState, element: Union[Event, Level]) -> None:
+    def process(self, 
+        game_state: GameState, element: Union[Event, Level]) -> None:
+
         if isinstance(element, PlacementPhaseEndEvent):
             return super().process(game_state, element)
         elif isinstance(element, TroopPlacementEvent):
-            territory = element.context.territory
-            t_owner = game_state.get_territory(territory).owner
-            num_troops = element.context.num_troops
-            player = element.context.player
+            return self._handle_placement(game_state, element)
+        
+    def _handle_placement(self,
+        game_state: GameState, element: TroopPlacementEvent
+        ) -> List[Event]:
+        """
+        The logic to process a troop placement event.
 
-            if game_state.current_player_id != player:
-                return [
-                    RejectTroopPlacement(
-                        game_state.total_turns,
-                        player,
-                        territory,
-                        num_troops,
-                        "Not your turn"
-                    )
-                ]
-            if t_owner != player:
-                return [
-                    RejectTroopPlacement(
-                        game_state.total_turns,
-                        player,
-                        territory,
-                        num_troops,
-                        "You do not own this territory"
-                    )
-                ]
+        :param game_state: The current game state.
+        :param element: The troop placement event to process.
 
+        :returns: A list of resulting events.
+        """
+        territory = element.context.territory
+        t_owner = game_state.get_territory(territory).owner
+        num_troops = element.context.num_troops
+        player = element.context.player
+
+        if game_state.current_player_id != player:
             return [
-                AddArmiesSE(
+                RejectTroopPlacement(
+                    game_state.total_turns,
+                    player,
                     territory,
-                    num_troops
+                    num_troops,
+                    "Not your turn"
+                )
+            ]
+        if t_owner != player:
+            return [
+                RejectTroopPlacement(
+                    game_state.total_turns,
+                    player,
+                    territory,
+                    num_troops,
+                    "You do not own this territory"
                 )
             ]
 
+        return [
+            AddArmiesSE(
+                territory,
+                num_troops
+            )
+        ]
+
+
+from ..state.event_stack import (
+    AttackPhase,
+    AttackPhaseEndEvent,
+    AttackOnTerritoryEvent,
+)
 
 class RiskAttackEngine(Engine):
     """
@@ -213,6 +235,10 @@ class RiskAttackEngine(Engine):
         - casualty-def
         - capture 
     """
+    allowed_elements = [
+        AttackPhase,
+        AttackOnTerritoryEvent
+    ]
 
     def __init__(self):
         super().__init__("RiskAttackEngine")
