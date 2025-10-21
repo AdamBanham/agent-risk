@@ -4,6 +4,7 @@ Manages players, game state, and overall simulation state.
 """
 
 from dataclasses import dataclass, field
+import random
 from typing import Dict, List, Optional, Set, Tuple
 from enum import Enum
 import time
@@ -118,6 +119,7 @@ class GameState:
     total_turns: int = 0  # Total number of turns completed in simulation
     current_player_id: Optional[int] = None
     winner_id: Optional[int] = None
+    starting_player: int = 0
     
     # Game entities
     territories: Dict[int, Territory] = field(default_factory=dict)
@@ -126,7 +128,11 @@ class GameState:
     # Timing and metadata
     created_at: float = field(default_factory=time.time)
     last_updated: float = field(default_factory=time.time)
-    
+
+    # rendering 
+    screen_width: int = 1800
+    screen_height: int = 1028
+
     @classmethod
     def create_new_game(cls, regions: int, num_players: int, 
                        starting_armies: int) -> 'GameState':
@@ -168,6 +174,30 @@ class GameState:
         
         return game_state
     
+    def initialise(self, generate_board: bool = True) -> None:
+        """
+        Set up initial game state.
+        """
+        # set territories
+        if not self.territories or generate_board:
+            from ..state.board_generator import generate_sample_board
+            generate_sample_board(
+                self, self.screen_width, self.screen_height - 120
+                )
+            print(
+                f"Generated initial board with {len(self.territories)} territories"
+            )
+
+        # set first player
+        self.set_current_player(random.choice(list(self.players.keys())))
+        self.starting_player = self.current_player_id
+
+        # spread the initial armies
+        # TODO
+
+
+        self.phase = GamePhase.PLAYER_TURN
+
     def add_territory(self, territory: Territory) -> None:
         """
         Add a territory to the game state. Updates the territories 
@@ -269,7 +299,7 @@ class GameState:
                 self.current_player_id = active_players[next_index].id
                 
                 # Increment turn counter when we cycle back to first player
-                if next_index == 0:
+                if next_index == self.starting_player:
                     self.current_turn += 1
                     self.total_turns += 1  # Track total completed turns
         
