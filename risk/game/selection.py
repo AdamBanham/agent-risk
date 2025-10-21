@@ -399,7 +399,7 @@ class TerritorySelectionHandler:
         
         # Check if this is a valid movement target
         if (territory.owner == current_turn.player_id and  # Owned territory
-            territory.id in primary_territory.adjacent_territories):  # Adjacent
+            territory in primary_territory.adjacent_territories):  # Adjacent
             
             # Start movement
             if current_turn.start_movement(primary_territory, territory):

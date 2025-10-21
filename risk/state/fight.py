@@ -259,12 +259,21 @@ class Fight:
         """
         result = self.get_result()
         casualties_att, casualties_def = self.get_casualties()
+
+        rounds = ""
+        for i, dice_roll in enumerate(self.dice_history):
+            rounds += (f" Round {i+1}: "
+                       f"Attacker rolled {dice_roll.attacker_dice} "
+                       f"-> {dice_roll.attacker_casualties} casualties; "
+                       f"Defender rolled {dice_roll.defender_dice} "
+                       f"-> {dice_roll.defender_casualties} casualties.\n")
         
         summary = (
             f"Fight: Territory {self.attacker_territory_id} -> "
             f"{self.defender_territory_id}\n"
             f"Initial: {self.initial_attackers} attackers vs "
             f"{self.initial_defenders} defenders\n"
+            f"{rounds}"
             f"Rounds: {self.rounds_fought}\n"
             f"Casualties: {casualties_att} attackers, {casualties_def} defenders\n"
             f"Result: {result.value}"
