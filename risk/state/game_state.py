@@ -384,8 +384,9 @@ class GameState:
     
     def __repr__(self) -> str:
         """String representation for debugging."""
-        return (f"GameState(regions={self.regions}, "
-                f"players={self.num_players}, "
-                f"phase={self.phase.value}, turn={self.current_turn}, "
-                f"total_turns={self.total_turns}, "
-                f"territories={len(self.territories)})")
+        ret = "GameState(" 
+
+        for attr, value in self.__dict__.items():
+            ret += f"\n\t{attr}={repr(value)},"
+
+        return ret + ")"
