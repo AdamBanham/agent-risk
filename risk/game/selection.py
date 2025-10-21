@@ -343,7 +343,7 @@ class TerritorySelectionHandler:
             if (territory.owner == current_turn.player_id and 
                 territory.armies > 1):
                 print(f"Selected {territory.name} as attacker. Now click on adjacent enemy territory.")
-                print(f"DEBUG: Adjacent territories: {territory.adjacent_territories}")
+                # print(f"DEBUG: Adjacent territories: {territory.adjacent_territories}")
                 # Don't change selection here - let the normal selection logic handle it
             else:
                 print("Selected territory cannot attack (need >1 army and ownership)")
@@ -351,12 +351,12 @@ class TerritorySelectionHandler:
             return
         
         print(f"DEBUG: Attempting attack from {primary_territory.name} (owner: {primary_territory.owner}) to {territory.name} (owner: {territory.owner})")
-        print(f"DEBUG: Primary territory adjacent: {primary_territory.adjacent_territories}")
+        print(f"DEBUG: Primary territory adjacent: {[ t.name for t in primary_territory.adjacent_territories]}")
         print(f"DEBUG: Target territory ID: {territory.id}")
         
         # Check if this is a valid attack target
         if (territory.owner != current_turn.player_id and  # Enemy territory
-            territory.id in primary_territory.adjacent_territories):  # Adjacent
+            territory in primary_territory.adjacent_territories):  # Adjacent
             
             # Start attack
             if current_turn.start_attack(primary_territory, territory):
