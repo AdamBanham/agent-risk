@@ -5,7 +5,7 @@ on the world state or a presumed world state.
 
 from ..events import Event
 from ...game_state import GameState
-from abc import ABC 
+from abc import ABC, abstractmethod
 
 class SideEffect(ABC):
     """
@@ -21,6 +21,7 @@ class SideEffect(ABC):
 
     """
 
+    @abstractmethod
     def apply(self, state: 'GameState') -> None:
         """
         Apply the side effect to the given game state.
@@ -31,6 +32,7 @@ class SideEffect(ABC):
         """
         pass
 
+    @abstractmethod
     def revert(self, state: 'GameState') -> None:
         """
         Revert the side effect from the given game state.
@@ -42,7 +44,7 @@ class SideEffect(ABC):
         pass 
             
 
-class SideEffectEvent(Event):
+class SideEffectEvent(Event, SideEffect):
     """
     An event that produces a side effect on the world state.
 
@@ -55,3 +57,38 @@ class SideEffectEvent(Event):
 
     def __init__(self, description: str):
         super().__init__("SideEffectEvent")
+
+
+class AddArmiesSE(Event, SideEffect):
+    """
+    A side effect that adds armies to a territory.
+
+    .. attributes ::
+       - territory_id:
+            `str`
+            The ID of the territory to which armies will be added.
+       - num_armies:
+            `int`
+            The number of armies to add.
+
+    """
+
+    def __init__(self, territory_id: str, num_armies: int):
+        super().__init__(
+            f"Add {num_armies} armies to territory {territory_id}",
+            dict(
+                territory_id=territory_id,
+                num_armies=num_armies
+            )
+        )
+
+    def apply(self, state: 'GameState') -> None:
+        territory = state.get_territory(self.context.territory_id)
+        if territory:
+            territory.armies += self.context.num_armies
+
+    def revert(self, state: 'GameState') -> None:
+        territory = state.get_territory(self.context.territory_id)
+
+        if territory:
+            territory.armies -= self.context.num_armies

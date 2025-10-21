@@ -14,7 +14,7 @@ class AgentTurnPhase(Level):
     """
 
     def __init__(self, turn_number: int, player: str):
-        super().__init__(f"Agent Turn Phase - T{turn_number} - {player}")
+        super().__init__(f"Agent Turn Phase-T{turn_number}-P{player}")
 
 class AgentTurnEndEvent(Event):
     """
@@ -37,7 +37,7 @@ class PlacementPhase(Level):
 
     def __init__(self, turn_number: int, player: str):
         super().__init__(
-            f"Placement Phase - T{turn_number} - {player}"
+            f"Placement Phase-T{turn_number}-P{player}"
         )
 
 class TroopPlacementEvent(Event):
@@ -200,7 +200,7 @@ class MovementPhaseEndEvent(Event):
 
     def __init__(self, turn_number: int, player: str):
         super().__init__(
-            f"Attack Phase End-T{turn_number}-P{player}", 
+            f"Movement Phase End-T{turn_number}-P{player}", 
             dict(
                 turn_number=turn_number,
                 player=player
