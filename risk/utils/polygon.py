@@ -86,5 +86,4 @@ def find_centroid(polygon: List[Point]) -> Point:
             break
             
         x, y = new_x, new_y
-    print(f"returned on {iter}/ {max_iterations}:", broke)
     return Point(x, y)
