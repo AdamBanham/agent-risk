@@ -216,9 +216,10 @@ class RiskPlacementEngine(Engine):
 
 
 from ..state.event_stack import (
-    AttackPhase,
-    AttackPhaseEndEvent,
     AttackOnTerritoryEvent,
+    FightEvent,
+    ResolveFightEvent,
+    RejectAttack
 )
 
 class RiskAttackEngine(Engine):
@@ -227,27 +228,137 @@ class RiskAttackEngine(Engine):
     of each turn in the Risk simulation.
 
     .. consumes ::
-        - attack-phase
         - attack 
+        - fight
+        - resolve-fight
         
     .. produces ::
-        - casualty-atk
-        - casualty-def
-        - capture 
+        - casualty-atk (SE)
+        - casualty-def (SE)
+        - capture (SE)
+        - fight 
+        - reject-attack
+        - resolve-fights
     """
     allowed_elements = [
-        AttackPhase,
-        AttackOnTerritoryEvent
+        AttackOnTerritoryEvent,
+        FightEvent,
+        ResolveFightEvent
     ]
 
     def __init__(self):
         super().__init__("RiskAttackEngine")
 
-    def processable(self, element: Union[Event, Level]) -> bool:
-        return super().processable(element)
-
     def process(self, game_state: GameState, element: Union[Event, Level]) -> None:
+        if isinstance(element, AttackOnTerritoryEvent):
+            return self._handle_attack_request(
+                game_state,
+                element
+            ) 
+        elif isinstance(element, FightEvent):
+            return self._handle_fight(
+                game_state,
+                element
+            ) 
+        elif isinstance(element, ResolveFightEvent):
+            return self._handle_resolve_fight(
+                game_state,
+                element
+            )
         return super().process(game_state, element)
+    
+    def _handle_attack_request(self,
+        game_state: GameState,
+        element: AttackOnTerritoryEvent
+        ) -> List[Event]:
+        
+        attacker = game_state.get_territory(
+            element.context.from_territory
+        )
+        defender = game_state.get_territory(
+            element.context.to_territory
+        )
+
+        if element.context.player != game_state.current_player_id:
+            return [
+                RejectAttack(
+                    game_state.total_turns,
+                    element.context.player,
+                    element.context.from_territory,
+                    element.context.to_territory,
+                    "Not your turn"
+                )
+            ]
+
+        if element.context.player != attacker.owner:
+            return [
+                RejectAttack(
+                    game_state.total_turns,
+                    element.context.player,
+                    element.context.from_territory,
+                    element.context.to_territory,
+                    "You do not own the attacking territory"
+                )
+            ]
+        
+        if defender not in attacker.adjacent_territories:
+            return [
+                RejectAttack(
+                    game_state.total_turns,
+                    element.context.player,
+                    element.context.from_territory,
+                    element.context.to_territory,
+                    "Defending territory is not adjacent"
+                )
+            ]
+        
+        if defender.owner == attacker.owner:
+            return [
+                RejectAttack(
+                    game_state.total_turns,
+                    element.context.player,
+                    element.context.from_territory,
+                    element.context.to_territory,
+                    "Cannot attack your own territory"
+                )
+            ]
+        
+        if element.context.attacking_troops >= attacker.armies \
+            or element.context.attacking_troops < 1:
+            return [
+                RejectAttack(
+                    game_state.total_turns,
+                    element.context.player,
+                    element.context.from_territory,
+                    element.context.to_territory,
+                    "Not enough troops to attack"
+                )
+            ]
+        
+        # now that rules have been validated, create FightEvent
+        return [
+            FightEvent(
+                attacking_territory_id=attacker.id,
+                defending_territory_id=defender.id,
+                attacking_armies=element.context.attacking_troops,
+                defending_armies=defender.armies,
+                player_id=element.context.player,
+                turn=game_state.total_turns
+            )
+        ]
+        
+
+    def _handle_fight(self,
+        game_state: GameState,
+        element: FightEvent
+        ) -> List[Event]:
+        pass
+
+    def _handle_resolve_fight(self,
+        game_state: GameState,
+        element: ResolveFightEvent
+        ) -> List[Event]:
+        pass
 
 class RiskMovementEngine(Engine):
     """
