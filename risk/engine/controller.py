@@ -56,6 +56,16 @@ class SimulationController:
                     self.event_stack.push(error_event)
                     continue
                 if events:
+                    try : 
+                        iter(events)
+                    except Exception as e:
+                        self.event_stack.push(
+                            EngineProcessingError(
+                                engine.id, element, 
+                                "Engine returned non-iterable events."
+                            )
+                        )
+                        continue
                     for event in events:
                         self.event_stack.push(event)
 
