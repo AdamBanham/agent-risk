@@ -40,7 +40,7 @@ class FightEvent(Event):
         )
     
 
-class ResolveFightEvent(FightEvent):
+class ResolveFightEvent(Event):
     """
     An event recording the resolution of a fight between attacking
     and defending troops on a territory.

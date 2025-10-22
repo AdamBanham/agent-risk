@@ -50,7 +50,9 @@ from ..state.event_stack import (
 from ..state.event_stack import (
     PlacementPhaseEndEvent,
     AttackPhaseEndEvent,
-    MovementPhaseEndEvent
+    MovementPhaseEndEvent,
+    UpdateReinforcements,
+    ClearReinforcements
 )
 
 class RiskTurnEngine(Engine):
@@ -98,6 +100,9 @@ class RiskTurnEngine(Engine):
                 PlacementPhase(
                     game_state.total_turns,
                     game_state.current_player_id
+                ),
+                UpdateReinforcements(
+                    game_state.current_player_id
                 )
             ]
             return phases 
@@ -106,7 +111,7 @@ class RiskTurnEngine(Engine):
                 PlacementPhaseEndEvent(
                     game_state.total_turns,
                     game_state.current_player_id
-                )
+                ),
             ]
         elif isinstance(element, AttackPhase):
             return [
@@ -137,7 +142,7 @@ from ..state.event_stack.events.turns import (
 )
 
 from ..state.event_stack import (
-    AddArmiesSE,
+    AdjustArmies,
     RejectTroopPlacement
 )
 
@@ -166,7 +171,11 @@ class RiskPlacementEngine(Engine):
         game_state: GameState, element: Union[Event, Level]) -> None:
 
         if isinstance(element, PlacementPhaseEndEvent):
-            return super().process(game_state, element)
+            return [
+                ClearReinforcements(
+                    game_state.placements_left
+                )
+            ]
         elif isinstance(element, TroopPlacementEvent):
             return self._handle_placement(game_state, element)
         
@@ -206,9 +215,21 @@ class RiskPlacementEngine(Engine):
                     "You do not own this territory"
                 )
             ]
+        
+        if game_state.placements_left < 1 \
+            or num_troops > game_state.placements_left:
+            return [
+                RejectTroopPlacement(
+                    game_state.total_turns,
+                    player,
+                    territory,
+                    num_troops,
+                    "Not enough placements left"
+                )
+            ]
 
         return [
-            AddArmiesSE(
+            AdjustArmies(
                 territory,
                 num_troops
             )
@@ -220,6 +241,13 @@ from ..state.event_stack import (
     FightEvent,
     ResolveFightEvent,
     RejectAttack
+)
+
+from ..state import Fight, FightResult
+
+from ..state.event_stack import (
+    CaptureTerritory,
+    CasualitiesOnTerritory
 )
 
 class RiskAttackEngine(Engine):
@@ -352,13 +380,59 @@ class RiskAttackEngine(Engine):
         game_state: GameState,
         element: FightEvent
         ) -> List[Event]:
-        pass
+        
+        # create a fight and resolve it
+        fight = Fight(
+            attacker_territory_id=element.context.attacking_territory_id,
+            defender_territory_id=element.context.defending_territory_id,
+            initial_attackers=element.context.attacking_armies,
+            initial_defenders=element.context.defending_armies
+        )
+
+        result = fight.fight_to_completion()
+        atk_sur, def_sur = fight.get_surviving_armies()
+
+        return [
+            ResolveFightEvent(
+                attacking_territory_id=element.context.attacking_territory_id,
+                defending_territory_id=element.context.defending_territory_id,
+                surviving_attacking_armies=atk_sur, 
+                surviving_defending_armies=def_sur,
+                fight=fight, fight_result=result,
+                player_id=element.context.player_id, 
+                turn=element.context.turn
+            )
+        ]
 
     def _handle_resolve_fight(self,
         game_state: GameState,
         element: ResolveFightEvent
         ) -> List[Event]:
-        pass
+        
+        fight:Fight = element.context.fight 
+        atk_cas = fight.total_attacker_casualties
+        def_cas = fight.total_defender_casualties
+        result:FightResult = element.context.fight_result
+
+        ret = []
+
+        if result.attacker_won:
+            ret.append(
+                CaptureTerritory()
+            )
+        
+        # report on defender losses
+        if atk_cas > 0:
+            ret.append(
+                CasualitiesOnTerritory()
+            )
+        # report on attacker losses
+        if def_cas > 0:
+            ret.append(
+                CasualitiesOnTerritory()
+            )
+
+        return ret
 
 class RiskMovementEngine(Engine):
     """

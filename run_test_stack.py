@@ -31,6 +31,7 @@ class MockPlacements(Engine):
     def process(self, game_state: GameState, element: PlacementPhase) -> None:
         # For each player, place 1 troop in the first territory they own
         placement = []
+        fails = []
 
         territories = list(game_state.get_territories_owned_by(
             game_state.current_player_id 
@@ -39,11 +40,24 @@ class MockPlacements(Engine):
             (game_state.current_player_id + 1) % game_state.num_players
         ))
 
-        placer = territories[0]
+        placer = random.choice(territories)
         other = other_territories[0]
 
-        # simulate adding troops for non current player
-        placement.append(
+        for place in territories:
+            # simulate adding troops
+            placement.append(
+                TroopPlacementEvent(
+                    turn=game_state.total_turns,
+                    player=game_state.current_player_id,
+                    territory=place.id,
+                    num_troops=random.choice(
+                        range(1, game_state.placements_left)
+                    )
+                )
+            )
+
+        # simulate adding troops for non owned territory
+        fails.append(
             TroopPlacementEvent(
                 turn=game_state.total_turns,
                 player=game_state.current_player_id,
@@ -52,7 +66,7 @@ class MockPlacements(Engine):
             )
         )
         # simulate adding troops for non current player
-        placement.append(
+        fails.append(
             TroopPlacementEvent(
                 turn=game_state.total_turns,
                 player=(game_state.current_player_id + 1) % game_state.num_players,
@@ -60,24 +74,18 @@ class MockPlacements(Engine):
                 num_troops=3
             )
         )
-        # simulate undo by placing another troop placement
-        placement.append(
+
+        # simulate adding too many troops
+        fails.append(
             TroopPlacementEvent(
                 turn=game_state.total_turns,
                 player=game_state.current_player_id,
                 territory=placer.id,
-                num_troops= -1
+                num_troops=game_state.placements_left + 1
             )
         )
-        # simulate adding troops
-        placement.append(
-            TroopPlacementEvent(
-                turn=game_state.total_turns,
-                player=game_state.current_player_id,
-                territory=placer.id,
-                num_troops=2
-            )
-        )
+
+        
 
         return [random.choice(placement)]
 
@@ -122,7 +130,7 @@ class MockFights(Engine):
                     player=game_state.current_player_id,
                     from_territory=placer.id,
                     to_territory=adjacent.id,
-                    attacking_troops=1
+                    attacking_troops=max(1 , placer.armies // 2)
                 )
             )
 
@@ -179,7 +187,7 @@ class MockFights(Engine):
             )
         )
 
-        return placement + [random.choice(fails)]
+        return [random.choice(placement)] #+ [random.choice(fails)]
 
 recorder = RecordStackEngine()
 engine = RiskSimulationController(
@@ -193,7 +201,7 @@ engine.event_stack.push(
     GameEvent()
 )
 
-delay = 0.5
+delay = 0.1
 
 original_stdout = sys.stdout
 try :

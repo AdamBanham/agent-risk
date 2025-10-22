@@ -120,6 +120,7 @@ class GameState:
     current_player_id: Optional[int] = None
     winner_id: Optional[int] = None
     starting_player: int = 0
+    placements_left: int = 0
     
     # Game entities
     territories: Dict[int, Territory] = field(default_factory=dict)
@@ -197,6 +198,19 @@ class GameState:
 
 
         self.phase = GamePhase.PLAYER_TURN
+
+    def calculate_reinforcements(self, player_id:int) -> int:
+        """
+        Work out the reinforcements for the given player.
+
+        :param player_id:
+            the player to consider for reinforcements
+        
+        :returns:
+            the number of reinforcements
+        """
+        territory_count = self.get_player(player_id).get_territory_count()
+        return max(3, territory_count // 3)
 
     def add_territory(self, territory: Territory) -> None:
         """

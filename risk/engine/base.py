@@ -125,12 +125,10 @@ class SideEffectEngine(Engine):
         """This side effect engine can process all events and levels."""
         return isinstance(element, SideEffectEvent)
 
-    def process(self, state: GameState, element: Union[Event, Level]) -> None:
+    def process(self, state: GameState, element: SideEffectEvent) -> None:
         """Apply side effects to the game state."""
-        # Placeholder for side effect logic
-        print(f"[SIDE EFFECT] Engine '{self.id}' processing element: {element.name}")
-
-        return None
+        events = element.apply(state)
+        return events
     
 from ..state.event_stack import EventStack
 
@@ -147,7 +145,6 @@ class RecordStackEngine(Engine):
 
     def process(self, state: GameState, element: Union[Event, Level]) -> None:
         """Record the event stack state."""
-        # Placeholder for recording logic
         self.stack.push(element)
 
         return None

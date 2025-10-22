@@ -53,13 +53,65 @@ class SideEffectEvent(Event, SideEffect):
             `str`
             A description of the side effect.
 
+    .. required-methods ::
+        - apply:
+            `apply(state: GameState) -> None`
+        - revert:
+            `revert(state: GameState) -> None`
     """
 
-    def __init__(self, description: str):
-        super().__init__("SideEffectEvent")
+    def __str__(self):
+        return f"SideEffect: {self.name}, Context: {str(self.context)}"
 
+class UpdateReinforcements(SideEffectEvent):
+    """
+    A side effect that setups up the number of reinforcements
+    for the placement phase.
 
-class AddArmiesSE(Event, SideEffect):
+    .. attributes ::
+        - player_id
+    """
+
+    def __init__(self, player_id:int):
+        super().__init__(
+            f"Setup reinforcements for player {player_id}",
+            dict(
+                player_id=player_id
+            )
+        )
+
+    def apply(self, state: GameState) -> None:
+        reinforcements = state.calculate_reinforcements(
+            self.context.player_id
+        )
+        state.placements_left = reinforcements
+
+    def revert(self, state: GameState) -> None:
+        state.placements_left = 0
+        
+class ClearReinforcements(SideEffectEvent):
+    """
+    Clears any remaining reinforcements.
+
+    .. attributes:
+        - context.remaining
+    """
+
+    def __init__(self, remaining:int):
+        super().__init__(
+            "Clear reinforcements.",
+            dict(
+                remaining=remaining
+            )
+        )
+
+    def apply(self, state):
+        state.placements_left = 0 
+
+    def revert(self, state):
+        state.placements_left = self.context.remaining
+
+class AdjustArmies(SideEffectEvent):
     """
     A side effect that adds armies to a territory.
 
@@ -75,7 +127,7 @@ class AddArmiesSE(Event, SideEffect):
 
     def __init__(self, territory_id: str, num_armies: int):
         super().__init__(
-            f"Add {num_armies} armies to territory {territory_id}",
+            f"Adjust Armies: Add {num_armies} armies to territory {territory_id}",
             dict(
                 territory_id=territory_id,
                 num_armies=num_armies
@@ -86,9 +138,19 @@ class AddArmiesSE(Event, SideEffect):
         territory = state.get_territory(self.context.territory_id)
         if territory:
             territory.armies += self.context.num_armies
+            state.placements_left -= self.context.num_armies
 
     def revert(self, state: 'GameState') -> None:
         territory = state.get_territory(self.context.territory_id)
 
         if territory:
             territory.armies -= self.context.num_armies
+
+class CaptureTerritory(SideEffectEvent):
+    pass
+
+class CasualitiesOnTerritory(SideEffectEvent):
+    pass 
+
+class ClearTerritory(SideEffectEvent):
+    pass

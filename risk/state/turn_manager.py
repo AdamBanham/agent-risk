@@ -337,9 +337,6 @@ class TurnManager:
         territory_count = player.get_territory_count()
         base_reinforcements = max(3, territory_count // 3)
         
-        # TODO: Add continent bonuses in future
-        # TODO: Add card bonuses in future
-        
         return base_reinforcements
     
     def get_current_turn(self) -> Optional[TurnState]:
