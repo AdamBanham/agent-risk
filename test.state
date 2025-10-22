@@ -1,1 +1,0 @@
-GameState(regions=10, players=2, phase=player_turn, turn=1, total_turns=1, territories=10)
