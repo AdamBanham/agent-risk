@@ -90,10 +90,17 @@ class AttackPhase(Level):
 class AttackOnTerritoryEvent(Event):
     """
     An event representing an attack on a territory.
+
+    .. attributes ::
+        - context.from_territory
+        - context.to_territory
+        - context.attacking_troops
+        - context.player
+        - context.turn
     """
 
     def __init__(self, 
-            player: str, turn_number:int, 
+            player: str, turn:int, 
             from_territory: int, 
             to_territory: int, 
             attacking_troops: int):
@@ -103,7 +110,7 @@ class AttackOnTerritoryEvent(Event):
                 from_territory=from_territory,
                 to_territory=to_territory,
                 attacking_troops=attacking_troops,
-                turn_number=turn_number,
+                turn=turn,
                 player=player
             )
         )
