@@ -45,6 +45,9 @@ The project currently includes a working pygame visualization showing:
 ### Architecture design plans for the simulator
 ![A brief overview for the game logic](./architecture.png)
 
+
+### Evolution of event stack over the duration of a simulation
+![A demonstration of the event stack](./event_stack_evo.png)
 ## Risk: The Board Game
 
 Wikipedia (<https://en.wikipedia.org/wiki/Risk_(game)>) defines the board game of
