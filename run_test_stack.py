@@ -10,7 +10,7 @@ from time import time, sleep
 
 state = GameState.create_new_game(
     regions=30,
-    num_players=2,
+    num_players=5,
     starting_armies=30
 )
 state.initialise()

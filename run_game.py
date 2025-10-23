@@ -71,6 +71,15 @@ def parse_arguments():
         default=None,
         help='Player ID to be human (0 to players-1), all others will be AI. If not specified, all players are AI.'
     )
+
+    parser.add_argument(
+        '--sim-delay',
+        type=float,
+        default=1.0,
+        help='Delay between simulation steps in seconds (default: 1.0)'
+    )
+
+
     
     return parser.parse_args()
 
@@ -92,10 +101,6 @@ if __name__ == "__main__":
         
     if not (0.0 <= args.attack_rate <= 1.0):
         print("Error: Attack rate must be between 0.0 and 1.0", file=sys.stderr)
-        sys.exit(1)
-        
-    if args.ai_delay < 0.1:
-        print("Error: AI delay must be at least 0.1 seconds", file=sys.stderr)
         sys.exit(1)
         
     if args.human_player is not None:
@@ -148,7 +153,8 @@ if __name__ == "__main__":
             starting_armies=args.army_size,
             ai_player_ids=ai_player_ids,
             attack_probability=args.attack_rate,
-            ai_delay=args.ai_delay
+            ai_delay=args.ai_delay,
+            sim_delay=args.sim_delay,
         )
         
         if human_player_id is not None:
@@ -164,3 +170,13 @@ if __name__ == "__main__":
         import traceback
         traceback.print_exc()
         sys.exit(1)
+    finally:
+        print("Simulation ended.")
+
+        recorder = game.sim_controller.tape
+        state = game.sim_controller.game_state
+
+        with open("simulation.stack", "w") as f:
+            f.write(str(recorder.stack))
+        with open("simulation.state", "w") as f:
+            f.write(repr(state))
