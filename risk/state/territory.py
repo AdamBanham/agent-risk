@@ -215,7 +215,20 @@ class Territory:
         """String representation for debugging."""
         ret = "Territory(" 
         for key in vars(self):
-            ret+= f"{key}={repr(getattr(self, key))}, "
+            if key == 'vertices':
+                ret+= f"\n{key}=[\n"
+                last = 0
+                for next in range(1, len(self.vertices)+6,5):
+                    ret += "\t"
+                    for v in self.vertices[last:next]:
+                        ret+= f"{repr(v)}, "
+                    ret+= "\n"
+                    last = next
+                ret+= "], \n"
+            elif key == 'adjacent_territories':
+                ret += f"{key}={repr(set())}, "
+            else:
+                ret+= f"{key}={repr(getattr(self, key))}, "
         return ret + ")"
     
     def __hash__(self):
