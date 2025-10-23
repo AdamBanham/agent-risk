@@ -5,7 +5,7 @@ Tests for pause functionality in AIGameLoop.
 import unittest
 from unittest.mock import Mock, patch, MagicMock
 import time
-from risk.agents.simple.ai_game_loop import AIGameLoop
+from risk.agents.ai_game_loop import AIGameLoop
 from risk.state.game_state import GamePhase
 
 
