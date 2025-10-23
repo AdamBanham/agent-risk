@@ -130,14 +130,14 @@ class SideEffectEngine(Engine):
         events = element.apply(state)
         return events
     
-from ..state.event_stack import EventStack
+from ..state.event_stack import EventTape
 
 class RecordStackEngine(Engine):
     """An engine that records the event stack state for analysis."""
 
-    def __init__(self):
+    def __init__(self, pairs=None):
         super().__init__("record_stack_engine")
-        self.stack = EventStack("record")
+        self.stack = EventTape(pairs=pairs)
 
     def processable(self, element: Union[Event, Level]) -> bool:
         """This record stack engine can process all events and levels."""
