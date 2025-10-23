@@ -137,20 +137,154 @@ class AdjustArmies(SideEffectEvent):
     def apply(self, state: 'GameState') -> None:
         territory = state.get_territory(self.context.territory_id)
         if territory:
-            territory.armies += self.context.num_armies
+            territory.add_armies(self.context.num_armies)
             state.placements_left -= self.context.num_armies
 
     def revert(self, state: 'GameState') -> None:
         territory = state.get_territory(self.context.territory_id)
 
         if territory:
-            territory.armies -= self.context.num_armies
+            territory.remove_armies(self.context.num_armies)
+        state.placements_left += self.context.num_armies
+
+class TransferArmies(SideEffectEvent):
+    """
+    A side effect that transfers armies from one territory to another.
+
+    .. attributes ::
+        - context.from_territory_id
+        - context.to_territory_id
+        - context.num_armies
+    """
+
+    def __init__(self, from_territory_id: str, to_territory_id: str, num_armies: int):
+        super().__init__(
+            f"Transfer Armies: Move {num_armies} armies from {from_territory_id} to {to_territory_id}",
+            dict(
+                from_territory_id=from_territory_id,
+                to_territory_id=to_territory_id,
+                num_armies=num_armies
+            )
+        )
+
+    def apply(self, state: 'GameState') -> None:
+        from_territory = state.get_territory(self.context.from_territory_id)
+        to_territory = state.get_territory(self.context.to_territory_id)
+
+        if from_territory and to_territory:
+            from_territory.remove_armies(self.context.num_armies)
+            to_territory.add_armies(self.context.num_armies)
+
+    def revert(self, state: 'GameState') -> None:
+        from_territory = state.get_territory(self.context.from_territory_id)
+        to_territory = state.get_territory(self.context.to_territory_id)
+
+        if from_territory and to_territory:
+            from_territory.add_armies(self.context.num_armies)
+            to_territory.remove_armies(self.context.num_armies)
+
 
 class CaptureTerritory(SideEffectEvent):
-    pass
+    """
+    A side effect that changes the ownership of a territory.
+
+    .. attributes ::
+        - context.territory_id
+        - context.new_owner_id
+        - context.previous_owner_id
+    """
+
+    def __init__(self, territory_id: str, new_owner_id: int, previous_owner_id: int):
+        super().__init__(
+            f"Capture Territory: {territory_id} by {new_owner_id}",
+            dict(
+                territory_id=territory_id,
+                new_owner_id=new_owner_id,
+                previous_owner_id=previous_owner_id
+            )
+        )
+
+    def apply(self, state: 'GameState') -> None:
+        territory = state.get_territory(self.context.territory_id)
+        if territory:
+            territory.owner = self.context.new_owner_id
+            territory.armies = 0
+        state.update_player_statistics()
+
+    def revert(self, state: 'GameState') -> None:
+        territory = state.get_territory(self.context.territory_id)
+        if territory:
+            territory.owner = self.context.previous_owner_id
+            territory.armies = 0
+        state.update_player_statistics()
 
 class CasualitiesOnTerritory(SideEffectEvent):
-    pass 
+    """
+    A side effect that removes armies from a territory due to casualties.
+
+    .. attributes ::
+        - context.territory_id
+        - context.num_casualties
+    """
+
+    def __init__(self, territory_id: str, num_casualties: int):
+        super().__init__(
+            f"Casualties on Territory: Remove {num_casualties} armies from territory {territory_id}",
+            dict(
+                territory_id=territory_id,
+                num_casualties=num_casualties
+            )
+        )
+
+    def apply(self, state: 'GameState') -> None:
+        territory = state.get_territory(self.context.territory_id)
+        if territory:
+            territory.remove_armies(self.context.num_casualties)
+
+        if territory.armies < 1:
+            return [
+                ClearTerritory(
+                    territory.id,
+                    territory.owner
+                )
+            ]
+        
+        state.update_player_statistics()
+
+    def revert(self, state: 'GameState') -> None:
+        territory = state.get_territory(self.context.territory_id)
+
+        if territory:
+            territory.add_armies(self.context.num_casualties)
+
+        state.update_player_statistics()
 
 class ClearTerritory(SideEffectEvent):
-    pass
+    """
+    A side effect that clears the owner of a territory.
+    
+    .. attributes ::
+        - context.territory_id
+        - context.previous_owner_id
+    """
+
+    def __init__(self, territory_id: str, previous_owner_id: int):
+        super().__init__(
+            f"Clear Territory: {territory_id}",
+            dict(
+                territory_id=territory_id,
+                previous_owner_id=previous_owner_id
+            )
+        )
+    
+    def apply(self, state: 'GameState') -> None:
+        territory = state.get_territory(self.context.territory_id)
+        if territory:
+            territory.set_owner(None)
+        state.update_player_statistics()
+
+    def revert(self, state: 'GameState') -> None:
+        territory = state.get_territory(self.context.territory_id)
+        if territory:
+            territory.set_owner(self.context.previous_owner_id)
+        state.update_player_statistics()
