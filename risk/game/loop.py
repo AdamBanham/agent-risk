@@ -25,7 +25,9 @@ class GameLoop:
     """
     
     def __init__(self, width: int = 1800, height: int = 1028, 
-                 regions: int = 27, num_players: int = 3, starting_armies: int = 10):
+                 regions: int = 27, num_players: int = 3, 
+                 starting_armies: int = 10,
+                 play_from_state: Optional[GameState] = None):
         """
         Initialize pygame and create the game window. Sets up game 
         parameters and creates initial game state.
@@ -54,7 +56,12 @@ class GameLoop:
         self.current_board_layout = None
         
         # Create the game state
-        self.game_state = GameState.create_new_game(regions, num_players, starting_armies)
+        if play_from_state:
+            self.game_state = play_from_state
+            self.regions = len(play_from_state.territories)
+            self.num_players = len(play_from_state.players)
+        else:
+            self.game_state = GameState.create_new_game(regions, num_players, starting_armies)
         
     def initialize(self) -> bool:
         """Initialize pygame and create game components. Sets up screen, components, and registers callbacks.

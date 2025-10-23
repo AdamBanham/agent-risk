@@ -7,7 +7,7 @@ import time
 from typing import Optional
 
 from ...game.loop import GameLoop as BaseGameLoop
-from ...state.game_state import GamePhase
+from ...state.game_state import GamePhase, GameState
 from .random_agent import AgentController
 
 
@@ -182,7 +182,8 @@ class AIGameLoop(BaseGameLoop):
 
 def create_ai_game(regions: int = 15, num_players: int = 3, starting_armies: int = 20,
                    ai_player_ids: list = None, attack_probability: float = 0.5,
-                   ai_delay: float = 1.0) -> AIGameLoop:
+                   ai_delay: float = 1.0,
+                   play_from_state: GameState = None) -> AIGameLoop:
     """
     Factory function to create a complete AI-enabled game setup. Creates game 
     loop, agent controller, and configures AI players.
@@ -205,7 +206,8 @@ def create_ai_game(regions: int = 15, num_players: int = 3, starting_armies: int
         height=1028,
         regions=regions,
         num_players=num_players,
-        starting_armies=starting_armies
+        starting_armies=starting_armies,
+        play_from_state=play_from_state
     )
     
     # Set up AI agents if specified
