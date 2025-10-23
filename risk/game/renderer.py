@@ -12,10 +12,8 @@ from ..state.board_generator import generate_sample_board
 from .ui import TurnUI
 from .ui_renderer import UIRenderer
 from .animation import AnimationManager
-
-
 class GameRenderer:
-    """Renders the Risk board and game state using pygame."""
+    """Renders he Risk board and game state using pygame."""
     
     def __init__(self, screen: pygame.Surface, game_state: GameState, 
                  turn_state: Optional[TurnState] = None):
@@ -29,6 +27,7 @@ class GameRenderer:
         self.game_state = game_state
         self.width = screen.get_width()
         self.height = screen.get_height()
+        self._renderers = []
         
         # Initialize turn UI
         self.turn_ui = TurnUI(self.width, self.height)
@@ -82,6 +81,14 @@ class GameRenderer:
         if not self.game_state.territories:
             generate_sample_board(self.game_state, self.width, self.height - 120)
     
+    def add_renderer(self, renderer) -> None:
+        """
+        Add a custom renderer to the rendering pipeline.
+        
+        :param renderer: Renderer instance with a draw(screen) method
+        """
+        self._renderers.append(renderer)
+
     def draw_board(self, delta_time: float = 0.0) -> None:
         """
         Draw the complete Risk board. Renders territories, continent labels, 
@@ -93,8 +100,11 @@ class GameRenderer:
         self._draw_territories()
         self._draw_continent_labels()
         self._draw_player_summaries()
-        self._draw_legend()
-        
+        # self._draw_legend()
+
+        for renderer in self._renderers:
+            renderer.render(self.game_state, surface=self.screen)
+
         # Draw turn UI
         self.turn_ui.set_turn_state(self.turn_state)
         self.ui_renderer.draw_turn_ui(self.turn_ui)
@@ -260,17 +270,7 @@ class GameRenderer:
             # Choose color based on territory state and owner
             if territory.state == TerritoryState.FREE:
                 fill_color = self.colors['territory_fill']
-            elif territory.state == TerritoryState.CONTESTED:
-                # Contested territories get a special highlight
-                if (territory.owner is not None and 
-                    territory.owner < len(self.colors['player_colors'])):
-                    base_color = self.colors['player_colors'][territory.owner]
-                else:
-                    base_color = self.colors['territory_fill']
-                # Brighten the color
-                fill_color = tuple(min(255, c + 50) for c in base_color)
-            elif (territory.owner is not None and 
-                  territory.owner < len(self.colors['player_colors'])):
+            elif territory.state == TerritoryState.OWNED:
                 fill_color = self.colors['player_colors'][territory.owner]
             else:
                 fill_color = self.colors['territory_fill']

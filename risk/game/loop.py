@@ -6,12 +6,17 @@ Handles pygame initialization, window management, and the core game loop.
 import pygame
 import sys
 from typing import Optional
+
+from risk.engine.risk import RiskSimulationController
+from risk.game.rendering.stack_renderer import StackRenderer
+from risk.state.event_stack.events import GameEvent
 from .renderer import GameRenderer
 from .input import GameInputHandler
 from .selection import TerritorySelectionHandler
 from .ui import UIAction
 from ..state.game_state import GameState, GamePhase
 from ..state.turn_manager import TurnManager, TurnPhase
+from ..engine import RecordStackEngine
 
 
 class GameLoop:
@@ -27,7 +32,8 @@ class GameLoop:
     def __init__(self, width: int = 1800, height: int = 1028, 
                  regions: int = 27, num_players: int = 3, 
                  starting_armies: int = 10,
-                 play_from_state: Optional[GameState] = None):
+                 play_from_state: Optional[GameState] = None,
+                 sim_delay: float = 1.0) -> None:
         """
         Initialize pygame and create the game window. Sets up game 
         parameters and creates initial game state.
@@ -43,6 +49,7 @@ class GameLoop:
         self.regions = regions
         self.num_players = num_players
         self.starting_armies = starting_armies
+        self.sim_delay = sim_delay
         self.screen: Optional[pygame.Surface] = None
         self.clock: Optional[pygame.time.Clock] = None
         self.running = False
@@ -52,6 +59,7 @@ class GameLoop:
         self.selection_handler: Optional[TerritorySelectionHandler] = None
         self.turn_manager: Optional[TurnManager] = None
         
+
         # Store the current board layout for reuse
         self.current_board_layout = None
         
@@ -62,6 +70,10 @@ class GameLoop:
             self.num_players = len(play_from_state.players)
         else:
             self.game_state = GameState.create_new_game(regions, num_players, starting_armies)
+        
+        # create event stack for simulation
+        self.sim_controller = RiskSimulationController(self.game_state)
+        self.stack = self.sim_controller.event_stack
         
     def initialize(self) -> bool:
         """Initialize pygame and create game components. Sets up screen, components, and registers callbacks.
@@ -87,6 +99,9 @@ class GameLoop:
                 self._handle_attack_failure_animation
             )
             self.renderer = GameRenderer(self.screen, self.game_state)
+            self.renderer.add_renderer(
+                StackRenderer(self.stack)
+            )
             self.input_handler = GameInputHandler(self.renderer, self.renderer.get_turn_ui())
             self.selection_handler = TerritorySelectionHandler(self.game_state, self.turn_manager)
             
@@ -587,10 +602,17 @@ class GameLoop:
         print("Close the window or press Ctrl+C to exit")
         
         try:
+            last_tick = 0
+            
             while self.running:
                 # Maintain 60 FPS and get delta time
                 delta_time = self.clock.tick(60) / 1000.0  # Convert milliseconds to seconds
-                
+                last_tick += delta_time
+                # step simulator
+                if last_tick > self.sim_delay:
+                    last_tick = 0
+                    self.sim_controller.step()
+
                 # Process events
                 self.handle_events()
                 
