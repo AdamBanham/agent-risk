@@ -481,7 +481,7 @@ class RiskMovementEngine(Engine):
     """
 
     allowed_elements = [
-        MovementPhase,
+        MovementPhaseEndEvent,
         MovementOfTroopsEvent
     ]
 
@@ -490,13 +490,8 @@ class RiskMovementEngine(Engine):
 
 
     def process(self, game_state: GameState, element: Union[Event, Level]) -> None:
-        if isinstance(element, MovementPhase):
-            return [
-                MovementPhaseEndEvent(
-                    game_state.total_turns,
-                    game_state.current_player_id
-                )
-            ]
+        if isinstance(element, MovementPhaseEndEvent):
+            return super().process(game_state, element) 
         elif isinstance(element, MovementOfTroopsEvent):
             return self._handle_movement(
                 game_state,
