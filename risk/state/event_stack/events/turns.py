@@ -182,17 +182,24 @@ class MovementPhase(Level):
 class MovementOfTroopsEvent(Event):
     """
     An event representing the movement of troops.
+
+    .. attributes ::
+        - context.from_territory
+        - context.to_territory
+        - context.moving_troops
+        - context.player
+        - context.turn
     """
 
     def __init__(self, 
-        player: str, turn_number:int, 
+        player: str, turn:int, 
         from_territory: int, to_territory: int, 
         moving_troops: int):
         super().__init__(
             f"Movement of Troops-S{from_territory}-of-M{moving_troops}-to-E{to_territory}",
             dict(
                 player = player,
-                turn_number = turn_number,
+                turn = turn,
                 from_territory = from_territory,
                 to_territory = to_territory,
                 moving_troops = moving_troops,

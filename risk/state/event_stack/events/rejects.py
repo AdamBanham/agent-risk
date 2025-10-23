@@ -48,3 +48,26 @@ class RejectAttack(Rejected):
                 reason=reason
             )
         )
+
+class RejectTransfer(Rejected):
+    """
+    An event representing the rejection of a troop transfer action.
+    """
+
+    def __init__(self,
+        turn_number:int, player: str,
+        from_territory: int,
+        to_territory: int,
+        num_troops: int,
+        reason: str):
+        super().__init__(
+            f"Reject-Transfer-T{turn_number}-P{player}-FT{from_territory}-TT{to_territory}-U{num_troops}: {reason}",
+            dict(
+                turn_number=turn_number,
+                player=player,
+                from_territory=from_territory,
+                to_territory=to_territory,
+                num_troops=num_troops,
+                reason=reason
+            )
+        )

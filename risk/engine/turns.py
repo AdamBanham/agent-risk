@@ -444,7 +444,7 @@ class RiskAttackEngine(Engine):
                     atk_cas
                 )
             )
-            
+
         # report on attacker losses
         if def_cas > 0:
             ret.append(
@@ -455,6 +455,15 @@ class RiskAttackEngine(Engine):
             )
 
         return ret
+    
+from ..state.event_stack import (
+    MovementPhase,
+    MovementPhaseEndEvent,
+    MovementOfTroopsEvent
+)
+from ..state.event_stack import (
+    RejectTransfer
+)
 
 class RiskMovementEngine(Engine):
     """
@@ -463,17 +472,118 @@ class RiskMovementEngine(Engine):
 
     .. consumes ::
         - movement-phase
-        - movement
+        - movement-of-troops
 
     .. produces ::
-
+        - transfer-armies
+        - reject-transfer
+        - movement-phase-end
     """
+
+    allowed_elements = [
+        MovementPhase,
+        MovementOfTroopsEvent
+    ]
 
     def __init__(self):
         super().__init__("RiskMovementEngine")
 
-    def processable(self, element: Union[Event, Level]) -> bool:
-        return super().processable(element)
 
     def process(self, game_state: GameState, element: Union[Event, Level]) -> None:
-        return super().process(game_state, element)
+        if isinstance(element, MovementPhase):
+            return [
+                MovementPhaseEndEvent(
+                    game_state.total_turns,
+                    game_state.current_player_id
+                )
+            ]
+        elif isinstance(element, MovementOfTroopsEvent):
+            return self._handle_movement(
+                game_state,
+                element
+            )
+        
+    def _handle_movement(self,
+        game_state: GameState,
+        element: MovementOfTroopsEvent
+        ) -> List[Event]:
+        
+        from_territory = game_state.get_territory(
+            element.context.from_territory
+        )
+        to_territory = game_state.get_territory(
+            element.context.to_territory
+        )
+        num_troops = element.context.moving_troops
+        player = element.context.player
+
+        if game_state.current_player_id != player:
+            return [
+                RejectTransfer(
+                    game_state.total_turns,
+                    player,
+                    element.context.from_territory,
+                    element.context.to_territory,
+                    num_troops,
+                    "Not your turn"
+                )
+            ]
+        
+        if from_territory.owner != player \
+            or to_territory.owner != player:
+            return [
+                RejectTransfer(
+                    game_state.total_turns,
+                    player,
+                    element.context.from_territory,
+                    element.context.to_territory,
+                    num_troops,
+                    "You do not own both territories"
+                )
+            ]
+        
+        if to_territory not in from_territory.adjacent_territories:
+            return [
+                RejectTransfer(
+                    game_state.total_turns,
+                    player,
+                    element.context.from_territory,
+                    element.context.to_territory,
+                    num_troops,
+                    "Territories are not adjacent"
+                )
+            ]
+        
+        if num_troops < 1 \
+            or num_troops > from_territory.armies:
+            return [
+                RejectTransfer(
+                    game_state.total_turns,
+                    player,
+                    element.context.from_territory,
+                    element.context.to_territory,
+                    num_troops,
+                    "Not enough troops to transfer"
+                )
+            ]
+        
+        if num_troops == from_territory.armies:
+            return [
+                RejectTransfer(
+                    game_state.total_turns,
+                    player,
+                    element.context.from_territory,
+                    element.context.to_territory,
+                    num_troops,
+                    "Must leave at least one troop behind"
+                )
+            ]
+
+        return [
+            TransferArmies(
+                from_territory_id=from_territory.id,
+                to_territory_id=to_territory.id,
+                num_armies=num_troops
+            )
+        ]
+        
