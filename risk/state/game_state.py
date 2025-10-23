@@ -24,6 +24,9 @@ class GamePhase(Enum):
     GAME_END = "game_end"           # Game finished
     SCORE = "score"                 # Post-game scoring
 
+    def __repr__(self):
+        return f"GamePhase.{self.name}"
+
 
 @dataclass
 class Player:
@@ -96,9 +99,10 @@ class Player:
     
     def __repr__(self) -> str:
         """String representation for debugging."""
-        return (f"Player(id={self.id}, name='{self.name}', "
-                f"territories={len(self.territories_controlled)}, "
-                f"armies={self.total_armies}, active={self.is_active})")
+        ret = "Player("
+        for attr, value in self.__dict__.items():
+            ret += f"\n\t{attr}={repr(value)},"
+        return ret + ")"
 
 
 @dataclass 
@@ -175,6 +179,22 @@ class GameState:
         
         return game_state
     
+    def set_adjacent_territories(self) -> None:
+        """
+        Determine and set adjacent territories based on shared vertices.
+        Updates each territory's adjacency list.
+        """
+        for territory in self.territories.values():
+            for other in self.territories.values():
+                if other.id == territory.id:
+                    continue
+                shared_vertices = any(
+                    vertex in other.vertices for vertex in territory.vertices
+                )
+                if shared_vertices:
+                    territory.add_adjacent_territory(other)
+                    other.add_adjacent_territory(territory)
+    
     def initialise(self, generate_board: bool = True) -> None:
         """
         Set up initial game state.
@@ -188,14 +208,13 @@ class GameState:
             print(
                 f"Generated initial board with {len(self.territories)} territories"
             )
+        else:
+            # determine adjacencies
+            self.set_adjacent_territories()
 
         # set first player
         self.set_current_player(random.choice(list(self.players.keys())))
         self.starting_player = self.current_player_id
-
-        # spread the initial armies
-        # TODO
-
 
         self.phase = GamePhase.PLAYER_TURN
 
@@ -319,14 +338,6 @@ class GameState:
         
         self.last_updated = time.time()
         return self.current_player_id
-    
-    def complete_turn(self) -> None:
-        """
-        Mark the current turn as completed and increment total turns. Used 
-        for manual turn management in certain scenarios.
-        """
-        self.total_turns += 1
-        self.last_updated = time.time()
     
     def check_victory_condition(self) -> Optional[int]:
         """
