@@ -8,6 +8,7 @@ from ..state import GameState
 from ..state.event_stack import EventStack
 
 from copy import deepcopy
+import traceback
 
 class SimulationController:
     """
@@ -17,11 +18,17 @@ class SimulationController:
 
     def __init__(self, 
         game_state: GameState, 
-        engines: list[Engine]):
+        engines: list[Engine],
+        debug: bool = False):
         self.game_state = game_state
         self.engines = engines
         self.event_stack = EventStack("event-stack")
         self._last = None
+        self.debug = debug
+
+    def _print_debug(self, message: str) -> None:
+        if self.debug:
+            print(f"[DEBUG] {message}")
 
     def step(self) -> bool:
         """
@@ -34,7 +41,7 @@ class SimulationController:
             return False
 
         element = self.event_stack.pop()
-        print(f"Processing element: {element}")
+        self._print_debug(f"Processing element: {element}")
         self._last = element
         for engine in self.engines:
             try :
@@ -46,12 +53,12 @@ class SimulationController:
                 self.event_stack.push(error_event)
                 continue
             if engine.processable(element):
-                print(f"Engine '{engine.id}' processing element: {element}")
+                self._print_debug(f"Engine '{engine.id}' processing element: {element}")
                 try :
                     events = engine.process(self.game_state, element)
                 except Exception as e:
                     error_event = EngineProcessingError(
-                        engine.id, element, str(e)
+                        engine.id, element, traceback.format_exc()
                     )
                     self.event_stack.push(error_event)
                     continue
@@ -108,31 +115,3 @@ class SimulationController:
         self.engines.append(engine)
     
 
-from .base import DebugEngine, SideEffectEngine
-from .turns import (
-    RiskGameEngine,
-    RiskTurnEngine,
-    RiskPlacementEngine,
-    RiskAttackEngine,
-    RiskMovementEngine
-)
-
-RISK_ENGINES = [
-    DebugEngine(),
-    SideEffectEngine(),
-    RiskGameEngine(),
-    RiskTurnEngine(),
-    RiskPlacementEngine(),
-    RiskAttackEngine(),
-    RiskMovementEngine()
-]
-
-class RiskSimulationController(SimulationController):
-    """
-    The controller responsible for managing the event stack
-    and engine processing loop for the Risk simulation.
-    """
-
-    def __init__(self, 
-        game_state: GameState):
-        super().__init__(game_state, RISK_ENGINES)
