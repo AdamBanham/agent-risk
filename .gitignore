@@ -183,3 +183,5 @@ cython_debug/
 test.out
 test.stack
 test.state
+*.stack
+*.state
