@@ -64,6 +64,9 @@ class GameRenderer:
             'text': (255, 255, 255),
             'selected_text': (255, 0, 0),  # Red text for selected territories
             'selected_border': (255, 255, 0),  # Yellow border for selected territories
+            'selected_adj_friendly': (0, 255, 0),  # Green border for adjacent friendly territories
+            'selected_adj_enemy': (255, 0, 0),  # Red border for adjacent enemy territories
+            'selected_adj_neutral': (100, 100, 100),  # Gray border for adjacent neutral territories
             'highlight': (255, 255, 100),
             'summary_bg': (40, 40, 60),
             'summary_border': (80, 80, 120),
@@ -250,7 +253,7 @@ class GameRenderer:
         Draw all territories with their borders, colors, and armies. Renders 
         filled polygons, borders, and army counts.
         """
-        selected_territories = []  # Keep track of selected territories for last
+        selected_territory = None  # Keep track of selected territories for last
         
         # First pass: Draw all filled polygons
         for territory in self.game_state.territories.values():
@@ -278,30 +281,40 @@ class GameRenderer:
             
             # Keep track of selected territories for later rendering
             if territory.selected:
-                selected_territories.append(territory)
+                selected_territory = territory
         
         # Second pass: Draw all non-selected territory borders
         for territory in self.game_state.territories.values():
-            if not territory.selected and len(territory.vertices) >= 3:
-                # Determine border color and width for non-selected territories
-                if territory.state == TerritoryState.CONTESTED:
-                    # Contested territories get highlight color
-                    border_color = self.colors['highlight']
-                    border_width = 3
-                else:
-                    # Normal territories get standard border
-                    border_color = self.colors['territory_border']
-                    border_width = 2
-                
-                pygame.draw.polygon(self.screen, border_color, territory.vertices, border_width)
+            # Determine border color and width for non-selected territories
+            border_color = self.colors['territory_border']
+            border_width = 2
+            pygame.draw.polygon(self.screen, border_color, territory.vertices, border_width)
+        
+        # second pass b: draw borders for territories adjacent to selected territory
+        if selected_territory:
+            for territory in self.game_state.territories.values():
+                if territory.id == selected_territory.id:
+                    continue
+                if selected_territory.is_adjacent_to(territory.id):
+                    if selected_territory.owner == territory.owner:
+                        # Adjacent friendly territories get green border
+                        border_color = self.colors['selected_adj_friendly']
+                    elif territory.state == TerritoryState.FREE:
+                        # Adjacent neutral territories get gray border
+                        border_color = self.colors['selected_adj_neutral']
+                    else:
+                        # Adjacent enemy territories get red border
+                        border_color = self.colors['selected_adj_enemy']
+                    border_width = 4
+                    pygame.draw.polygon(self.screen, border_color, territory.vertices, border_width)
         
         # Third pass: Draw selected territory borders (on top of everything)
-        for territory in selected_territories:
-            if len(territory.vertices) >= 3:
+        if selected_territory:
+            if len(selected_territory.vertices) >= 3:
                 # Selected territories get yellow outline with thicker border
                 border_color = self.colors['selected_border']
                 border_width = 4
-                pygame.draw.polygon(self.screen, border_color, territory.vertices, border_width)
+                pygame.draw.polygon(self.screen, border_color, selected_territory.vertices, border_width)
         
         # Fourth pass: Draw territory names and army counts
         for territory in self.game_state.territories.values():
