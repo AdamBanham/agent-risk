@@ -207,14 +207,14 @@ class CaptureTerritory(SideEffectEvent):
     def apply(self, state: 'GameState') -> None:
         territory = state.get_territory(self.context.territory_id)
         if territory:
-            territory.owner = self.context.new_owner_id
+            territory.set_owner(self.context.new_owner_id)
             territory.armies = 0
         state.update_player_statistics()
 
     def revert(self, state: 'GameState') -> None:
         territory = state.get_territory(self.context.territory_id)
         if territory:
-            territory.owner = self.context.previous_owner_id
+            territory.set_owner(self.context.previous_owner_id)
             territory.armies = 0
         state.update_player_statistics()
 
