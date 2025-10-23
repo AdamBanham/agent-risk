@@ -4,19 +4,18 @@ Handles pygame initialization, window management, and the core game loop.
 """
 
 import pygame
-import sys
 from typing import Optional
 
 from risk.engine.risk import RiskSimulationController
 from risk.game.rendering.stack_renderer import StackRenderer
-from risk.state.event_stack.events import GameEvent
 from .renderer import GameRenderer
+from .rendering.animations import AnimationEngine
+
 from .input import GameInputHandler
 from .selection import TerritorySelectionHandler
 from .ui import UIAction
 from ..state.game_state import GameState, GamePhase
 from ..state.turn_manager import TurnManager, TurnPhase
-from ..engine import RecordStackEngine
 
 
 class GameLoop:
@@ -101,6 +100,9 @@ class GameLoop:
             self.renderer = GameRenderer(self.screen, self.game_state)
             self.renderer.add_renderer(
                 StackRenderer(self.stack)
+            )
+            self.sim_controller.add_engine(
+                AnimationEngine(self.renderer.animation_manager)
             )
             self.input_handler = GameInputHandler(self.renderer, self.renderer.get_turn_ui())
             self.selection_handler = TerritorySelectionHandler(self.game_state, self.turn_manager)

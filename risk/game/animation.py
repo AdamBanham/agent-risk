@@ -665,6 +665,119 @@ class RandomWalkAnimation(BaseAnimation):
         return current_points if current_points else [self.path_points[0]]
 
 
+class FlashAnimation(BaseAnimation):
+    """
+    An animation that makes a flash of colour on a position for a brief moment.
+    It grows in intensity and then fades out.
+    
+    :param position: (x, y) position for flash center
+    :param duration: Animation duration in seconds
+    :param color: RGB color tuple for flash
+    :param size: Flash size in pixels
+    :param delay: Delay before animation starts
+    """
+    
+    def __init__(self, position: Tuple[float, float], duration: float,
+                 color: Tuple[int, int, int], size: int = 30, 
+                 delay: float = 0.0, after: float = 0.0):
+        """
+        Initialize flash animation.
+        
+        :param position: (x, y) position for flash center
+        :param duration: Animation duration in seconds
+        :param color: RGB color tuple for flash
+        :param size: Flash size in pixels
+        :param delay: Delay before animation starts
+        :param after: Duration to keep flash visible after completion
+        """
+        super().__init__(duration, delay, after)
+        self.position = position
+        self.color = color
+        self.size = size
+    
+    def render(self, surface: pygame.Surface) -> None:
+        """
+        Render the flash animation to the provided surface with growing 
+        and fading intensity effects.
+        
+        :param surface: Pygame surface to draw on
+        """
+        if not self.is_visible():
+            return
+        
+        x, y = self.position
+        current_size = int(self.size * self._get_scale())
+        alpha = int(255 * self._get_alpha())
+        
+        # Create color with alpha for transparency effect
+        flash_color = (*self.color, alpha)
+        
+        # Create temporary surface for alpha blending
+        temp_surface = pygame.Surface((current_size * 2, current_size * 2), 
+                                     pygame.SRCALPHA)
+        
+        # Draw main flash circle
+        pygame.draw.circle(
+            temp_surface,
+            flash_color,
+            (current_size, current_size),
+            current_size
+        )
+        
+        # Draw inner bright core (50% smaller, brighter)
+        core_size = current_size // 2
+        core_alpha = min(255, int(alpha * 1.5))
+        core_color = (
+            min(255, int(self.color[0] * 1.3)),
+            min(255, int(self.color[1] * 1.3)),
+            min(255, int(self.color[2] * 1.3)),
+            core_alpha
+        )
+        
+        pygame.draw.circle(
+            temp_surface,
+            core_color,
+            (current_size, current_size),
+            core_size
+        )
+        
+        # Blit the temporary surface to main surface
+        surface.blit(temp_surface, 
+                    (x - current_size, y - current_size))
+    
+    def _get_scale(self) -> float:
+        """
+        Get current scale factor for flash size. Grows from 0.3 to 1.0.
+        
+        :returns: Scale factor (0.3 to 1.0)
+        """
+        if self.state == AnimationState.WAITING:
+            return 0.3
+        
+        # Ease-out scaling: fast growth then slow
+        t = self.progress
+        eased_progress = 1.0 - (1.0 - t) * (1.0 - t)
+        return 0.3 + (eased_progress * 0.7)
+    
+    def _get_alpha(self) -> float:
+        """
+        Get current alpha transparency. Fades in quickly then out slowly.
+        
+        :returns: Alpha value (0.0 to 1.0)
+        """
+        if self.state == AnimationState.WAITING:
+            return 0.0
+        
+        # Peak at 30% through animation, then fade out
+        if self.progress <= 0.3:
+            # Fade in quickly
+            return self.progress / 0.3
+        else:
+            # Fade out slowly
+            fade_progress = (self.progress - 0.3) / 0.7
+            return 1.0 - (fade_progress * fade_progress)  # Ease-out fade
+
+
 class AnimationManager:
     """
     Manages all active animations in the game using a single queue. Provides 
@@ -744,8 +857,11 @@ class AnimationManager:
         self.animations.append(animation)
         return animation
     
-    def add_random_walk_animation(self, start_pos: Tuple[float, float], 
-                                 end_pos: Tuple[float, float], duration: float) -> RandomWalkAnimation:
+    def add_random_walk_animation(self, 
+            start_pos: Tuple[float, float], 
+            end_pos: Tuple[float, float], 
+            duration: float,
+            delay:float = 0) -> RandomWalkAnimation:
         """
         Create and register a new random walk animation. Shows troop movement
         along a random walk path between territories.
@@ -758,7 +874,35 @@ class AnimationManager:
         animation = RandomWalkAnimation(
             start_pos=start_pos,
             end_pos=end_pos,
-            duration=duration
+            duration=duration,
+            delay=delay
+        )
+        
+        self.animations.append(animation)
+        return animation
+    
+    def add_flash_animation(self, position: Tuple[float, float], 
+                           duration: float,
+                           color: Tuple[int, int, int],
+                           size: int =30,
+                           delay: float =0.0) -> FlashAnimation:
+        """
+        Create and register a new flash animation. Shows a flash of color at 
+        specified position.
+        
+        :param position: (x, y) position for flash center
+        :param duration: Animation duration in seconds
+        :param color: RGB color tuple for flash
+        :param size: Flash size in pixels
+        :param delay: Delay before animation starts
+        :returns: Created FlashAnimation object for reference
+        """
+        animation = FlashAnimation(
+            position=position,
+            duration=duration,
+            color=color,
+            size=size,
+            delay=delay
         )
         
         self.animations.append(animation)
