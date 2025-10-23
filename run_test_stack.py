@@ -9,9 +9,9 @@ from risk.state.game_state import GameState
 from time import time, sleep
 
 state = GameState.create_new_game(
-    regions=10,
+    regions=30,
     num_players=2,
-    starting_armies=20
+    starting_armies=30
 )
 state.initialise()
 
@@ -189,19 +189,150 @@ class MockFights(Engine):
 
         return [random.choice(placement)] #+ [random.choice(fails)]
 
-recorder = RecordStackEngine()
+from risk.state.event_stack import (
+    MovementPhase,
+    MovementOfTroopsEvent,
+)
+class MockMovements(Engine):
+    """
+    Mock engine for placing troop movements on the stack.
+    """
+
+    allowed_elements = [
+        MovementPhase
+    ]
+
+    def __init__(self):
+        super().__init__("MockMovementsEngine")
+    
+    def process(self, 
+                game_state: GameState, 
+                element) -> None:
+        # For each player, place 1 troop in the first territory they own
+        placement = []
+        fails = []
+
+        territories = list(game_state.get_territories_owned_by(
+            game_state.current_player_id 
+        ))
+        other_territories = list(game_state.get_territories_owned_by(
+            (game_state.current_player_id + 1) % game_state.num_players
+        ))
+
+        placer = random.choice(territories)
+        other = random.choice(other_territories)
+        
+        for adjacent in placer.adjacent_territories:
+            if adjacent.owner != game_state.current_player_id:
+                continue
+            placement.append(
+                MovementOfTroopsEvent(
+                    turn=game_state.total_turns,
+                    player=game_state.current_player_id,
+                    from_territory=placer.id,
+                    to_territory=adjacent.id,
+                    moving_troops=max(1 , placer.armies // 2)
+                )
+            )
+
+        # add some fail cases
+        ## not your turn
+        fails.append(
+            MovementOfTroopsEvent(
+                turn=game_state.total_turns,
+                player=(game_state.current_player_id + 1) % game_state.num_players,
+                from_territory=placer.id,
+                to_territory=adjacent.id,
+                moving_troops=max(1 , placer.armies // 2)
+            )
+        )
+        ## not your territory
+        non_owned = [ adj for adj in placer.adjacent_territories if adj.owner != game_state.current_player_id ]
+        if len(non_owned) > 0:
+            fails.append(
+                MovementOfTroopsEvent(
+                    turn=game_state.total_turns,
+                    player=game_state.current_player_id,
+                    from_territory=non_owned[0].id,
+                    to_territory=placer.id,
+                    moving_troops=1
+                )
+            )
+            fails.append(
+                MovementOfTroopsEvent(
+                    turn=game_state.total_turns,
+                    player=game_state.current_player_id,
+                    from_territory=placer.id,
+                    to_territory=non_owned[0].id,
+                    moving_troops=1
+                )
+            )
+        ## zero troops
+        fails.append(
+            MovementOfTroopsEvent(
+                turn=game_state.total_turns,
+                player=game_state.current_player_id,
+                from_territory=placer.id,
+                to_territory=adjacent.id,
+                moving_troops=0
+            )
+        )
+        ## too many troops
+        fails.append(
+            MovementOfTroopsEvent(
+                turn=game_state.total_turns,
+                player=game_state.current_player_id,
+                from_territory=placer.id,
+                to_territory=adjacent.id,
+                moving_troops=placer.armies + 5
+            )
+        )
+        ## must leave one behind
+        fails.append(
+            MovementOfTroopsEvent(
+                turn=game_state.total_turns,
+                player=game_state.current_player_id,
+                from_territory=placer.id,
+                to_territory=adjacent.id,
+                moving_troops=placer.armies
+            )
+        )
+
+        if len(placement) == 0:
+            return random.sample(fails, k=1)
+        return [random.choice(placement), random.choice(fails)]
+
+from risk.state.event_stack import (
+    PlayingEvent,
+    AgentTurnEndEvent,
+    AgentTurnPhase,
+    GameEvent,
+    PlacementPhaseEndEvent,
+    AttackPhaseEndEvent,
+    MovementPhaseEndEvent
+)
+
+recorder = RecordStackEngine(
+    pairs=[
+        (PlayingEvent, AgentTurnEndEvent),
+        (PlacementPhase, PlacementPhaseEndEvent),
+        (AttackPhase, AttackPhaseEndEvent),
+        (MovementPhase, MovementPhaseEndEvent)
+    ]
+)
 engine = RiskSimulationController(
     game_state=state
 )
 engine.add_engine(MockPlacements())
 engine.add_engine(MockFights())
+engine.add_engine(MockMovements())
 engine.add_engine(recorder)
 
 engine.event_stack.push(
     GameEvent()
 )
 
-delay = 0.1
+delay = 0.5
 
 original_stdout = sys.stdout
 try :
