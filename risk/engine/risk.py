@@ -9,7 +9,7 @@ from risk.state.event_stack.events import (
     GameEvent
 ) 
 from risk.state.game_state import GameState
-from .base import DebugEngine, RecordStackEngine, SideEffectEngine
+from .base import RecordStackEngine
 from .turns import (
     RiskGameEngine,
     RiskTurnEngine,
@@ -19,8 +19,6 @@ from .turns import (
 )
 
 RISK_ENGINES = [
-    DebugEngine(),
-    SideEffectEngine(),
     RiskGameEngine(),
     RiskTurnEngine(),
     RiskPlacementEngine(),

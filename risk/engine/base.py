@@ -148,4 +148,3 @@ class RecordStackEngine(Engine):
         self.stack.push(element)
 
         return None
-    

@@ -61,6 +61,7 @@ class AiEngine(Engine):
 
 
 from ..state.event_stack import AgentTurnEndEvent
+from ..state.event_stack import PauseProcessingEvent
 class AiDelayEngine(Engine):
     """
     Adds a delay before processing AI turns to improve visibility.
@@ -74,8 +75,7 @@ class AiDelayEngine(Engine):
         self.ai_turn_delay = ai_turn_delay
 
     def process(self, state, element):
-        time.sleep(self.ai_turn_delay)
-        return super().process(state, element)
+        return [PauseProcessingEvent(self.ai_turn_delay)]
 
 class AIGameLoop(BaseGameLoop):
     """

@@ -3,8 +3,11 @@ A holder module for running the event stack and engine
 processing loop.
 """
 
+from typing import Union
 from ..engine.base import Engine, EngineProccesableError, EngineProcessingError
+from .base import DebugEngine, SideEffectEngine
 from ..state import GameState
+from ..state.event_stack import Event, Level
 from ..state.event_stack import EventStack
 
 from copy import deepcopy
@@ -21,10 +24,15 @@ class SimulationController:
         engines: list[Engine],
         debug: bool = False):
         self.game_state = game_state
-        self.engines = engines
+        self.engines = engines + [
+            DebugEngine(),
+            SideEffectEngine(),
+            PauseEngine(self)
+        ]
         self.event_stack = EventStack("event-stack")
         self._last = None
         self.debug = debug
+        self._processing = True
 
     def _print_debug(self, message: str) -> None:
         if self.debug:
@@ -39,6 +47,9 @@ class SimulationController:
         """
         if self.event_stack.is_empty:
             return False
+        
+        if not self._processing:
+            return True
 
         element = self.event_stack.pop()
         self._print_debug(f"Processing element: {element}")
@@ -113,5 +124,66 @@ class SimulationController:
         """
 
         self.engines.append(engine)
+
+    def pause_processing(self) -> None:
+        """
+        Pause the processing of the event stack.
+        """
+        self._processing = False
+
+    def resume_processing(self) -> None:
+        """
+        Resume the processing of the event stack.
+        """
+        self._processing = True
     
 
+from ..state.event_stack import PauseProcessingEvent
+import threading
+    
+class PauseEngine(Engine):
+    """
+    An engine that pauses processing when a specific event is encountered.
+    """
+
+    allowed_elements = [
+        PauseProcessingEvent
+    ]
+
+    def __init__(self, controller: SimulationController):
+        super().__init__("pause_engine")
+        self.controller = controller
+        self._thread = None
+        self.delay = 0
+
+    
+    @staticmethod
+    def _launch_pause(self: "PauseEngine", controller: SimulationController) -> None:
+        """Launch a pause in processing for the specified duration."""
+        import time
+        start = time.time()
+        controller.pause_processing()
+        while time.time() - start < self.delay:
+            time.sleep(0.1)
+            print(f"[SYSTEM] Pausing for {self.delay - (time.time() - start):.2f} seconds...", end="\r")
+        controller.resume_processing()
+        self._thread = None
+        print("\033[2K\033[1G", end="", flush=True)
+
+    def process(self, state: GameState, element: Union[Event, Level]) -> None:
+        """Pause processing when the specified event is encountered."""
+        if isinstance(element, PauseProcessingEvent):
+            delay = element.context.delay
+
+            if self._thread:
+                self.delay += delay
+            else:
+                self.delay = delay
+                self._thread = threading.Thread(
+                    target=PauseEngine._launch_pause,
+                    args=(self, self.controller)
+                )
+                self._thread.start()
+
+        return super().process(state, element)
+            
