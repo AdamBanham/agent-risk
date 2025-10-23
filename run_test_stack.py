@@ -1,7 +1,7 @@
 
 import random
 import sys
-from risk.engine.controller import RiskSimulationController
+from risk.engine.risk import RiskSimulationController
 from risk.engine.base import RecordStackEngine, Engine
 from risk.state.event_stack import GameEvent
 from risk.state.game_state import GameState

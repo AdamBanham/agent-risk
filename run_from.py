@@ -2,8 +2,6 @@ from risk.game.loop import GameLoop, GamePhase
 from risk.agents import create_ai_game
 from risk.state.game_state import GameState, Player, Territory, TerritoryState
 
-import sys
-import os
 import argparse
 
 def parse_arguments():
