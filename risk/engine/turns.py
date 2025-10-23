@@ -247,7 +247,8 @@ from ..state import Fight, FightResult
 
 from ..state.event_stack import (
     CaptureTerritory,
-    CasualitiesOnTerritory
+    CasualitiesOnTerritory,
+    TransferArmies
 )
 
 class RiskAttackEngine(Engine):
@@ -410,26 +411,47 @@ class RiskAttackEngine(Engine):
         ) -> List[Event]:
         
         fight:Fight = element.context.fight 
+        atk_id = fight.attacker_territory_id
+        def_id = fight.defender_territory_id
         atk_cas = fight.total_attacker_casualties
         def_cas = fight.total_defender_casualties
+        atk_sur, _ = fight.get_surviving_armies()
         result:FightResult = element.context.fight_result
 
         ret = []
 
-        if result.attacker_won:
+        if result.attacker_won():
             ret.append(
-                CaptureTerritory()
+                TransferArmies(
+                    from_territory_id=atk_id,
+                    to_territory_id=def_id,
+                    num_armies=atk_sur,
+                )
             )
-        
+            ret.append(
+                CaptureTerritory(
+                    def_id,
+                    element.context.player_id,
+                    game_state.get_territory(def_id).owner,
+                )
+            )
+
         # report on defender losses
         if atk_cas > 0:
             ret.append(
-                CasualitiesOnTerritory()
+                CasualitiesOnTerritory(
+                    atk_id,
+                    atk_cas
+                )
             )
+            
         # report on attacker losses
         if def_cas > 0:
             ret.append(
-                CasualitiesOnTerritory()
+                CasualitiesOnTerritory(
+                    def_id,
+                    def_cas
+                )
             )
 
         return ret
