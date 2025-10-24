@@ -157,7 +157,7 @@ def create_ai_game(regions: int = 15, num_players: int = 3, starting_armies: int
     
     # Set up AI agents if specified
     if ai_player_ids:
-        from .simple.random_agent import RandomAgent
+        from .simple.random import RandomAgent
         
         for player_id in ai_player_ids:
             agent = RandomAgent(
