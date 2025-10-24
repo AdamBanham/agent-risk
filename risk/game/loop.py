@@ -359,16 +359,20 @@ class GameLoop:
         while self.running:
             if not self.paused:
 
-                for _ in range(self._sim_speed):  # Process multiple steps per iteration for speed
+                # batch process to speed up simulation
+                for _ in range(self._sim_speed): 
                     action = self.sim_controller.step()
                     if action:
                         processed += 1
-                if time.time() - started >= 1.0:
-                    timing = max(1, time.time() - started)
+
+                curr = time.time()
+                if curr - started >= 1.0:
+                    timing = max(1, curr - started)
                     self._caption = f"Agent Risk - Dynamic Board Simulation ({processed / timing:.2f} actions/sec)"
-                    started = time.time()
+                    started = curr
                     processed = 0
-                # Update shared state safely
+
+            # release control back to draw 
             await asyncio.sleep(self.sim_delay)
     
     async def _render_loop(self) -> None:

@@ -1,6 +1,32 @@
 # agent-risk
 
-A modular event-driven simulation framework for the board game called "Risk"
+A modular event-driven simulation framework for the board game called "Risk".
+Currrently a work in progress, but this project stands be a test for a more
+general framework for handling multi-agent simulations. 
+
+It tests several notations and techniques for handling the decision making of 
+agents through a complex world. The board game risk allows to test the plumbing
+out before taclking the more complex aspects of such simulations, like temporal
+and uncertainity within world state knowledge.
+
+A brief demonstration of how the simulation unfold is shown below:
+![A gif of the simulation](demo.gif)
+
+The simulation framework revolves around an event stack, which allows us to
+build out the simulation via engines. These engines react to elements popped
+off the stack to generate more elements, which trigger further engines. A 
+simulation ends once no more elements are left on this stack.
+
+Notably, a human can play within the simulation, but ideally all the actions
+are generated from automated players. Automated agents react to the key
+phases on their turn via an engine, which prompts an agent to produce a plan
+of actions for that phase.
+
+Agents may put anything on the stack, as can the human player. Humans have a 
+bit more hand holding than agents. But the simulation decides if these elements
+placed on the stack are valid and result in side effects. Side effects are 
+events that change the world state. The types of events on the stack are colour
+coded, and the current stack is shown in the bottom right.
 
 ## Quick Start
 
@@ -14,33 +40,9 @@ python run_game.py
 
 - **Mouse:** Click on territories to select them
 - **ESC:** Quit the game
-- **I:** Show info for selected territory
-- **D:** Show debug information  
-- **H:** Show help
-- **Space:** Pause/unpause (placeholder)
 
 ## Current Implementation
 
-The project currently includes a working pygame visualization showing:
-
-- **Dynamic Risk Board:** A general outline of Risk territories organized by continents
-- **Territory Selection:** Click on territories to select and view information
-- **Visual Elements:** Color-coded territories by player ownership, army counts, continent groupings
-- **Interactive Interface:** Mouse and keyboard controls for exploration
-
-### Implemented Modules
-
-- **`risk/game/`** - Pygame event loop and rendering system
-  - `loop.py` - Main game loop with pygame initialization
-  - `renderer.py` - Board rendering with territories, armies, and visual elements
-  - `input.py` - Input handling for mouse clicks and keyboard shortcuts
-
-### Architecture Status
-
-- ✅ **Game Module:** Pygame integration with working board visualization
-- ⏳ **Handler Module:** Event queue system (planned)
-- ⏳ **Agent Module:** AI agent behaviors using formal methods (planned)
-- ⏳ **World Module:** Game state and replay functionality (planned)
 
 ### Architecture design plans for the simulator
 ![A brief overview for the game logic](./architecture.png)
@@ -48,6 +50,8 @@ The project currently includes a working pygame visualization showing:
 
 ### Evolution of event stack over the duration of a simulation
 ![A demonstration of the event stack](./event_stack_evo.png)
+
+
 ## Risk: The Board Game
 
 Wikipedia (<https://en.wikipedia.org/wiki/Risk_(game)>) defines the board game of
@@ -110,8 +114,8 @@ The simulation should use the `pygame` python library
 The architecture is split into several modules:
 
 - The '`game`' module handles running the event loop, rendering, and user input
-- The '`handler`' module manages the event queue for simulation, where agents
-or the game can post actions to modify the state of the game
+- The '`engine`' module includes the engines that run the show and progress
+the simulation into new states.
 - The '`agents`' module describes the agent behaviours for players, ideally
 versions of the same agent behaviour will be recorded, but the formalism used
 will change (following Action, Planning, and Learning by Malik Ghallab, Dana
@@ -124,7 +128,7 @@ Nau, Paolo Traverso). Types of formalisms to be consider are:
 the game and any other required state to ensure that each step of a simulation
 can be replayed.
 
-## Gameplay
+## Gameplay Loop
 
 The flow of game will consisting of the following main phases
 
