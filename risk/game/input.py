@@ -170,6 +170,26 @@ class InputHandler:
                     )
                     self.callbacks['sim_interrupt'](input_event)
 
+            # ctrl+'+' to increase sim speed
+            elif event.key == pygame.K_EQUALS and (pygame.K_LCTRL in self.keys_pressed or pygame.K_RCTRL in self.keys_pressed):
+                if 'increase_sim_speed' in self.callbacks:
+                    input_event = InputEvent(
+                        event_type='increase_sim_speed',
+                        key=event.key,
+                        data={'ctrl_pressed': True}
+                    )
+                    self.callbacks['increase_sim_speed'](input_event)
+
+            # ctrl+'-' to decrease sim speed
+            elif event.key == pygame.K_MINUS and (pygame.K_LCTRL in self.keys_pressed or pygame.K_RCTRL in self.keys_pressed):  
+                if 'decrease_sim_speed' in self.callbacks:
+                    input_event = InputEvent(
+                        event_type='decrease_sim_speed',
+                        key=event.key,
+                        data={'ctrl_pressed': True}
+                    )
+                    self.callbacks['decrease_sim_speed'](input_event)
+
             # Space key for pause/unpause - but check turn UI first
             elif event.key == pygame.K_SPACE:
                 # If there's a turn UI, let it handle space first (for phase advancement)

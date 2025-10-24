@@ -89,7 +89,8 @@ class AIGameLoop(BaseGameLoop):
                  starting_armies: int = 10,
                  play_from_state: Optional[GameState] = None,
                  ai_turn_delay: float = 1.0,
-                 sim_delay: float = 1.0) -> None:
+                 sim_delay: float = 1.0,
+                 sim_speed: int = 5) -> None:
         """
         Initialize the AI-enabled game loop. Extends base GameLoop with agent 
         controller support.
@@ -100,7 +101,8 @@ class AIGameLoop(BaseGameLoop):
         super().__init__(width=width, height=height, regions=regions, num_players=num_players, 
                          starting_armies=starting_armies,
                          play_from_state=play_from_state,
-                         sim_delay=sim_delay)
+                         sim_delay=sim_delay,
+                         sim_speed=sim_speed)
         self.ai_turn_delay = ai_turn_delay  # Seconds to wait between AI actions for visibility
         self.last_ai_action_time = 0.0
         self.ai_turn_in_progress = False
@@ -126,7 +128,8 @@ def create_ai_game(regions: int = 15, num_players: int = 3, starting_armies: int
                    ai_player_ids: list = None, attack_probability: float = 0.5,
                    ai_delay: float = 1.0,
                    play_from_state: GameState = None,
-                   sim_delay: float = 1.0) -> AIGameLoop:
+                   sim_delay: float = 1.0,
+                   sim_speed: int = 5) -> AIGameLoop:
     """
     Factory function to create a complete AI-enabled game setup. Creates game 
     loop, agent controller, and configures AI players.
@@ -152,7 +155,8 @@ def create_ai_game(regions: int = 15, num_players: int = 3, starting_armies: int
         starting_armies=starting_armies,
         play_from_state=play_from_state,
         ai_turn_delay=ai_delay,
-        sim_delay=sim_delay
+        sim_delay=sim_delay,
+        sim_speed=sim_speed
     )
     
     # Set up AI agents if specified

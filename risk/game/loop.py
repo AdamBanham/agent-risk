@@ -3,6 +3,8 @@ Main game event loop for the Risk simulation.
 Handles pygame initialization, window management, and the core game loop.
 """
 
+import asyncio
+import threading
 import time
 import pygame
 from typing import Optional
@@ -33,7 +35,8 @@ class GameLoop:
                  regions: int = 27, num_players: int = 3, 
                  starting_armies: int = 10,
                  play_from_state: Optional[GameState] = None,
-                 sim_delay: float = 1.0) -> None:
+                 sim_delay: float = 1.0,
+                 sim_speed: int = 5) -> None:
         """
         Initialize pygame and create the game window. Sets up game 
         parameters and creates initial game state.
@@ -50,6 +53,7 @@ class GameLoop:
         self.num_players = num_players
         self.starting_armies = starting_armies
         self.sim_delay = sim_delay
+        self._sim_speed = sim_speed
         self.screen: Optional[pygame.Surface] = None
         self.clock: Optional[pygame.time.Clock] = None
         self.running = False
@@ -136,6 +140,8 @@ class GameLoop:
             self.input_handler.register_callback('sim_step', self._push_sim_sys_step)
             self.input_handler.register_callback('sim_interrupt', self._push_sim_sys_interrupt)
             self.input_handler.register_callback('sim_resume', self._push_sim_sys_resume)
+            self.input_handler.register_callback('increase_sim_speed', self._increase_sim_speed)
+            self.input_handler.register_callback('decrease_sim_speed', self._decrease_sim_speed)
             
             # Register territory selection callbacks
             self.input_handler.register_callback('territory_selected', self.selection_handler.handle_territory_selected)
@@ -179,52 +185,6 @@ class GameLoop:
         if self.input_handler:
             mouse_pos = pygame.mouse.get_pos()
             self.input_handler.update_mouse_hover(mouse_pos)
-    
-    def _handle_regenerate_game(self, input_event) -> None:
-        """
-        Handle Ctrl+R to regenerate the game state.
-        
-        :param input_event: Input event that triggered regeneration
-        """
-        print("Regenerating game state with same parameters...")
-        
-        # Create a new game state with original parameters
-        self.game_state = GameState.create_new_game(self.regions, 
-                                                    self.num_players, 
-                                                    self.starting_armies)
-        
-        # Generate the board for the new game state
-        from ..state.board_generator import generate_sample_board
-        generate_sample_board(self.game_state, self.width, self.height - 120)
-        
-        # Update all components with new game state
-        if self.turn_manager:
-            self.turn_manager.game_state = self.game_state
-        
-        if self.renderer:
-            self.renderer.game_state = self.game_state
-        
-        if self.selection_handler:
-            self.selection_handler.game_state = self.game_state
-            self.selection_handler.clear_all_selections()
-        
-        # Set up the game state - start the first turn
-        if self.game_state.players and self.turn_manager:
-            self.game_state.set_current_player(0)
-            self.game_state.phase = GamePhase.PLAYER_TURN
-            
-            # Start first player's turn
-            self.turn_manager.start_player_turn(0)
-            current_turn = self.turn_manager.get_current_turn()
-            if current_turn and self.renderer:
-                self.renderer.set_turn_state(current_turn)
-        
-        print(f"New game state created: {self.regions} regions, "
-              f"{self.num_players} players, {self.starting_armies} armies each")
-        print(f"Generated {len(self.game_state.territories)} territories")
-        
-        # Store the board layout for future reuse
-        self._store_current_board_layout()
     
     def _store_current_board_layout(self) -> None:
         """
@@ -279,6 +239,24 @@ class GameLoop:
                 adjacent_territories=territory_data['adjacent_territories'].copy()
             )
             game_state.add_territory(territory)
+
+    def _increase_sim_speed(self, input_event) -> None:
+        """
+        Increase the simulation speed by reducing the delay between steps.
+        
+        :param input_event: Input event that triggered the speed increase
+        """
+        # Decrease delay to speed up simulation, with a minimum cap
+        self._sim_speed = self._sim_speed * 2
+
+    def _decrease_sim_speed(self, input_event) -> None:
+        """
+        Decrease the simulation speed by increasing the delay between steps.
+        
+        :param input_event: Input event that triggered the speed decrease
+        """
+        # Increase delay to slow down simulation, with a maximum cap
+        self._sim_speed = max(1, self._sim_speed // 2)
     
     def _handle_toggle_pause(self, input_event) -> None:
         """
@@ -598,47 +576,65 @@ class GameLoop:
         instruction_text = font_small.render("Press SPACE to resume", True, (200, 200, 200))
         instruction_rect = instruction_text.get_rect(center=(self.width // 2, self.height // 2 + 30))
         self.screen.blit(instruction_text, instruction_rect)
+
+    async def run_async(self) -> None:
+        """Async main loop with concurrent simulation and rendering."""
+        if not self.initialize():
+            return
+        
+        # Create concurrent tasks
+        sim_task = asyncio.create_task(self._simulation_loop())
+        render_task = asyncio.create_task(self._render_loop())
+        
+        try:
+            await asyncio.gather(sim_task, render_task)
+        finally:
+            self.cleanup()
     
+    async def _simulation_loop(self) -> None:
+        """Async simulation loop."""
+        started = time.time()
+        processed = 0
+        while self.running:
+            if not self.paused:
+
+                for _ in range(self._sim_speed):  # Process multiple steps per iteration for speed
+                    action = self.sim_controller.step()
+                    if action:
+                        processed += 1
+                if time.time() - started >= 5.0:
+                    self._caption = f"Agent Risk - Dynamic Board Simulation ({processed / (time.time() - started):.2f} actions/sec)"
+                    started = time.time()
+                    processed = 0
+                # Update shared state safely
+            await asyncio.sleep(self.sim_delay)
+    
+    async def _render_loop(self) -> None:
+        """Async rendering loop."""
+        while self.running:
+            delta_time = self.clock.tick(60) / 1000.0
+            self.handle_events()
+            self.update()
+            self.render(delta_time)
+            pygame.display.set_caption(
+                getattr(self, 
+                    '_caption', 
+                    "Agent Risk - Dynamic Board Simulation")
+            )
+            await asyncio.sleep(0)  # Yield control
+
     def run(self) -> None:
         """
         Main game loop.
         """
         if not self.initialize():
             return
-        
+
         print("Starting Agent Risk simulation...")
         print("Close the window or press Ctrl+C to exit")
         
         try:
-            last_tick = 0
-            processed = 0
-            started = time.time()
-            
-            while self.running:
-                # Maintain 60 FPS and get delta time
-                delta_time = self.clock.tick(120) / 1000.0  # Convert milliseconds to seconds
-                last_tick += delta_time
-                # step simulator
-                if last_tick > self.sim_delay:
-                    last_tick = 0
-                    action = self.sim_controller.step()
-                    if action:
-                        processed += 1
-
-                    if time.time() - started > 5:
-                        fps = processed / (time.time() - started)
-                        pygame.display.set_caption(f"Agent Risk - Dynamic Board Simulation ({fps:.2f} steps/sec)")
-                        started = time.time()
-                        processed = 0
-
-                # Process events
-                self.handle_events()
-                
-                # Update game state
-                self.update()
-                
-                # Render frame with delta time
-                self.render(delta_time)
+            asyncio.run(self.run_async())
                 
         except KeyboardInterrupt:
             print("\nShutting down...")

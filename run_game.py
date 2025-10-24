@@ -79,6 +79,13 @@ def parse_arguments():
         help='Delay between simulation steps in seconds (default: 1.0)'
     )
 
+    parser.add_argument(
+        '--sim-speed',
+        type=int,
+        default=5,
+        help='Simulation speed (default: 5)'
+    )
+
 
     
     return parser.parse_args()
@@ -155,6 +162,7 @@ if __name__ == "__main__":
             attack_probability=args.attack_rate,
             ai_delay=args.ai_delay,
             sim_delay=args.sim_delay,
+            sim_speed=args.sim_speed
         )
         
         if human_player_id is not None:
