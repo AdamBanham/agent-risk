@@ -6,11 +6,18 @@
     "configurations": [
 
         {
-            "name": "Risk -g 1",
+            "name": "Risk",
             "type": "debugpy",
             "request": "launch",
             "program": "${workspaceFolder}/run_game.py",
-            "args": ["-g", "1"],
+            "console": "integratedTerminal"
+        },
+        {
+            "name": "Risk (human)",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/run_game.py",
+            "args": ["-g", "20", "-p", "2", "--sim-delay", "0.01", "--human-player", "1", "--ai-delay", "0.01", "--sim-speed", " 50"],
             "console": "integratedTerminal"
         }
     ]
