@@ -3,6 +3,7 @@ Main game event loop for the Risk simulation.
 Handles pygame initialization, window management, and the core game loop.
 """
 
+import time
 import pygame
 from typing import Optional
 
@@ -610,15 +611,25 @@ class GameLoop:
         
         try:
             last_tick = 0
+            processed = 0
+            started = time.time()
             
             while self.running:
                 # Maintain 60 FPS and get delta time
-                delta_time = self.clock.tick(60) / 1000.0  # Convert milliseconds to seconds
+                delta_time = self.clock.tick(120) / 1000.0  # Convert milliseconds to seconds
                 last_tick += delta_time
                 # step simulator
                 if last_tick > self.sim_delay:
                     last_tick = 0
-                    self.sim_controller.step()
+                    action = self.sim_controller.step()
+                    if action:
+                        processed += 1
+
+                    if time.time() - started > 5:
+                        fps = processed / (time.time() - started)
+                        pygame.display.set_caption(f"Agent Risk - Dynamic Board Simulation ({fps:.2f} steps/sec)")
+                        started = time.time()
+                        processed = 0
 
                 # Process events
                 self.handle_events()
