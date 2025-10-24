@@ -112,7 +112,7 @@ class StackRenderer(Renderer):
             bg_color = colors["ends"]
         elif isinstance(element, Rejected):
             bg_color = colors["ends"]
-        elif isinstance(element, PlayingEvent):
+        elif isinstance(element, (PlayingEvent, GameEvent)):
             bg_color = colors["specials"]
         elif isinstance(element, SideEffectEvent):
             bg_color = colors["side_effects"]
