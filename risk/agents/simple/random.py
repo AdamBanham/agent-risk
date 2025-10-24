@@ -7,7 +7,6 @@ import random
 from typing import List
 
 from ...state.game_state import GameState
-from ...state.territory import Territory
 from ...utils.movement import find_movement_sequence, Movement
 from ...utils.movement import find_safe_frontline_territories
 from ...utils.movement import find_connected_frontline_territories
