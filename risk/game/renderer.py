@@ -74,6 +74,7 @@ class GameRenderer:
         # Font for text rendering
         pygame.font.init()
         self.font = pygame.font.Font(None, 24)
+        self.title_font = pygame.font.Font(None, 48)
         self.small_font = pygame.font.Font(None, 18)
         self.large_font = pygame.font.Font(None, 32)
         
@@ -392,6 +393,13 @@ class GameRenderer:
         box_height = 80
         box_spacing = 15
         start_y = 50  # Start below the legend area
+
+        # Draw the current turn counter 
+        turn_text = self.title_font.render(
+            f"Turn: {self.game_state.current_turn}", True, self.colors['highlight']
+        )
+        self.screen.blit(turn_text, (summary_x, start_y - turn_text.get_height() // 2))
+        start_y += 50
         
         for i, player in enumerate(self.game_state.players.values()):
             # Calculate box position
