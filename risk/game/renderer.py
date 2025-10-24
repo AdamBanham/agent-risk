@@ -9,7 +9,7 @@ from typing import List, Tuple, Optional, Dict
 
 from ..state import Territory, TerritoryState, GameState, Player, TurnState
 from ..state.board_generator import generate_sample_board
-from .ui import TurnUI
+from ..state.ui import TurnUI
 from .ui_renderer import UIRenderer
 from .animation import AnimationManager
 class GameRenderer:
@@ -30,7 +30,7 @@ class GameRenderer:
         self._renderers = []
         
         # Initialize turn UI
-        self.turn_ui = TurnUI(self.width, self.height)
+        self.turn_ui = self.game_state.ui_turn_state
         self.ui_renderer = UIRenderer(screen)
         self.turn_state = turn_state
         
@@ -101,14 +101,13 @@ class GameRenderer:
         self._draw_territories()
         self._draw_continent_labels()
         self._draw_player_summaries()
-        # self._draw_legend()
+        self._draw_legend()
 
         for renderer in self._renderers:
             renderer.render(self.game_state, surface=self.screen)
 
         # Draw turn UI
-        self.turn_ui.set_turn_state(self.turn_state)
-        self.ui_renderer.draw_turn_ui(self.turn_ui)
+        self.ui_renderer.draw_turn_ui(self.game_state.ui_turn_state)
         
         # Update and draw animations with delta time
         self.animation_manager.update_animations(delta_time)
@@ -457,7 +456,7 @@ class GameRenderer:
             self.screen.blit(armies_num, (text_x + 85, stats_y + 18))
             
             # Active status indicator in corner
-            if player.is_active:
+            if player.id == self.game_state.current_player_id:
                 status_indicator = pygame.Rect(box_x + box_w - 15, box_y + 5, 
                                              10, 10)
                 pygame.draw.circle(self.screen, self.colors['highlight'], 
@@ -476,37 +475,20 @@ class GameRenderer:
         self.screen.blit(title_text, (legend_x, legend_y))
         
         # Game information
-        y_offset = 40
-        game_info = [
-            f"Phase: {self.game_state.phase.value}",
-            f"Turn: {self.game_state.current_turn}",
-            f"Territories: {len(self.game_state.territories)}",
-            f"Players: {len(self.game_state.players)}",
-        ]
-        
-        for info in game_info:
-            text = self.small_font.render(info, True, self.colors['text'])
-            self.screen.blit(text, (legend_x, legend_y + y_offset))
-            y_offset += 20
-        
-        # Current player indicator
-        if self.game_state.current_player_id is not None:
-            current_player = self.game_state.get_player(self.game_state.current_player_id)
-            if current_player:
-                y_offset += 10
-                current_text = self.font.render("Current Player:", True, self.colors['highlight'])
-                self.screen.blit(current_text, (legend_x, legend_y + y_offset))
-                
-                y_offset += 25
-                player_text = self.font.render(current_player.name, True, current_player.color)
-                self.screen.blit(player_text, (legend_x, legend_y + y_offset))
+        y_offset = 50
         
         # Instructions
-        y_offset += 40
         instructions = [
             "Dynamic Risk Board",
             "Click to interact",
-            "ESC to exit"
+            "ESC to exit",
+            "Controls:",
+            "- Select Territory: Click",
+            "- add interrupt to stack: ctrl + i",
+            "- add resume to stack: ctrl + r",
+            "- add step to stack: ctrl + s",
+            "- increase sim speed: ctrl + '+'",
+            "- decrease sim speed: ctrl + '-'",
         ]
         
         for instruction in instructions:

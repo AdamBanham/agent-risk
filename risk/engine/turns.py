@@ -31,6 +31,7 @@ class RiskGameEngine(Engine):
         ret = []
         if isinstance(element, GameEvent):
             ret.append(PlayingEvent())
+            
         elif isinstance(element, PlayingEvent):
             winner = game_state.check_victory_condition()
             if winner is None:

@@ -11,14 +11,17 @@ from typing import Optional
 
 from risk.engine.risk import RiskSimulationController
 from risk.game.rendering.stack_renderer import StackRenderer
+from risk.state.event_stack.events.players import TerritorySelectedEvent
+from risk.state.event_stack.events.ui import UIActionEvent
 from .renderer import GameRenderer
 from .rendering.animations import AnimationEngine
+from .players import add_player_engines
 
-from .input import GameInputHandler
+from .input import GameInputHandler, InputEvent
 from .selection import TerritorySelectionHandler
-from .ui import UIAction
 from ..state.game_state import GameState, GamePhase
-from ..state.turn_manager import TurnManager, TurnPhase
+from ..state.turn_manager import TurnManager
+from ..state.ui import UIAction
 
 
 class GameLoop:
@@ -74,9 +77,12 @@ class GameLoop:
             self.num_players = len(play_from_state.players)
         else:
             self.game_state = GameState.create_new_game(regions, num_players, starting_armies)
+            self.game_state.initialise()
         
         # create event stack for simulation
         self.sim_controller = RiskSimulationController(self.game_state)
+        add_player_engines(self.sim_controller, self.turn_manager)
+
         self.stack = self.sim_controller.event_stack
         
     def initialize(self) -> bool:
@@ -91,7 +97,8 @@ class GameLoop:
             self.clock = pygame.time.Clock()
             
             # Initialize game components
-            self.turn_manager = TurnManager(self.game_state)
+            turn_manager = self.game_state.ui_turn_manager
+            ui = self.game_state.ui_turn_state
             
             self.renderer = GameRenderer(self.screen, self.game_state)
             self.renderer.add_renderer(
@@ -100,25 +107,16 @@ class GameLoop:
             self.sim_controller.add_engine(
                 AnimationEngine(self.renderer.animation_manager)
             )
-            self.input_handler = GameInputHandler(self.renderer, self.renderer.get_turn_ui())
-            self.selection_handler = TerritorySelectionHandler(self.game_state, self.turn_manager)
+            self.input_handler = GameInputHandler(self.renderer, ui)
+            self.selection_handler = TerritorySelectionHandler(self.game_state, turn_manager)
             
-            # Connect turn UI to input handler
-            self.input_handler.set_turn_ui(self.renderer.get_turn_ui())
             
             # Set up selection callbacks for turn actions
             self.selection_handler.set_action_callbacks(
                 placement_callback=lambda: None,
                 attack_callback=lambda: None,  # Attack is handled by UI popup
                 movement_callback=lambda: None  # Movement is handled by UI
-            )
-            
-            # Generate initial board if not already present (fallback)
-            if not self.game_state.territories:
-                from ..state.board_generator import generate_sample_board
-                generate_sample_board(self.game_state, self.width, self.height - 120)
-                print(f"Generated initial board with {len(self.game_state.territories)} territories")
-        
+            )       
             
             # Register callbacks for game state regeneration and parameter changes
             self.input_handler.register_callback('toggle_pause', self._handle_toggle_pause)
@@ -129,26 +127,47 @@ class GameLoop:
             self.input_handler.register_callback('decrease_sim_speed', self._decrease_sim_speed)
             
             # Register territory selection callbacks
-            self.input_handler.register_callback('territory_selected', self.selection_handler.handle_territory_selected)
-            self.input_handler.register_callback('territory_deselected', self.selection_handler.handle_territory_deselected)
-            
-            # Set up the game state - start the first turn
-            if self.game_state.players and self.turn_manager:
-                self.game_state.set_current_player(0)
-                self.game_state.phase = GamePhase.PLAYER_TURN
-                
-                # Start first player's turn
-                self.turn_manager.start_player_turn(0)
-                current_turn = self.turn_manager.get_current_turn()
-                if current_turn and self.renderer:
-                    self.renderer.set_turn_state(current_turn)
-            
+            self.input_handler.register_callback('territory_selected', self._handle_selection)
+            self.input_handler.register_callback('territory_deselected', self.selection_handler.handle_territory_deselected)    
+
+
+            def launch_ui_action(action: UIAction):
+                self.sim_controller.force_processing_of(
+                    UIActionEvent(action, dict())
+                )
+
+            # register other input callbacks as needed
+            for value in list(UIAction):
+                def make_callback(that=value):
+                    return lambda: launch_ui_action(that)
+                ui.register_callback(
+                    value,
+                    make_callback(value)
+                )
+
+            # Connect turn UI to input handler
+            self.input_handler.set_turn_ui(ui)
             self.running = True
             return True
             
         except pygame.error as e:
             print(f"Failed to initialize pygame: {e}")
             return False
+
+    def _handle_selection(self, input_event: InputEvent) -> None:
+        """
+        Handle territory selection events.
+        
+        :param input_event: Input event containing selection details
+        """
+        territory_id = input_event.data['territory_id']
+
+        self.sim_controller.force_processing_of(
+            TerritorySelectedEvent(territory_id)
+        )
+    
+        if territory_id is not None and self.selection_handler:
+            self.selection_handler.handle_territory_selected(input_event)
     
     def handle_events(self) -> None:
         """
@@ -263,6 +282,12 @@ class GameLoop:
         if not self.paused:
             # Update player statistics based on current territory ownership
             self.game_state.update_player_statistics()
+            self.game_state.ui_turn_state.set_turn_state(
+                self.game_state.ui_turn_manager.current_turn
+            )
+            self.input_handler.set_turn_ui(
+                self.game_state.ui_turn_state
+            )
             # TODO: Update game state, agent decisions, etc.
     
     def render(self, delta_time: float) -> None:
@@ -317,8 +342,6 @@ class GameLoop:
 
     async def run_async(self) -> None:
         """Async main loop with concurrent simulation and rendering."""
-        if not self.initialize():
-            return
         
         # Create concurrent tasks
         sim_task = asyncio.create_task(self._simulation_loop())
@@ -340,8 +363,9 @@ class GameLoop:
                     action = self.sim_controller.step()
                     if action:
                         processed += 1
-                if time.time() - started >= 5.0:
-                    self._caption = f"Agent Risk - Dynamic Board Simulation ({processed / (time.time() - started):.2f} actions/sec)"
+                if time.time() - started >= 1.0:
+                    timing = max(1, time.time() - started)
+                    self._caption = f"Agent Risk - Dynamic Board Simulation ({processed / timing:.2f} actions/sec)"
                     started = time.time()
                     processed = 0
                 # Update shared state safely
@@ -351,8 +375,8 @@ class GameLoop:
         """Async rendering loop."""
         while self.running:
             delta_time = self.clock.tick(60) / 1000.0
-            self.handle_events()
             self.update()
+            self.handle_events()
             self.render(delta_time)
             pygame.display.set_caption(
                 getattr(self, 

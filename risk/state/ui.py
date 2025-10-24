@@ -4,12 +4,9 @@ Handles turn UI, phase display, buttons, and popups with clean separation from r
 """
 
 import pygame
-from typing import Optional, Tuple, List, Callable, Dict, Any
+from typing import Optional, Tuple, List, Callable, Dict
 from dataclasses import dataclass
 from enum import Enum
-
-from ..state import TurnState, TurnPhase, AttackState, MovementState
-
 
 class UIAction(Enum):
     """UI action types that can be triggered."""
@@ -126,7 +123,7 @@ class AttackPopup:
         self.width = width
         self.height = height
         self.visible = False
-        self.attack_state: Optional[AttackState] = None
+        self.attack_state: Optional['AttackState'] = None
         
         # UI elements
         self.attack_button = Button(
@@ -149,7 +146,7 @@ class AttackPopup:
         self.border_color = (100, 100, 120)
         self.text_color = (255, 255, 255)
     
-    def show(self, attack_state: AttackState) -> None:
+    def show(self, attack_state: 'AttackState') -> None:
         """
         Show the attack popup with given attack state.
         
@@ -173,7 +170,7 @@ class AttackPopup:
         self.visible = False
         self.attack_state = None
     
-    def update(self, attack_state: AttackState) -> None:
+    def update(self, attack_state: 'AttackState') -> None:
         """
         Update popup with new attack state.
         
@@ -246,7 +243,7 @@ class TurnUI:
         self.screen_height = screen_height
         
         # UI state
-        self.current_turn: Optional[TurnState] = None
+        self.current_turn: Optional['TurnState'] = None
         self.ui_callbacks: Dict[UIAction, Callable] = {}
         
         # UI layout constants
@@ -323,7 +320,7 @@ class TurnUI:
             text="Move Armies", action=UIAction.EXECUTE_MOVEMENT
         )
     
-    def set_turn_state(self, turn_state: Optional[TurnState]) -> None:
+    def set_turn_state(self, turn_state: Optional['TurnState']) -> None:
         """
         Update UI with new turn state.
         
@@ -347,6 +344,7 @@ class TurnUI:
             self.execute_movement_button.visible = False
             return
         
+        from .turn_manager import TurnPhase
         # Update phase display
         phase_names = {
             TurnPhase.PLACEMENT: "Placement",
@@ -436,6 +434,7 @@ class TurnUI:
         :param callback: Function to call when action is triggered
         """
         self.ui_callbacks[action] = callback
+        print(f"Registered callback for action: {action}")
     
     def handle_click(self, pos: Tuple[int, int]) -> bool:
         """
@@ -444,6 +443,8 @@ class TurnUI:
         :param pos: Click position (x, y)
         :returns: True if click was handled by UI, False otherwise
         """
+        from .turn_manager import TurnPhase
+
         if not self.current_turn:
             return False
         
@@ -482,6 +483,7 @@ class TurnUI:
         for element in self.attack_popup.get_ui_elements():
             if element.contains_point(pos):
                 if element.enabled and element.action in self.ui_callbacks:
+                    print("Popup action:", element.action)
                     self.ui_callbacks[element.action]()
                 return True
         return True  # Consume click even if no element hit (prevent click-through)
@@ -521,6 +523,8 @@ class TurnUI:
         :param key: Pygame key constant
         :returns: True if key was handled by UI, False otherwise
         """
+        from .turn_manager import TurnPhase
+
         if not self.current_turn:
             return False
         

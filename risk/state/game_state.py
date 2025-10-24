@@ -9,7 +9,13 @@ from typing import Dict, List, Optional, Set, Tuple
 from enum import Enum
 import time
 
-from .territory import Territory, TerritoryState
+from .territory import Territory
+from .ui import TurnUI
+from .turn_manager import TurnManager
+@dataclass
+class UIState:
+    selected_territory_id: Optional[int] = None
+
 
 
 class GamePhase(Enum):
@@ -121,7 +127,7 @@ class GameState:
     phase: GamePhase = GamePhase.INIT
     current_turn: int = 0
     total_turns: int = 0  # Total number of turns completed in simulation
-    current_player_id: Optional[int] = None
+    current_player_id: Optional[int] = 0
     winner_id: Optional[int] = None
     starting_player: int = 0
     placements_left: int = 0
@@ -137,6 +143,12 @@ class GameState:
     # rendering 
     screen_width: int = 1800
     screen_height: int = 1028
+
+    
+    # UI state
+    ui_state: UIState = field(default_factory=UIState)
+    ui_turn_manager: TurnManager = field(default_factory=lambda: None)
+    ui_turn_state: TurnUI = field(default_factory=lambda: None)
 
     @classmethod
     def create_new_game(cls, regions: int, num_players: int, 
@@ -215,6 +227,10 @@ class GameState:
         # set first player
         self.set_current_player(random.choice(list(self.players.keys())))
         self.starting_player = self.current_player_id
+        
+        self.ui_turn_manager = TurnManager(self)
+        self.ui_turn_state = TurnUI(self.screen_width, self.screen_height)
+
 
         self.phase = GamePhase.PLAYER_TURN
 

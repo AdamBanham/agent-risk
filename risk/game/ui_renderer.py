@@ -6,8 +6,10 @@ Handles drawing of buttons, labels, counters, and popups with consistent styling
 import pygame
 from typing import Tuple, Optional, List
 
-from .ui import (TurnUI, Button, Label, Counter, AttackPopup, UIElement,
-                 TurnPhase, AttackState, MovementState)
+from ..state.ui import (TurnUI, Button, Label, Counter, AttackPopup, UIElement)
+from ..state.turn_manager import (
+                 TurnPhase, AttackState, MovementState
+)
 
 
 class UIRenderer:

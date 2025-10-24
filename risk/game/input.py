@@ -7,7 +7,7 @@ import pygame
 from typing import Optional, Callable, Dict, Any, Tuple
 from dataclasses import dataclass
 
-from .ui import TurnUI
+from ..state.ui import TurnUI
 
 
 @dataclass
@@ -266,11 +266,13 @@ class GameInputHandler(InputHandler):
         Args:
             input_event: Input event with click information
         """
+        
         if not input_event.position:
             return
         
         # Check turn UI first (higher priority than territory selection)
         if self.turn_ui and self.turn_ui.handle_click(input_event.position):
+            print("Turn UI handled the click")
             return  # UI handled the click
         
         if not self.renderer:

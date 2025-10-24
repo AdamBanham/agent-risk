@@ -7,9 +7,8 @@ from dataclasses import dataclass, field
 from typing import Dict, List, Optional, Set, Tuple, Callable
 from enum import Enum
 
-from .game_state import GameState, Player
 from .territory import Territory
-from .fight import Fight, FightResult
+from .fight import Fight
 
 
 class TurnPhase(Enum):
@@ -75,49 +74,6 @@ class TurnState:
     current_movement: Optional[MovementState] = None
     current_fight: Optional[Fight] = None
     
-    def can_place_reinforcement(self, territory_id: int, armies: int = 1) -> bool:
-        """
-        Check if reinforcement can be placed. Player must own territory and 
-        have reinforcements available.
-        
-        :param territory_id: ID of territory to place reinforcements in
-        :param armies: Number of armies to place (default 1)
-        :returns: True if placement is valid, False otherwise
-        """
-        return (self.phase == TurnPhase.PLACEMENT and 
-                self.reinforcements_remaining >= armies and
-                armies > 0)
-    
-    def place_reinforcement(self, territory_id: int, armies: int = 1) -> bool:
-        """
-        Place reinforcement armies. Updates remaining reinforcements and 
-        tracks placement history.
-        
-        :param territory_id: ID of territory to place reinforcements in
-        :param armies: Number of armies to place
-        :returns: True if placement successful, False otherwise
-        """
-        if not self.can_place_reinforcement(territory_id, armies):
-            return False
-        
-        self.reinforcements_remaining -= armies
-        self.placements_made.append((territory_id, armies))
-        return True
-    
-    def undo_last_placement(self) -> Optional[Tuple[int, int]]:
-        """
-        Undo the last reinforcement placement. Restores reinforcements and 
-        removes from placement history.
-        
-        :returns: Tuple of (territory_id, armies) that was undone, or None 
-                 if no placements to undo
-        """
-        if not self.placements_made:
-            return None
-        
-        territory_id, armies = self.placements_made.pop()
-        self.reinforcements_remaining += armies
-        return territory_id, armies
     
     def start_attack(self, attacker_territory: Territory, 
                     defender_territory: Territory) -> bool:
@@ -153,41 +109,6 @@ class TurnState:
             attacking_armies=1
         )
         return True
-    
-    def resolve_attack(self) -> FightResult:
-        """
-        Resolve the current attack using the Fight system with dice-based 
-        combat mechanics.
-        
-        :returns: Attack result dictionary with Fight results and territory 
-                 status, or None if no active attack
-        """
-        if not self.current_attack or not self.current_attack.can_attack():
-            return None
-        
-        # Create or continue existing fight
-        if not self.current_fight:
-            # Start new fight
-            self.current_fight = Fight(
-                attacker_territory_id=self.current_attack.attacker_territory_id,
-                defender_territory_id=self.current_attack.defender_territory_id,
-                initial_attackers=self.current_attack.attacking_armies,
-                initial_defenders=self.current_attack.defending_armies
-            )
-            
-            # Trigger animation callback for new attacks through turn manager
-            if (self.turn_manager and 
-                self.turn_manager.attack_animation_callback):
-                self.turn_manager.attack_animation_callback(
-                    self.current_attack.attacker_territory_id,
-                    self.current_attack.defender_territory_id,
-                    self.player_id  # Include attacking player ID for color matching
-                )
-        
-        # resolve fight
-        result = self.current_fight.fight_to_completion()
-        
-        return result
     
     def end_attack(self) -> None:
         """
@@ -265,9 +186,6 @@ class TurnState:
         :returns: True if phase advanced, False if turn should end
         """
         if self.phase == TurnPhase.PLACEMENT:
-            # Can only advance if all reinforcements are placed
-            if self.reinforcements_remaining > 0:
-                return False  # Still have reinforcements to place
             self.phase = TurnPhase.ATTACKING
             return True
         
@@ -288,7 +206,7 @@ class TurnState:
 class TurnManager:
     """Manages turn progression and turn-specific game logic."""
     
-    def __init__(self, game_state: GameState):
+    def __init__(self, game_state: 'GameState'):
         """
         Initialize turn manager. Sets up turn state tracking for the given 
         game state.
@@ -314,8 +232,8 @@ class TurnManager:
             return False
         
         # Calculate reinforcements for this turn
-        reinforcements = self._calculate_reinforcements(player)
-        
+        reinforcements = self.game_state.placements_left
+
         # Create new turn state
         self.current_turn = TurnState(
             player_id=player_id,
@@ -325,19 +243,6 @@ class TurnManager:
         
         print(f"Starting turn for {player.name} - {reinforcements} reinforcements available")
         return True
-    
-    def _calculate_reinforcements(self, player: Player) -> int:
-        """
-        Calculate reinforcements for a player. Uses standard Risk rules: 
-        max(3, territories_controlled // 3).
-        
-        :param player: Player to calculate reinforcements for
-        :returns: Number of reinforcement armies the player receives
-        """
-        territory_count = player.get_territory_count()
-        base_reinforcements = max(3, territory_count // 3)
-        
-        return base_reinforcements
     
     def get_current_turn(self) -> Optional[TurnState]:
         """
@@ -422,31 +327,3 @@ class TurnManager:
             return False
         
         return self.current_turn.advance_phase()
-    
-    def set_attack_animation_callback(self, callback: Callable[[int, int, int], None]) -> None:
-        """
-        Set callback function to be called when attacks are resolved. Callback 
-        receives attacker territory ID, defender territory ID, and attacking 
-        player ID.
-        
-        :param callback: Function that takes (attacker_id, defender_id, player_id) parameters
-        """
-        self.attack_animation_callback = callback
-    
-    def set_attack_success_callback(self, callback: Callable[[int, int], None]) -> None:
-        """
-        Set callback function to be called when attacks succeed. Callback 
-        receives conquered territory ID and attacking player ID.
-        
-        :param callback: Function that takes (territory_id, player_id) parameters
-        """
-        self.attack_success_callback = callback
-    
-    def set_attack_failure_callback(self, callback: Callable[[int, int], None]) -> None:
-        """
-        Set callback function to be called when attacks fail. Callback 
-        receives defended territory ID and attacking player ID.
-        
-        :param callback: Function that takes (territory_id, player_id) parameters
-        """
-        self.attack_failure_callback = callback

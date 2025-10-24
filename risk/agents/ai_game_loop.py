@@ -145,6 +145,8 @@ def create_ai_game(regions: int = 15, num_players: int = 3, starting_armies: int
     """
     if ai_player_ids is None:
         ai_player_ids = list(range(1, num_players))  # Default: all except player 0
+
+    humans = [pid for pid in range(num_players) if pid not in ai_player_ids]
     
     # Create the enhanced game loop
     game_loop = AIGameLoop(
@@ -158,6 +160,8 @@ def create_ai_game(regions: int = 15, num_players: int = 3, starting_armies: int
         sim_delay=sim_delay,
         sim_speed=sim_speed
     )
+
+
     
     # Set up AI agents if specified
     if ai_player_ids:
@@ -170,4 +174,8 @@ def create_ai_game(regions: int = 15, num_players: int = 3, starting_armies: int
             )
             game_loop.add_ai_to_player(agent, player_id)
     
+    # Mark human players in the game state
+    for human in humans:
+        game_loop.game_state.get_player(human).is_human = True
+
     return game_loop

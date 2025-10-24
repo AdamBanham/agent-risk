@@ -8,7 +8,7 @@ from .loop import GameLoop, main
 from .renderer import GameRenderer
 from .input import InputHandler, GameInputHandler
 from .selection import TerritorySelectionHandler
-from .ui import TurnUI, UIAction
+from ..state.ui import TurnUI, UIAction
 from .ui_renderer import UIRenderer
 from .animation import AnimationManager, ArrowAnimation, CrossAnimation, TickAnimation, RandomWalkAnimation
 
