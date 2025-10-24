@@ -1,4 +1,4 @@
-# Monte Carlo Tree Search Implementation
+# Hierarchical Task Network Implementation
 
 
 ## Random 
