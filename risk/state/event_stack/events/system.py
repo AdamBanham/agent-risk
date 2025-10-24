@@ -17,3 +17,32 @@ class PauseProcessingEvent(Event):
             )
         )
 
+class SystemInterruptEvent(Event):
+    """
+    An event that indicates processing should be interrupted.
+    """
+
+    def __init__(self):
+        super().__init__(
+            "SYSTEM: Interrupted Processing of Event Stack"
+        )
+
+class SystemResumeEvent(Event):
+    """
+    An event that indicates processing should be resumed.
+    """
+
+    def __init__(self):
+        super().__init__(
+            "SYSTEM: Resumed Processing of Event Stack"
+        )
+
+class SystemStepEvent(Event):
+    """
+    An event that indicates a single step in processing should be forced.
+    """
+
+    def __init__(self):
+        super().__init__(
+            "SYSTEM: Forced Step in Processing of Event Stack"
+        )

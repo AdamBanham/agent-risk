@@ -140,50 +140,36 @@ class InputHandler:
             if event.key == pygame.K_ESCAPE:
                 pygame.event.post(pygame.event.Event(pygame.QUIT))
             
-            # Ctrl+R to regenerate game state
+            # Ctrl+R to trigger sim resume 
             elif event.key == pygame.K_r and (pygame.K_LCTRL in self.keys_pressed or pygame.K_RCTRL in self.keys_pressed):
-                if 'regenerate_game' in self.callbacks:
+                if 'sim_resume' in self.callbacks:
                     input_event = InputEvent(
-                        event_type='regenerate_game',
+                        event_type='sim_resume',
                         key=event.key,
                         data={'ctrl_pressed': True}
                     )
-                    self.callbacks['regenerate_game'](input_event)
-                    print("Regenerating game state...")
-            
-            # Ctrl+G to increase regions
-            elif event.key == pygame.K_g and (pygame.K_LCTRL in self.keys_pressed or pygame.K_RCTRL in self.keys_pressed):
-                if 'increase_regions' in self.callbacks:
-                    input_event = InputEvent(
-                        event_type='increase_regions',
-                        key=event.key,
-                        data={'ctrl_pressed': True}
-                    )
-                    self.callbacks['increase_regions'](input_event)
-                    print("Increasing regions...")
-            
-            # Ctrl+P to increase players
-            elif event.key == pygame.K_p and (pygame.K_LCTRL in self.keys_pressed or pygame.K_RCTRL in self.keys_pressed):
-                if 'increase_players' in self.callbacks:
-                    input_event = InputEvent(
-                        event_type='increase_players',
-                        key=event.key,
-                        data={'ctrl_pressed': True}
-                    )
-                    self.callbacks['increase_players'](input_event)
-                    print("Increasing players (keeping same map)...")
+                    self.callbacks['sim_resume'](input_event)
             
             # Ctrl+S to increase starting army size
             elif event.key == pygame.K_s and (pygame.K_LCTRL in self.keys_pressed or pygame.K_RCTRL in self.keys_pressed):
-                if 'increase_armies' in self.callbacks:
+                if 'sim_step' in self.callbacks:
                     input_event = InputEvent(
-                        event_type='increase_armies',
+                        event_type='sim_step',
                         key=event.key,
                         data={'ctrl_pressed': True}
                     )
-                    self.callbacks['increase_armies'](input_event)
-                    print("Increasing starting armies (keeping same map)...")
-            
+                    self.callbacks['sim_step'](input_event)
+
+            # ctrl+I to trigger sim interrupt
+            elif event.key == pygame.K_i and (pygame.K_LCTRL in self.keys_pressed or pygame.K_RCTRL in self.keys_pressed):
+                if 'sim_interrupt' in self.callbacks:
+                    input_event = InputEvent(
+                        event_type='sim_interrupt',
+                        key=event.key,
+                        data={'ctrl_pressed': True}
+                    )
+                    self.callbacks['sim_interrupt'](input_event)
+
             # Space key for pause/unpause - but check turn UI first
             elif event.key == pygame.K_SPACE:
                 # If there's a turn UI, let it handle space first (for phase advancement)

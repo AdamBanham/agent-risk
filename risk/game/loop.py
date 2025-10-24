@@ -131,11 +131,10 @@ class GameLoop:
                 self._store_current_board_layout()
             
             # Register callbacks for game state regeneration and parameter changes
-            self.input_handler.register_callback('regenerate_game', self._handle_regenerate_game)
-            self.input_handler.register_callback('increase_regions', self._handle_increase_regions)
-            self.input_handler.register_callback('increase_players', self._handle_increase_players)
-            self.input_handler.register_callback('increase_armies', self._handle_increase_armies)
             self.input_handler.register_callback('toggle_pause', self._handle_toggle_pause)
+            self.input_handler.register_callback('sim_step', self._push_sim_sys_step)
+            self.input_handler.register_callback('sim_interrupt', self._push_sim_sys_interrupt)
+            self.input_handler.register_callback('sim_resume', self._push_sim_sys_resume)
             
             # Register territory selection callbacks
             self.input_handler.register_callback('territory_selected', self.selection_handler.handle_territory_selected)
@@ -280,69 +279,75 @@ class GameLoop:
             )
             game_state.add_territory(territory)
     
-    def _handle_increase_regions(self, input_event) -> None:
-        """Handle Ctrl+G to increase regions and regenerate.
-        
-        Args:
-            input_event: Input event that triggered the change
-        """
-        # Increase regions by 1, with a reasonable maximum
-        old_regions = self.regions
-        self.regions = min(self.regions + 1, 50)  # Cap at 50 regions
-        
-        if self.regions != old_regions:
-            print(f"Increasing regions from {old_regions} to {self.regions}")
-            self._regenerate_with_new_parameters()
-        else:
-            print(f"Already at maximum regions ({self.regions})")
-    
-    def _handle_increase_players(self, input_event) -> None:
-        """Handle Ctrl+P to increase players and restart with same board.
-        
-        Args:
-            input_event: Input event that triggered the change
-        """
-        # Increase players by 1, with a reasonable maximum
-        old_players = self.num_players
-        self.num_players = min(self.num_players + 1, 8)  # Cap at 8 players
-        
-        if self.num_players != old_players:
-            print(f"Increasing players from {old_players} to {self.num_players}")
-            self._restart_with_same_board()
-        else:
-            print(f"Already at maximum players ({self.num_players})")
-    
-    def _handle_increase_armies(self, input_event) -> None:
-        """Handle Ctrl+S to increase starting armies and restart with same board.
-        
-        Args:
-            input_event: Input event that triggered the change
-        """
-        # Increase starting armies by 1, with a reasonable maximum
-        old_armies = self.starting_armies
-        self.starting_armies = min(self.starting_armies + 1, 100)  # Cap at 100 armies
-        
-        if self.starting_armies != old_armies:
-            print(f"Increasing starting armies from {old_armies} to {self.starting_armies}")
-            self._restart_with_same_board()
-        else:
-            print(f"Already at maximum starting armies ({self.starting_armies})")
-    
     def _handle_toggle_pause(self, input_event) -> None:
         """
         Handle spacebar to toggle pause/unpause state.
         
         :param input_event: Input event that triggered the pause toggle
         """
+        from ..state.event_stack import (
+            SystemInterruptEvent,
+            SystemStepEvent,
+            SystemResumeEvent
+        )
+
         self.paused = not self.paused
         status = "PAUSED" if self.paused else "UNPAUSED"
         print(f"Game {status}")
+
+        if self.paused:
+            self.sim_controller.event_stack.push(
+                SystemInterruptEvent()
+            )
+        else:
+            self.sim_controller.event_stack.push(
+                SystemResumeEvent()
+            )
+            self.sim_controller.event_stack.push(
+                SystemStepEvent()
+            )
         
         # Update window title to show pause state
         if self.paused:
             pygame.display.set_caption("Agent Risk - Dynamic Board Simulation [PAUSED]")
         else:
             pygame.display.set_caption("Agent Risk - Dynamic Board Simulation")
+
+    def _push_sim_sys_step(self, input_event) -> None:
+        """
+        Push a SystemStepEvent to the simulation event stack.
+        
+        :param input_event: Input event that triggered the step
+        """
+        from ..state.event_stack import SystemStepEvent
+        self.sim_controller.event_stack.push(
+            SystemStepEvent()
+        )
+        pygame.display.set_caption("Agent Risk - Dynamic Board Simulation [STEPPED]")
+
+    def _push_sim_sys_interrupt(self, input_event) -> None:
+        """
+        Push a SystemInterruptEvent to the simulation event stack.
+        
+        :param input_event: Input event that triggered the interrupt
+        """
+        from ..state.event_stack import SystemInterruptEvent
+        self.sim_controller.event_stack.push(
+            SystemInterruptEvent()
+        )
+        pygame.display.set_caption("Agent Risk - Dynamic Board Simulation [INTERUPTED]")
+
+    def _push_sim_sys_resume(self, input_event) -> None:
+        """
+        Push a SystemResumeEvent to the simulation event stack.
+        
+        :param input_event: Input event that triggered the resume
+        """
+        from ..state.event_stack import SystemResumeEvent
+        self.sim_controller.force_processing_of(
+            SystemResumeEvent()
+        )
+        pygame.display.set_caption("Agent Risk - Dynamic Board Simulation")
     
     def _regenerate_with_new_parameters(self) -> None:
         """

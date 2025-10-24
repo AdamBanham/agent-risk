@@ -27,18 +27,20 @@ class SimulationController:
         self.engines = engines + [
             DebugEngine(),
             SideEffectEngine(),
-            PauseEngine(self)
+            PauseEngine(self),
+            InterruptionEngine(self)
         ]
         self.event_stack = EventStack("event-stack")
         self._last = None
         self.debug = debug
         self._processing = True
+        self._halted = False
 
     def _print_debug(self, message: str) -> None:
         if self.debug:
             print(f"[DEBUG] {message}")
 
-    def step(self) -> bool:
+    def step(self, force: bool = False) -> bool:
         """
         Process a single element from the event stack.
 
@@ -48,7 +50,14 @@ class SimulationController:
         if self.event_stack.is_empty:
             return False
         
-        if not self._processing:
+        if isinstance(self.event_stack.peek(), SystemStepEvent):
+            self.event_stack.pop()
+            force = True
+        
+        if self._halted and not force:
+            return False
+
+        if not self._processing and not force:
             return True
 
         element = self.event_stack.pop()
@@ -136,7 +145,43 @@ class SimulationController:
         Resume the processing of the event stack.
         """
         self._processing = True
+
+    def halt(self) -> None:
+        """"
+        Break the processing of the event stack. Until 
+        unhalt is called. 
+        """
+        self._halted = True
+
+    def unhalt(self) -> None:
+        """
+        Resume processing after a halt.
+        """
+        self._halted = False    
+
+    def force_step(self) -> bool:
+        """
+        Force a step in processing, even if paused or halted.
+
+        :returns:
+            Whether an element was processed.
+        """
+        return self.step(force=True)
     
+    def force_processing_of(self, element: Union[Event, Level]) -> None:
+        """
+        Force the processing of a specific event or level,
+        bypassing normal engine checks.
+
+        :param element:
+            `Event | Level`
+            The event or level to process.
+        """
+        self.event_stack.push(element)
+        self.event_stack.push(
+            SystemStepEvent()
+        )
+        self.step()
 
 from ..state.event_stack import PauseProcessingEvent
 import threading
@@ -184,6 +229,36 @@ class PauseEngine(Engine):
                     args=(self, self.controller)
                 )
                 self._thread.start()
+
+        return super().process(state, element)
+    
+from ..state.event_stack import (
+    SystemInterruptEvent, SystemResumeEvent, SystemStepEvent
+)
+
+class InterruptionEngine(Engine):
+    """
+    An engine that allows for external interruption of the processing loop.
+    """
+
+    allowed_elements = [
+        SystemInterruptEvent,
+        SystemResumeEvent,
+        SystemStepEvent
+    ]
+
+    def __init__(self, controller: SimulationController):
+        super().__init__("interruption_engine")
+        self.controller = controller
+
+    def process(self, state: GameState, element: Union[Event, Level]) -> None:
+        """Check for external interruption signal."""
+        if isinstance(element, SystemInterruptEvent):
+            self.controller.halt()
+        elif isinstance(element, SystemResumeEvent):
+            self.controller.unhalt()
+        elif isinstance(element, SystemStepEvent):
+            self.controller.force_step()
 
         return super().process(state, element)
             
