@@ -106,14 +106,14 @@ class StackRenderer(Renderer):
         """Determine the foreground and background colors for a stack element."""
         if isinstance(element, Level):
             bg_color = colors["levels"]
-        elif "SYTEM" in element.name:
+        elif isinstance(element, (PlayingEvent, GameEvent)):
+            bg_color = colors["specials"]
+        elif "SYSTEM" in element.name:
             bg_color = colors["system"]
         elif "phase end" in element.name.lower():
             bg_color = colors["ends"]
         elif isinstance(element, Rejected):
             bg_color = colors["ends"]
-        elif isinstance(element, (PlayingEvent, GameEvent)):
-            bg_color = colors["specials"]
         elif isinstance(element, SideEffectEvent):
             bg_color = colors["side_effects"]
         else:
