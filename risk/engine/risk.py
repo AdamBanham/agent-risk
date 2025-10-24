@@ -1,13 +1,15 @@
-
-
 from risk.engine.controller import SimulationController
 from risk.state.event_stack.events import (
-    PlayingEvent, AgentTurnEndEvent, 
-    AttackPhase, AttackPhaseEndEvent, 
-    MovementPhase, MovementPhaseEndEvent, 
-    PlacementPhase, PlacementPhaseEndEvent,
-    GameEvent
-) 
+    PlayingEvent,
+    AgentTurnEndEvent,
+    AttackPhase,
+    AttackPhaseEndEvent,
+    MovementPhase,
+    MovementPhaseEndEvent,
+    PlacementPhase,
+    PlacementPhaseEndEvent,
+    GameEvent,
+)
 from risk.state.game_state import GameState
 from .base import RecordStackEngine
 from .turns import (
@@ -15,7 +17,7 @@ from .turns import (
     RiskTurnEngine,
     RiskPlacementEngine,
     RiskAttackEngine,
-    RiskMovementEngine
+    RiskMovementEngine,
 )
 
 RISK_ENGINES = [
@@ -23,8 +25,9 @@ RISK_ENGINES = [
     RiskTurnEngine(),
     RiskPlacementEngine(),
     RiskAttackEngine(),
-    RiskMovementEngine()
+    RiskMovementEngine(),
 ]
+
 
 class RiskRecordEngine(RecordStackEngine):
     """
@@ -37,9 +40,10 @@ class RiskRecordEngine(RecordStackEngine):
                 (PlayingEvent, AgentTurnEndEvent),
                 (PlacementPhase, PlacementPhaseEndEvent),
                 (AttackPhase, AttackPhaseEndEvent),
-                (MovementPhase, MovementPhaseEndEvent)
+                (MovementPhase, MovementPhaseEndEvent),
             ]
         )
+
 
 class RiskSimulationController(SimulationController):
     """
@@ -47,11 +51,8 @@ class RiskSimulationController(SimulationController):
     and engine processing loop for the Risk simulation.
     """
 
-    def __init__(self, 
-        game_state: GameState):
+    def __init__(self, game_state: GameState):
         super().__init__(game_state, RISK_ENGINES)
         self.tape = RiskRecordEngine()
         self.add_engine(self.tape)
-        self.event_stack.push(
-            GameEvent()
-        )
+        self.event_stack.push(GameEvent())

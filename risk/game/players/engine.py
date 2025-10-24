@@ -5,7 +5,7 @@ from risk.state.event_stack.events.turns import AttackPhaseEndEvent
 from ...engine import Engine
 from ...state.game_state import GameState
 from ...state.event_stack import Event, Level
-from ...state.turn_manager import TurnManager, TurnPhase
+from ...state.turn_manager import TurnPhase
 
 from ...state.event_stack import (
     PlacementPhase,
@@ -16,6 +16,7 @@ from ...state.event_stack import (
     TerritorySelectedEvent,
     ChangeSelectedTerritoryEvent
 )
+
 
 class PlayerEngine(Engine):
     """
@@ -29,9 +30,10 @@ class PlayerEngine(Engine):
         TerritorySelectedEvent
     ]
 
-    def process(self, 
+    def process(
+        self,
         state: GameState, element: Union[Event, Level]
-        ) -> Optional[List[Event]]:
+    ) -> Optional[List[Event]]:
         
         if isinstance(element, TerritorySelectedEvent):
 
@@ -54,11 +56,13 @@ class PlayerEngine(Engine):
         
         return super().process(state, element)
     
+
 from ...state.event_stack import (
     TroopPlacementEvent,
     PlacementPhaseEndEvent
 )
         
+
 class PlayerPlacementEngine(Engine):
     """
     Engine specifically for handling player placement phases.
@@ -74,19 +78,20 @@ class PlayerPlacementEngine(Engine):
     def __init__(self):
         super().__init__("Player Placement Engine")
 
-    def process(self, 
+    def process(
+        self,
         state: GameState, element: Union[Event, Level]
-        ) -> Optional[List[Event]]:
+    ) -> Optional[List[Event]]:
 
         manager = state.ui_turn_manager
 
-        if manager and manager.current_turn and manager.current_turn.phase == TurnPhase.PLACEMENT:
+        if manager and manager.current_turn \
+           and manager.current_turn.phase == TurnPhase.PLACEMENT:
             manager.current_turn.reinforcements_remaining = state.placements_left
 
         player = state.get_player(state.current_player_id)
         if player and not player.is_human:
             return super().process(state, element)
-        
         
         if isinstance(element, PlacementPhase):
             # trigger the start of the player's turn
@@ -110,10 +115,7 @@ class PlayerPlacementEngine(Engine):
             manager.advance_turn_phase()
 
         return super().process(state, element)
-    
-from ...state.event_stack import (
-    TriggerAttackPopupEvent,
-)
+
 
 class PlayerAttackEngine(Engine):
     """
@@ -129,9 +131,10 @@ class PlayerAttackEngine(Engine):
     def __init__(self,):
         super().__init__("Player Attack Engine")
 
-    def process(self, 
+    def process(
+        self, 
         state: GameState, element: Union[Event, Level]
-        ) -> Optional[List[Event]]:
+    ) -> Optional[List[Event]]:
 
         manager = state.ui_turn_manager
         player = state.get_player(state.current_player_id)
@@ -139,7 +142,8 @@ class PlayerAttackEngine(Engine):
         if player and not player.is_human:
             return super().process(state, element)
 
-        if manager and manager.current_turn and manager.current_turn.phase != TurnPhase.ATTACKING:
+        if manager and manager.current_turn \
+           and manager.current_turn.phase != TurnPhase.ATTACKING:
             return super().process(state, element)
         
         if isinstance(element, AttackPhase):
@@ -151,7 +155,6 @@ class PlayerAttackEngine(Engine):
 
             attacker = element.context.previous_territory_id
             defender = element.context.new_territory_id
-
 
             actioned = manager.current_turn.start_attack(
                 attacker_territory=state.get_territory(attacker),
@@ -171,12 +174,14 @@ class PlayerAttackEngine(Engine):
 
         return super().process(state, element)
     
+    
 from ...state.event_stack import (
     UIActionEvent,
     FightEvent,
     SystemResumeEvent,
 )
 from ...state.ui import UIAction
+
 
 class UITriggersEngine(Engine):
     """
@@ -190,14 +195,14 @@ class UITriggersEngine(Engine):
     def __init__(self):
         super().__init__("UI Triggers Engine")
 
-    def process(self, 
+    def process(
+        self, 
         state: GameState, element: Union[Event, Level]
-        ) -> Optional[List[Event]]:
+    ) -> Optional[List[Event]]:
 
         manager = state.ui_turn_manager
         cur_turn = manager.current_turn if manager else None
         cur_atk = cur_turn.current_attack if cur_turn else None
-
 
         match element.context.action:
 

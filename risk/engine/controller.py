@@ -13,22 +13,22 @@ from ..state.event_stack import EventStack
 from copy import deepcopy
 import traceback
 
+
 class SimulationController:
     """
     The controller responsible for managing the event stack
     and engine processing loop.
     """
 
-    def __init__(self, 
-        game_state: GameState, 
-        engines: list[Engine],
-        debug: bool = False):
+    def __init__(
+        self, game_state: GameState, engines: list[Engine], debug: bool = False
+    ):
         self.game_state = game_state
         self.engines = engines + [
             DebugEngine(),
             SideEffectEngine(),
             PauseEngine(self),
-            InterruptionEngine(self)
+            InterruptionEngine(self),
         ]
         self.event_stack = EventStack("event-stack")
         self._last = None
@@ -49,11 +49,11 @@ class SimulationController:
         """
         if self.event_stack.is_empty:
             return False
-        
+
         if isinstance(self.event_stack.peek(), SystemStepEvent):
             self.event_stack.pop()
             force = True
-        
+
         if self._halted and not force:
             return False
 
@@ -64,32 +64,31 @@ class SimulationController:
         self._print_debug(f"Processing element: {element}")
         self._last = element
         for engine in self.engines:
-            try :
-                processable  = engine.processable(element)
+            try:
+                processable = engine.processable(element)
             except Exception as e:
-                error_event = EngineProccesableError(
-                    engine.id, element, str(e)
-                )
+                error_event = EngineProccesableError(engine.id, element, str(e))
                 self.event_stack.push(error_event)
                 continue
-            if engine.processable(element):
+            if processable:
                 self._print_debug(f"Engine '{engine.id}' processing element: {element}")
-                try :
+                try:
                     events = engine.process(self.game_state, element)
-                except Exception as e:
+                except Exception:
                     error_event = EngineProcessingError(
                         engine.id, element, traceback.format_exc()
                     )
                     self.event_stack.push(error_event)
                     continue
                 if events:
-                    try : 
+                    try:
                         iter(events)
-                    except Exception as e:
+                    except Exception:
                         self.event_stack.push(
                             EngineProcessingError(
-                                engine.id, element, 
-                                "Engine returned non-iterable events."
+                                engine.id,
+                                element,
+                                "Engine returned non-iterable events.",
                             )
                         )
                         continue
@@ -119,10 +118,9 @@ class SimulationController:
         """
 
         return SimulationController(
-            game_state=deepcopy(self.game_state),
-            engines=deepcopy(self.engines)
+            game_state=deepcopy(self.game_state), engines=deepcopy(self.engines)
         )
-    
+
     def add_engine(self, engine: Engine) -> None:
         """
         Add an engine to the controller's engine list.
@@ -147,9 +145,9 @@ class SimulationController:
         self._processing = True
 
     def halt(self) -> None:
-        """"
-        Break the processing of the event stack. Until 
-        unhalt is called. 
+        """ "
+        Break the processing of the event stack. Until
+        unhalt is called.
         """
         self._halted = True
 
@@ -157,7 +155,7 @@ class SimulationController:
         """
         Resume processing after a halt.
         """
-        self._halted = False    
+        self._halted = False
 
     def force_step(self) -> bool:
         """
@@ -167,7 +165,7 @@ class SimulationController:
             Whether an element was processed.
         """
         return self.step(force=True)
-    
+
     def force_processing_of(self, element: Union[Event, Level]) -> None:
         """
         Force the processing of a specific event or level,
@@ -178,22 +176,20 @@ class SimulationController:
             The event or level to process.
         """
         self.event_stack.push(element)
-        self.event_stack.push(
-            SystemStepEvent()
-        )
+        self.event_stack.push(SystemStepEvent())
         self.step()
+
 
 from ..state.event_stack import PauseProcessingEvent
 import threading
-    
+
+
 class PauseEngine(Engine):
     """
     An engine that pauses processing when a specific event is encountered.
     """
 
-    allowed_elements = [
-        PauseProcessingEvent
-    ]
+    allowed_elements = [PauseProcessingEvent]
 
     def __init__(self, controller: SimulationController):
         super().__init__("pause_engine")
@@ -201,16 +197,20 @@ class PauseEngine(Engine):
         self._thread = None
         self.delay = 0
 
-    
     @staticmethod
     def _launch_pause(self: "PauseEngine", controller: SimulationController) -> None:
         """Launch a pause in processing for the specified duration."""
         import time
+
         start = time.time()
         controller.pause_processing()
         while time.time() - start < self.delay:
             time.sleep(0.1)
-            print(f"[SYSTEM] Pausing for {self.delay - (time.time() - start):.2f} seconds...", end="\r")
+            paused_for = self.delay - (time.time() - start)
+            print(
+                f"[SYSTEM] Pausing for {paused_for:.2f} seconds...",
+                end="\r",
+            )
         controller.resume_processing()
         self._thread = None
         print("\033[2K\033[1G", end="", flush=True)
@@ -225,27 +225,22 @@ class PauseEngine(Engine):
             else:
                 self.delay = delay
                 self._thread = threading.Thread(
-                    target=PauseEngine._launch_pause,
-                    args=(self, self.controller)
+                    target=PauseEngine._launch_pause, args=(self, self.controller)
                 )
                 self._thread.start()
 
         return super().process(state, element)
-    
-from ..state.event_stack import (
-    SystemInterruptEvent, SystemResumeEvent, SystemStepEvent
-)
+
+
+from ..state.event_stack import SystemInterruptEvent, SystemResumeEvent, SystemStepEvent
+
 
 class InterruptionEngine(Engine):
     """
     An engine that allows for external interruption of the processing loop.
     """
 
-    allowed_elements = [
-        SystemInterruptEvent,
-        SystemResumeEvent,
-        SystemStepEvent
-    ]
+    allowed_elements = [SystemInterruptEvent, SystemResumeEvent, SystemStepEvent]
 
     def __init__(self, controller: SimulationController):
         super().__init__("interruption_engine")
@@ -261,4 +256,3 @@ class InterruptionEngine(Engine):
             self.controller.force_step()
 
         return super().process(state, element)
-            

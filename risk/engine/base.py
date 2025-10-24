@@ -1,5 +1,5 @@
 """
-This module contains the base class for what an engine is 
+This module contains the base class for what an engine is
 within the architecture of the simulation framework.
 
 Engines are responsible for processing events on the stack,
@@ -20,6 +20,7 @@ from risk.state import GameState
 
 from typing import List, Union
 
+
 class Engine:
     """
     The behaviour contract of an engine within the simulation framework.
@@ -27,7 +28,7 @@ class Engine:
     without side effects. Their responses to elements on the stack should
     be deterministic based on the current world state and the parameters of
     the given elements.
-    
+
     .. attributes ::
        - id:
             `str`
@@ -44,6 +45,7 @@ class Engine:
     .. optional-methods ::
 
     """
+
     allowed_elements: List[Union[Event, Level]] = []
 
     def __init__(self, engine_id: str):
@@ -61,39 +63,45 @@ class Engine:
             Whether this engine can process the given event or level.
         """
         return isinstance(element, tuple(self.allowed_elements))
-    
+
     def process(self, state: GameState, element: Union[Event, Level]) -> None:
         """
         Process the given event or level.
 
         :param state:
             `GameState`
-            
+
             The current game state to process against.
 
         :param element:
           `Event | Level`
-          
+
           The event or level to process.
         """
         pass
+
 
 class EngineProcessingError(Event):
     """An error event indicating that an engine failed to process an element."""
 
     def __init__(self, engine_id: str, element: Union[Event, Level], message: str):
         super().__init__(
-            f"Engine '{engine_id}' failed to process element: {element}. Reason: {message}"
+            (
+                f"Engine '{engine_id}' failed to process element:"
+                f" {element}. Reason: {message}"
+            )
         )
+
 
 class EngineProccesableError(Event):
     """An error event indicating that no engine could check whether to
-     an element is processable."""
+    an element is processable."""
 
     def __init__(self, element: Union[Event, Level]):
         super().__init__(
             f"No engine could check whether element: {element} is processable."
         )
+
 
 class DebugEngine(Engine):
     """A simple engine that logs processing actions for debugging purposes."""
@@ -104,7 +112,7 @@ class DebugEngine(Engine):
     def processable(self, element: Union[Event, Level]) -> bool:
         """This debug engine can process all events and levels."""
         if isinstance(element, (EngineProcessingError, EngineProccesableError)):
-            return True 
+            return True
         return False
 
     def process(self, state: GameState, element: Union[Event]) -> None:
@@ -112,8 +120,10 @@ class DebugEngine(Engine):
         print(f"[DEBUG] Engine crashed out : {element.name}")
 
         return None
-    
+
+
 from ..state.event_stack import SideEffectEvent
+
 
 class SideEffectEngine(Engine):
     """An engine that applies side effects to the game state."""
@@ -129,8 +139,10 @@ class SideEffectEngine(Engine):
         """Apply side effects to the game state."""
         events = element.apply(state)
         return events
-    
+
+
 from ..state.event_stack import EventTape
+
 
 class RecordStackEngine(Engine):
     """An engine that records the event stack state for analysis."""
