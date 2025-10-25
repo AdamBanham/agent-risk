@@ -35,6 +35,7 @@ class PolygonTerritory:
         self.is_divided = False
         self._area = compute_area(self.vertices)
 
+    @property
     def center(self) -> Tuple[int, int]:
         """
         Calculate the centroid of the polygon. Returns the geometric center
@@ -633,7 +634,7 @@ class BoardGenerator:
         territory_name = f"Region {territory_id + 1}"
 
         # Assign continent based on position (create multiple continents)
-        continent_name = self._assign_continent(poly_territory, territory_id)
+        continent_name = "World 1"
 
         territory = Territory(
             id=territory_id,
@@ -644,47 +645,6 @@ class BoardGenerator:
         )
 
         return territory
-
-    def _assign_continent(
-        self, poly_territory: PolygonTerritory, territory_id: int
-    ) -> str:
-        """Assign a continent name based on territory position.
-
-        Args:
-            poly_territory: PolygonTerritory to assign continent to
-            territory_id: Territory ID for variation
-
-        Returns:
-            Continent name
-        """
-        # Create continent names
-        continent_names = [
-            "North America",
-            "Europe",
-            "Asia",
-            "Africa",
-            "South America",
-            "Australia",
-            "Antarctica",
-            "Middle East",
-        ]
-
-        # Assign based on position on screen
-        center_x, center_y = poly_territory.center
-
-        # Divide screen into regions for continent assignment
-        screen_thirds_x = self.width // 3
-        screen_thirds_y = self.height // 3
-
-        continent_id = 0
-        if center_x < screen_thirds_x:
-            continent_id = 0 if center_y < screen_thirds_y * 2 else 1
-        elif center_x < screen_thirds_x * 2:
-            continent_id = 2 if center_y < screen_thirds_y * 2 else 3
-        else:
-            continent_id = 4 if center_y < screen_thirds_y * 2 else 5
-
-        return continent_names[continent_id % len(continent_names)]
 
     def _calculate_adjacencies(self, territories: List[Territory]) -> None:
         """Calculate which territories are adjacent based on shared boundaries.

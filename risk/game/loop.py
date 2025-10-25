@@ -14,6 +14,7 @@ from risk.state.event_stack.events.players import TerritorySelectedEvent
 from risk.state.event_stack.events.ui import UIActionEvent
 from .renderer import GameRenderer
 from .rendering.animations import AnimationEngine
+from .rendering.player_movements import PlayerMovementRenderer
 from .players import add_player_engines
 
 from .input import GameInputHandler, InputEvent
@@ -109,6 +110,7 @@ class GameLoop:
 
             self.renderer = GameRenderer(self.screen, self.game_state)
             self.renderer.add_renderer(StackRenderer(self.stack))
+            self.renderer.add_renderer(PlayerMovementRenderer())
             self.sim_controller.add_engine(
                 AnimationEngine(self.renderer.animation_manager)
             )
@@ -234,7 +236,6 @@ class GameLoop:
 
         self.paused = not self.paused
         status = "PAUSED" if self.paused else "UNPAUSED"
-        print(f"Game {status}")
 
         if self.paused:
             self.sim_controller.event_stack.push(SystemInterruptEvent())

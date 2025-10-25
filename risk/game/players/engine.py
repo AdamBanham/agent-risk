@@ -173,12 +173,64 @@ class PlayerAttackEngine(Engine):
             manager.advance_turn_phase()
 
         return super().process(state, element)
+
+
+from ...state.event_stack import (
+    MovementPhase
+)
+
+
+class PlayerMovementEngine(Engine):
+    """
+    Handles the triggering the movement between player owned
+    territory.
+    """
+
+    allowed_elements = [ 
+        MovementPhase,
+        ChangeSelectedTerritoryEvent
+    ]
+
+    def __init__(self):
+        super().__init__("Player Movement Engine")
+
+    def process(
+        self, 
+        state: GameState, element: Union[Event, Level]
+    ) -> Optional[List[Event]]:
+
+        manager = state.ui_turn_manager
+        player = state.get_player(state.current_player_id)
+        curr_turn = manager.current_turn
+
+        if player and not player.is_human:
+            return super().process(state, element)
+
+        if manager and manager.current_turn \
+           and manager.current_turn.phase != TurnPhase.ATTACKING:
+            return super().process(state, element)
+        
+        if isinstance(element, MovementPhase):
+            # trigger the start of the player's turn
+            return super().process(state, element)
     
-    
+        if isinstance(element, ChangeSelectedTerritoryEvent):
+            # Placeholder for actual attack handling logic
+            src = element.context.previous_territory_id
+            tgt = element.context.new_territory_id
+
+            if curr_turn:
+                curr_turn.start_movement(
+                    src,
+                    tgt
+                )
+
+
 from ...state.event_stack import (
     UIActionEvent,
     FightEvent,
     SystemResumeEvent,
+    MovementOfTroopsEvent
 )
 from ...state.ui import UIAction
 
@@ -196,14 +248,16 @@ class UITriggersEngine(Engine):
         super().__init__("UI Triggers Engine")
 
     def process(
-        self, 
+        self,
         state: GameState, element: Union[Event, Level]
     ) -> Optional[List[Event]]:
 
         manager = state.ui_turn_manager
         cur_turn = manager.current_turn if manager else None
         cur_atk = cur_turn.current_attack if cur_turn else None
+        cur_mov = cur_turn.current_movement if cur_turn else None
 
+        print(f"processing ui-action:: {element.context.action}")
         match element.context.action:
 
             case UIAction.INCREASE_ATTACKING_ARMIES if cur_atk:
@@ -213,7 +267,7 @@ class UITriggersEngine(Engine):
                 )
             case UIAction.DECREASE_ATTACKING_ARMIES if cur_atk:
                 cur_atk.attacking_armies = max(
-                    0, 
+                    0,
                     cur_atk.attacking_armies - 1
                 )
             case UIAction.END_ATTACK:
@@ -222,6 +276,7 @@ class UITriggersEngine(Engine):
                 state.ui_turn_state.attack_popup.hide()
             case UIAction.RESOLVE_ATTACK if cur_atk and cur_turn:
                 ret = [
+                    SystemInterruptEvent(),
                     FightEvent(
                         cur_atk.attacker_territory_id,
                         cur_atk.defender_territory_id,
@@ -230,10 +285,43 @@ class UITriggersEngine(Engine):
                         state.current_player_id,
                         state.total_turns
                     ),
+                    SystemResumeEvent(),
+                    SystemStepEvent()
                 ]
                 cur_turn.end_attack()
                 state.ui_turn_state.attack_popup.hide()
                 return ret
+            case UIAction.START_MOVEMENT:
+                pass
+            case UIAction.INCREASE_MOVING_ARMIES:
+                if cur_mov:
+                    cur_mov.moving_armies = min(
+                        cur_mov.moving_armies + 1,
+                        cur_mov.max_moving_armies
+                    )
+            case UIAction.DECREASE_MOVING_ARMIES:
+                if cur_mov:
+                    cur_mov.moving_armies = max(
+                        cur_mov.moving_armies - 1,
+                        1
+                    )
+            case UIAction.EXECUTE_MOVEMENT:
+                if cur_mov:
+                    cur_turn.execute_movement()
+                    return [
+                        SystemInterruptEvent(),
+                        MovementOfTroopsEvent(
+                            state.current_player_id,
+                            state.total_turns,
+                            cur_mov.source_territory_id,
+                            cur_mov.target_territory_id,
+                            cur_mov.moving_armies
+                        ),
+                        SystemResumeEvent(),
+                        SystemStepEvent()
+                    ]
+            case UIAction.END_MOVEMENT:
+                cur_turn.current_movement = None
             case UIAction.END_TURN:
                 if manager:
                     manager.end_current_turn()

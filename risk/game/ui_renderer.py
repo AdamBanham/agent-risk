@@ -168,6 +168,10 @@ class UIRenderer:
         if turn_ui.execute_movement_button.visible:
             self._draw_button(turn_ui.execute_movement_button)
 
+        # draw cancel movement button
+        if turn_ui.cancel_movement_button.visible:
+            self._draw_button(turn_ui.cancel_movement_button)
+
     def _draw_action_buttons(self, turn_ui: TurnUI) -> None:
         """
         Draw common action buttons.

@@ -7,6 +7,8 @@ from dataclasses import dataclass, field
 from typing import List, Tuple, Optional, Set
 from enum import Enum
 
+from ..utils.distance import Point
+
 
 class TerritoryState(Enum):
     """
@@ -62,6 +64,11 @@ class Territory:
             TerritoryState.CONTESTED,
         ):
             self.state = TerritoryState.FREE
+
+        self.vertices = [
+            vert.to_tuple() if isinstance(vert, Point) else vert
+            for vert in self.vertices
+        ]
 
     def add_adjacent_territory(self, territory: "Territory") -> None:
         """

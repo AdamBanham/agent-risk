@@ -287,7 +287,6 @@ class GameInputHandler(InputHandler):
 
         # Check turn UI first (higher priority than territory selection)
         if self.turn_ui and self.turn_ui.handle_click(input_event.position):
-            print("Turn UI handled the click")
             return  # UI handled the click
 
         if not self.renderer:
