@@ -293,7 +293,6 @@ class GameLoop:
                 self.game_state.ui_turn_manager.current_turn
             )
             self.input_handler.set_turn_ui(self.game_state.ui_turn_state)
-            # TODO: Update game state, agent decisions, etc.
 
     def render(self, delta_time: float) -> None:
         """
