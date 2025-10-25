@@ -324,41 +324,30 @@ class GameState:
             self.current_player_id = player_id
             self.last_updated = time.time()
 
-    def advance_turn(self) -> Optional[int]:
+    def advance_turn(self) -> None:
         """
         Advance to the next player's turn. Cycles through active players
         and increments turn counter.
-
-        :returns: ID of the next player, or None if game should end (less
-                 than 2 active players)
         """
         # Get all players who are still active (not eliminated)
         active_players = [p for p in self.players.values() if p.is_active]
 
         if len(active_players) <= 1:
-            return None
+            return
 
-        if self.current_player_id is None:
-            self.current_player_id = active_players[0].id
-        else:
-            # Find current player index and advance
-            current_index = None
-            for i, player in enumerate(active_players):
-                if player.id == self.current_player_id:
-                    current_index = i
-                    break
-
-            if current_index is not None:
-                next_index = (current_index + 1) % len(active_players)
-                self.current_player_id = active_players[next_index].id
-
-                # Increment turn counter when we cycle back to first player
-                if next_index == self.starting_player:
-                    self.current_turn += 1
-                    self.total_turns += 1  # Track total completed turns
+        next_id = (self.current_player_id + 1) % len(self.players.keys())
+        self.current_player_id = next_id
+        
+        if self.current_player_id == self.starting_player:
+            self.total_turns += 1
+            self.current_turn += 1
+        
+        next_player = self.get_player(self.current_player_id)
+        if not next_player.is_active:
+            return self.advance_turn()
 
         self.last_updated = time.time()
-        return self.current_player_id
+        return 
 
     def check_victory_condition(self) -> Optional[int]:
         """
