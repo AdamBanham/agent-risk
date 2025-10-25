@@ -2,13 +2,11 @@ import unittest
 
 from risk.state.event_stack import Event, Level, EventStack
 
+
 class TestEvents(unittest.TestCase):
 
     def test_create(self):
         ev = Event("attack")
-        ev2 = Event("defend")
-        ev3 = Event("attack")
-        ev4 = Event("attack", { 'p1' : 1}) 
 
         with self.assertRaises(TypeError):
             ev.id = "foo"
@@ -21,7 +19,7 @@ class TestEvents(unittest.TestCase):
         ev = Event("attack")
         ev2 = Event("defend")
         ev3 = Event("attack")
-        ev4 = Event("attack", { 'p1' : 1}) 
+        ev4 = Event("attack", {"p1": 1})
 
         self.assertTrue(ev != ev2)
         self.assertTrue(ev == ev)
@@ -42,10 +40,7 @@ class TestEvents(unittest.TestCase):
         ev = Event("attack")
         ev2 = Event("defend")
 
-        holder = {
-            ev : "foo",
-            ev2 : "bar"
-        }
+        holder = {ev: "foo", ev2: "bar"}
 
         self.assertTrue(ev in holder)
         self.assertTrue(ev2 in holder)
@@ -54,16 +49,16 @@ class TestEvents(unittest.TestCase):
 
     def test_repr(self):
         ev = Event("attack")
-        ev4 = Event("defend", { 'p1' : 1}) 
+        ev4 = Event("defend", {"p1": 1})
 
         self.assertEqual(eval(repr(ev)), ev)
         self.assertEqual(eval(repr(ev4)), ev4)
-    
+
 
 class TestLevel(unittest.TestCase):
 
     def test_create(self):
-        
+
         turn_one = Level("Turn 1")
 
         with self.assertRaises(TypeError):
@@ -76,7 +71,7 @@ class TestLevel(unittest.TestCase):
         turn_one = Level("Turn 1")
         turn_one_b = Level("Turn 1")
 
-        turn_two = Level("Turn 2") 
+        turn_two = Level("Turn 2")
 
         self.assertNotEqual(turn_one, turn_two)
         self.assertEqual(turn_one, turn_one_b)
@@ -92,10 +87,7 @@ class TestLevel(unittest.TestCase):
         turn_one = Level("Turn 1")
         turn_two = Level("Turn 2")
 
-        holder = {
-            turn_one : "foo",
-            turn_two : "bar"
-        }
+        holder = {turn_one: "foo", turn_two: "bar"}
 
         self.assertTrue(turn_one in holder)
         self.assertTrue(turn_two in holder)
@@ -110,6 +102,7 @@ class TestLevel(unittest.TestCase):
         self.assertNotEqual(turn_one, event)
         self.assertNotEqual(turn_one.id, event.id)
 
+
 class TestEventStack(unittest.TestCase):
 
     def test_create(self):
@@ -118,7 +111,7 @@ class TestEventStack(unittest.TestCase):
         with self.assertRaises(TypeError):
             stack.foo = "bar"
         with self.assertRaises(TypeError):
-            stack['baz'] = 2
+            stack["baz"] = 2
         with self.assertRaises(TypeError):
             stack.id = 2
 
@@ -248,5 +241,4 @@ class TestEventStack(unittest.TestCase):
         stack = EventStack("turn one")
 
         self.assertNotEqual(event_one.id, stack.id)
-        self.assertNotEqual(level_one.id, stack.id) 
-
+        self.assertNotEqual(level_one.id, stack.id)
