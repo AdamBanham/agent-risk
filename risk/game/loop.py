@@ -21,7 +21,7 @@ from .input import GameInputHandler, InputEvent
 from .selection import TerritorySelectionHandler
 from ..state.game_state import GameState
 from ..state.turn_manager import TurnManager
-from ..state.ui import UIAction
+from ..state.ui import UIAction, TurnUI
 
 
 class GameLoop:
@@ -107,6 +107,17 @@ class GameLoop:
             # Initialize game components
             turn_manager = self.game_state.ui_turn_manager
             ui = self.game_state.ui_turn_state
+
+            if not turn_manager:
+                self.game_state.ui_turn_manager = TurnManager(self.game_state)
+                turn_manager = self.game_state.ui_turn_manager
+            
+            if not ui:
+                self.game_state.ui_turn_state = TurnUI(
+                    self.game_state.screen_width,
+                    self.game_state.screen_height
+                )
+                ui = self.game_state.ui_turn_state
 
             self.renderer = GameRenderer(self.screen, self.game_state)
             self.renderer.add_renderer(StackRenderer(self.stack))

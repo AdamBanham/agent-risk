@@ -51,26 +51,6 @@ class Player:
     total_armies: int = 0
     reinforcements_available: int = 0
 
-    def add_territory(self, territory_id: int) -> None:
-        """
-        Add a territory to this player's control. Updates the player's
-        controlled territories set.
-
-        :param territory_id: ID of the territory to add to this player's
-                            control
-        """
-        self.territories_controlled.add(territory_id)
-
-    def remove_territory(self, territory_id: int) -> None:
-        """
-        Remove a territory from this player's control. Updates the player's
-        controlled territories set.
-
-        :param territory_id: ID of the territory to remove from this
-                            player's control
-        """
-        self.territories_controlled.discard(territory_id)
-
     def get_territory_count(self) -> int:
         """
         Get the number of territories controlled by this player. Returns the
@@ -79,22 +59,6 @@ class Player:
         :returns: Number of territories controlled by this player
         """
         return len(self.territories_controlled)
-
-    def calculate_reinforcements(
-        self, base_reinforcement: int = 3, territory_bonus_divisor: int = 3
-    ) -> int:
-        """
-        Calculate reinforcements for this player. Uses territory count and
-        minimum reinforcement rules.
-
-        :param base_reinforcement: Minimum reinforcements per turn regardless
-                                  of territory count
-        :param territory_bonus_divisor: Number of territories needed per
-                                       bonus army
-        :returns: Number of reinforcement armies this player should receive
-        """
-        territory_bonus = max(1, self.get_territory_count() // territory_bonus_divisor)
-        return max(base_reinforcement, territory_bonus)
 
     def is_eliminated(self) -> bool:
         """
@@ -224,7 +188,7 @@ class GameState:
             self.set_adjacent_territories()
 
         # set first player
-        self.set_current_player(random.choice(list(self.players.keys())))
+        self.current_player_id = random.choice(list(self.players.keys()))
         self.starting_player = self.current_player_id
 
         self.ui_turn_manager = TurnManager(self)
@@ -313,17 +277,6 @@ class GameState:
             territory for territory in self.territories.values() if territory.is_free()
         ]
 
-    def set_current_player(self, player_id: int) -> None:
-        """
-        Set the current active player. Updates the game state to reflect
-        whose turn it is.
-
-        :param player_id: ID of the player whose turn it is now
-        """
-        if player_id in self.players:
-            self.current_player_id = player_id
-            self.last_updated = time.time()
-
     def advance_turn(self) -> None:
         """
         Advance to the next player's turn. Cycles through active players
@@ -379,15 +332,20 @@ class GameState:
         """
         # Reset all player territory sets
         for player in self.players.values():
-            player.territories_controlled.clear()
-            player.total_armies = 0
+            terrs = self.get_territories_owned_by(player.id)
+            player.territories_controlled = set(
+                [
+                    t.id
+                    for t 
+                    in terrs
+                ]
+            )
 
-        # Update based on current territory ownership
-        for territory in self.territories.values():
-            if territory.owner is not None and territory.owner in self.players:
-                player = self.players[territory.owner]
-                player.add_territory(territory.id)
-                player.total_armies += territory.armies
+            player.total_armies = sum(
+                t.armies
+                for t 
+                in terrs
+            )
 
         # Check for eliminated players
         for player in self.players.values():
@@ -421,7 +379,15 @@ class GameState:
         """String representation for debugging."""
         ret = "GameState("
 
+        non_inserted = [
+            "ui_state",
+            "ui_turn_manager",
+            "ui_turn_state"
+        ]
+
         for attr, value in self.__dict__.items():
+            if attr in non_inserted:
+                continue
             ret += f"\n\t{attr}={repr(value)},"
 
         return ret + ")"

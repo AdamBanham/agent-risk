@@ -17,7 +17,7 @@ class EventTapeInfo:
     seen_parents:List[int]=field(default_factory=list)
     last_seen:int=-1
 
-    def _cal_depth(self, event: Union[Event | Level]) -> int:
+    def _cal_depth(self, event: Union[Event,Level]) -> int:
         """
         Calculate depth based on hierarchical pairs.
         """
