@@ -173,11 +173,19 @@ def create_ai_game(
     # Set up AI agents if specified
     if ai_player_ids:
         from .simple.random import RandomAgent
+        from .bt.random import BTRandomAgent
+        import random
 
         for player_id in ai_player_ids:
-            agent = RandomAgent(
-                player_id=player_id, attack_probability=attack_probability
-            )
+            pick = random.uniform(0.0, 1.0)
+            if pick <= 0.25:
+                agent = RandomAgent(
+                    player_id=player_id, attack_probability=attack_probability
+                )
+            else:
+                agent = BTRandomAgent(
+                    player_id=player_id, attack_probability=attack_probability
+                )
             game_loop.add_ai_to_player(agent, player_id)
 
     # Mark human players in the game state

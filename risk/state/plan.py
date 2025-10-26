@@ -16,7 +16,7 @@ class Goal:
     def __init__(self, description: str):
         self.description = description
 
-    def achieved(self, state: GameState) -> bool:
+    def achieved(self, state: GameState, plan: "Plan") -> bool:
         """
         Check if the goal has been achieved in the given state.
         """
@@ -74,7 +74,7 @@ class Plan:
         """
         Pop the next step off the plan.
         """
-        if self.steps:
+        if len(self.steps) > 0:
             return self.steps.pop(0)
         return None
 
@@ -82,7 +82,7 @@ class Plan:
         """
         Check if the plan's goal has been achieved in the given state.
         """
-        return self.goal.achieved(state)
+        return self.goal.achieved(state, self)
 
     def is_done(self) -> bool:
         """

@@ -33,8 +33,7 @@ class RandomAgent(BaseAgent):
     """
 
     def __init__(self, player_id: int, attack_probability: float = 0.5):
-        super().__init__(player_id, "Random-Agent-{}".format(player_id))
-        self.attack_probability = max(0.0, min(1.0, attack_probability))
+        super().__init__(player_id, "Random-Agent-{}".format(player_id), attack_probability)
 
     def decide_placement(self, game_state: GameState, goal: Goal) -> List[Event]:
         owned_territories = game_state.get_territories_owned_by(self.player_id)
@@ -58,10 +57,10 @@ class RandomAgent(BaseAgent):
     def decide_attack(self, game_state: GameState, goal: Goal) -> List[Event]:
         owned_territories = game_state.get_territories_owned_by(self.player_id)
         attack_events = []
-        pick = random.uniform(0, 1)
 
         # try to pick for ten attacks
         # (should be possible at all times)
+        pick = random.uniform(0, 1)
         while pick <= self.attack_probability and len(attack_events) < 10:
 
             territory = random.choice(owned_territories)
@@ -141,3 +140,5 @@ class RandomAgent(BaseAgent):
                 )
 
         return events
+
+    

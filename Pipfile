@@ -5,6 +5,7 @@ name = "pypi"
 
 [packages]
 pygame = "*"
+py-trees = "*"
 
 [dev-packages]
 

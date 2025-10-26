@@ -16,7 +16,9 @@ class BaseAgent(ABC):
     must implement to participate in the Risk simulation.
     """
 
-    def __init__(self, player_id: int, name: str = "AI Agent"):
+    def __init__(
+        self, player_id: int, name: str = "AI Agent", attack_probability: float = 0.5
+    ):
         """
         Initialize the base agent. Sets up player identification and
         configuration.
@@ -26,6 +28,7 @@ class BaseAgent(ABC):
         """
         self.player_id = player_id
         self.name = name
+        self.attack_probability = max(0.0, min(1.0, attack_probability))
 
     @abstractmethod
     def decide_placement(self, game_state: GameState, goal: Goal) -> List[Event]:
