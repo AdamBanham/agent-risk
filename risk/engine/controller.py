@@ -179,6 +179,13 @@ class SimulationController:
         self.event_stack.push(SystemStepEvent())
         self.step()
 
+    @property
+    def stack(self) -> EventStack:
+        """
+        Get the current event stack.
+        """
+        return self.event_stack
+    
 
 from ..state.event_stack import PauseProcessingEvent
 import threading
