@@ -4,10 +4,14 @@ Enhances the base GameLoop to support automatic AI turn execution.
 """
 
 from typing import Dict, List, Optional
+from os.path import exists, join
+from json import loads
 
 from ..game.loop import GameLoop as BaseGameLoop
 from ..state.game_state import GameState
 from .agent import BaseAgent
+from .finder import AgentStrategies, AgentTypes
+from .simple.random import RandomAgent
 from ..engine import Engine
 from ..state.event_stack import MovementPhase, AttackPhase, PlacementPhase, Event
 
@@ -172,21 +176,53 @@ def create_ai_game(
 
     # Set up AI agents if specified
     if ai_player_ids:
-        from .simple.random import RandomAgent
-        from .bt.random import BTRandomAgent
-        import random
 
-        for player_id in ai_player_ids:
-            pick = random.uniform(0.0, 1.0)
-            if pick <= 0.25:
+        # check for config file for the agents ('ai.config')
+        if exists(join(".", "ai.config")):
+            print("ai.config file found, configuring AI agents accordingly.")
+            config = loads(open(join(".", "ai.config"), "r").read())
+
+            for player_id in ai_player_ids:
+                player_setup = config.get(str(player_id), None)
+                if player_setup:
+                    agent_type = player_setup.get("type", "bt")
+                    attack_probability = player_setup.get(
+                        "attack_probability", attack_probability
+                    )
+                    agent_family = AgentTypes.get_selector(agent_type)
+                    strat = AgentStrategies.find(
+                        player_setup.get("strat", "random")
+                    )
+                    agent_class = agent_family.get_agent(strat)
+                    agent = agent_class(
+                        player_id=player_id, attack_probability=attack_probability
+                    )
+                    print(
+                        (
+                            f"Configured AI Agent for player {player_id}: "
+                            f"Type={agent_type}, "
+                            f"Strategy={strat}, "
+                            f"Attack Probability={attack_probability}"
+                        )
+                    )
+                    game_loop.add_ai_to_player(agent, player_id)
+                else:
+                    print(
+                        f"No configuration found for player {player_id}, using default RandomAgent."
+                    )
+                    agent = RandomAgent(
+                        player_id=player_id, attack_probability=attack_probability
+                    )
+                    game_loop.add_ai_to_player(agent, player_id)
+        else:
+            print(
+                "No ai.config file found, defaulting to RandomAgents for all AI players."
+            )
+            for player_id in ai_player_ids:
                 agent = RandomAgent(
                     player_id=player_id, attack_probability=attack_probability
                 )
-            else:
-                agent = BTRandomAgent(
-                    player_id=player_id, attack_probability=attack_probability
-                )
-            game_loop.add_ai_to_player(agent, player_id)
+                game_loop.add_ai_to_player(agent, player_id)
 
     # Mark human players in the game state
     for human in humans:
