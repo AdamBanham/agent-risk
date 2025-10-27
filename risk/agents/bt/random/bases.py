@@ -5,6 +5,7 @@ from py_trees.common import Access
 from dataclasses import dataclass
 import inspect
 import random
+from typing import Callable
 
 from risk.state.plan import Plan
 
@@ -52,24 +53,35 @@ class SelectTerritory(Behaviour):
     Selects a random territory.
     """
 
-    def __init__(self, state_name: str, attr_name: str, put_name: str = "terr"):
+    def __init__(
+        self,
+        state_name: str,
+        attr_name: str,
+        put_name: str = "terr",
+        condition: Callable = None,
+    ):
         super().__init__("Select Territory")
         self.state_name = state_name
         self.attr_name = attr_name
         self.put_name = put_name
+        if not condition:
+            self.condition = lambda x: True
+        else:
+            self.condition = condition
 
     def initialise(self):
         self.logger.debug(f"{self.__class__.__name__}::{self.name}::{func_name()}")
         self._ticks = 0
-        self.placement = self.attach_blackboard_client(self.state_name)
-        self.placement.register_key(key="state", access=Access.WRITE)
+        self.bd = self.attach_blackboard_client(self.state_name)
+        self.bd.register_key(key="state", access=Access.WRITE)
         return super().initialise()
 
     def update(self):
-        state = self.placement.state
+        state = self.bd.state
         values = getattr(state, self.attr_name)
         if isinstance(values, set):
             values = list(values)
+        values = list(filter(self.condition, values))
         terr = random.choice(values)
         setattr(state, self.put_name, terr)
         return Status.SUCCESS

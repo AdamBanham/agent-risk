@@ -2,27 +2,11 @@
 This module contains the logic for Behaviour Tree (BT)
 Random Agent Implementation.
 """
-
-import random
-from typing import List
-
-from risk.state.game_state import GameState
-from risk.utils.movement import find_movement_sequence, Movement
-from risk.utils.movement import find_safe_frontline_territories
-from risk.utils.movement import find_connected_frontline_territories
-
-
 from risk.agents import BaseAgent
-from risk.state.plan import Goal
-from risk.state.event_stack import (
-    TroopPlacementEvent,
-    AttackOnTerritoryEvent,
-    MovementOfTroopsEvent,
-    Event,
-)
 
 from .placement import RandomPlacements
 from .attack import RandomAttacks
+from .movement import RandomMovements
 
 
 class BTRandomAgent(BaseAgent):
@@ -37,7 +21,7 @@ class BTRandomAgent(BaseAgent):
         )
 
     def decide_placement(self, game_state, goal):
-        print(f"bt-agent-{self.player_id} planning for placement")
+        print(f"bt-random-agent-{self.player_id} planning for placement")
 
         terrs = game_state.get_territories_owned_by(self.player_id)
 
@@ -58,7 +42,7 @@ class BTRandomAgent(BaseAgent):
         return events
 
     def decide_attack(self, game_state, goal):
-        print(f"bt-agent-{self.player_id} planning for attacking")
+        print(f"bt-random-agent-{self.player_id} planning for attacking")
 
         terrs = game_state.get_territories_owned_by(self.player_id)
 
@@ -67,7 +51,7 @@ class BTRandomAgent(BaseAgent):
             10,
             [t.id for t in terrs],
             game_state,
-            self.attack_probability
+            self.attack_probability,
         )
         planner.construct_plan()
         plan = planner.plan
@@ -80,5 +64,19 @@ class BTRandomAgent(BaseAgent):
         return events
 
     def decide_movement(self, game_state, goal):
-        print(f"bt-agent-{self.player_id} planning for movement")
-        return super().decide_movement(game_state, goal)
+        print(f"bt-random-agent-{self.player_id} planning for movement")
+
+        planner = RandomMovements(
+            self.player_id,
+            3,
+            [t.id for t in game_state.get_territories_owned_by(self.player_id)],
+            game_state,
+        )
+        plan = planner.construct_plan()
+
+        events = []
+        while not plan.is_done():
+            step = plan.pop_step()
+            events.extend(step.execute(game_state))
+
+        return events
