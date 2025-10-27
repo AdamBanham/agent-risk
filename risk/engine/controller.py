@@ -216,7 +216,7 @@ class PauseEngine(Engine):
                 f"[SYSTEM] Pausing for {paused_for:.2f} seconds...",
                 end="\r",
             )
-            await asyncio.sleep(0.01)
+            await asyncio.sleep(self.delay / 3.33)
         controller.resume_processing()
         self._thread = None
         print("\033[2K\033[1G", end="", flush=True)
@@ -227,7 +227,7 @@ class PauseEngine(Engine):
             delay = element.context.delay
 
             if self._thread:
-                self.delay = min(0.25, self.delay + delay)
+                self.delay = min(1, self.delay + delay)
             else:
                 self.delay = delay
                 self._thread = asyncio.create_task(

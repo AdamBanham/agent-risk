@@ -384,9 +384,10 @@ class GameLoop:
                     if action:
                         processed += 1
 
-                self._caption = f"Agent Risk - Dynamic Board Simulation ({processed:0d} actions/render)"
-                elapsed = time.time() - step_time
-                print("[DEBUG] Simulation step took {:.4f} seconds for {processed:0d} actions".format(elapsed, processed=processed))
+                if processed > 0:
+                    elapsed = time.time() - step_time
+                    self._caption = f"Agent Risk - Dynamic Board Simulation ({processed:0d} actions/render) (processed in {elapsed:.4f} seconds)"
+                    print("[DEBUG] Simulation step took {:.4f} seconds for {processed:0d} actions".format(elapsed, processed=processed))
                 processed = 0
 
             # release control back to draw
