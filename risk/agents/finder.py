@@ -35,7 +35,7 @@ class BTAgents(AgentFamily):
 
     @staticmethod
     def get_agent(strategy: AgentStrategies):
-        for agent in  BTAgents.TYPES:
+        for agent in BTAgents.TYPES:
             if agent.name == strategy.name:
                 return agent.value
         raise ValueError(f"Unknown strategy: {strategy}")

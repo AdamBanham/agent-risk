@@ -33,7 +33,9 @@ class RandomAgent(BaseAgent):
     """
 
     def __init__(self, player_id: int, attack_probability: float = 0.5):
-        super().__init__(player_id, "Random-Agent-{}".format(player_id), attack_probability)
+        super().__init__(
+            player_id, "Random-Agent-{}".format(player_id), attack_probability
+        )
 
     def decide_placement(self, game_state: GameState, goal: Goal) -> List[Event]:
         print(f"simple-random-agent-{self.player_id} planning for placement")
@@ -143,5 +145,3 @@ class RandomAgent(BaseAgent):
                 )
 
         return events
-
-    

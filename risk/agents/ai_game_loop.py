@@ -14,6 +14,8 @@ from .finder import AgentStrategies, AgentTypes
 from .simple.random import RandomAgent
 from ..engine import Engine
 from ..state.event_stack import MovementPhase, AttackPhase, PlacementPhase, Event
+from ..state.event_stack import AgentTurnEndEvent
+from ..state.event_stack import PauseProcessingEvent
 
 
 class AiEngine(Engine):
@@ -54,10 +56,6 @@ class AiEngine(Engine):
         :param player_id: ID of the player to associate with the agent
         """
         self._agents[player_id] = agent
-
-
-from ..state.event_stack import AgentTurnEndEvent
-from ..state.event_stack import PauseProcessingEvent
 
 
 class AiDelayEngine(Engine):
@@ -190,9 +188,7 @@ def create_ai_game(
                         "attack_probability", attack_probability
                     )
                     agent_family = AgentTypes.get_selector(agent_type)
-                    strat = AgentStrategies.find(
-                        player_setup.get("strat", "random")
-                    )
+                    strat = AgentStrategies.find(player_setup.get("strat", "random"))
                     agent_class = agent_family.get_agent(strat)
                     agent = agent_class(
                         player_id=player_id, attack_probability=attack_probability
