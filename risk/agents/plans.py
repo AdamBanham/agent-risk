@@ -1,3 +1,5 @@
+from typing import List
+from risk.state.event_stack.events.turns import MovementOfTroopsEvent
 from risk.state.plan import Step, Plan, Goal
 from risk.state.event_stack import TroopPlacementEvent, AttackOnTerritoryEvent
 
@@ -110,3 +112,77 @@ class AttackPlan(Plan):
         attacks: int,
     ):
         super().__init__("Agent's plan for its attack phase", AttackFrequency(attacks))
+
+
+class MovementStep(Step):
+    """
+    A step that requests a movement of troops from one territory to another.
+    """
+
+    def __init__(self, source: int, destination: int, troops: int):
+        super().__init__(f"Move {troops} troops from {source} to {destination}")
+        self.source = source
+        self.destination = destination
+        self.troops = troops
+
+    def execute(self, state):
+        return [
+            MovementOfTroopsEvent(
+                state.current_player_id,
+                state.current_turn,
+                self.source,
+                self.destination,
+                self.troops,
+            )
+        ]
+
+
+class RouteMovementStep(Step):
+    """
+    A step that requests a movement of troops along a route of territories.
+    """
+
+    def __init__(self, route: List[MovementStep], troops: int):
+        super().__init__(f"Move {troops} troops along route {route}")
+        self.route = route
+        self.troops = troops
+
+    def add_to_route(self, territory: int):
+        self.route.append(territory)
+
+    def execute(self, state):
+        events = []
+        for step in reversed(self.route):
+            events.extend(step.execute(state))
+        return events
+
+
+class MovementFrequency(Goal):
+    """
+    A goal to launch up to N movements in a movement plan.
+    """
+
+    def __init__(self, movements: int):
+        super().__init__(f"Create {movements} requests to move.")
+        self.num_movements = movements
+
+    def achieved(self, state, plan):
+        movements = 0
+        for step in plan.steps:
+            if isinstance(step, (MovementStep, RouteMovementStep)):
+                movements += 1
+        return movements <= self.num_movements
+
+
+class MovementPlan(Plan):
+    """
+    A plan for the movement phase of risk
+    """
+
+    def __init__(
+        self,
+        moves: int,
+    ):
+        super().__init__(
+            "Agent's plan for its movement phase", MovementFrequency(moves)
+        )
