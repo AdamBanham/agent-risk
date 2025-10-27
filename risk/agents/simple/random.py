@@ -36,6 +36,7 @@ class RandomAgent(BaseAgent):
         super().__init__(player_id, "Random-Agent-{}".format(player_id), attack_probability)
 
     def decide_placement(self, game_state: GameState, goal: Goal) -> List[Event]:
+        print(f"simple-random-agent-{self.player_id} planning for placement")
         owned_territories = game_state.get_territories_owned_by(self.player_id)
         placements = game_state.placements_left
 
@@ -55,6 +56,7 @@ class RandomAgent(BaseAgent):
         return events
 
     def decide_attack(self, game_state: GameState, goal: Goal) -> List[Event]:
+        print(f"simple-random-agent-{self.player_id} planning for attack")
         owned_territories = game_state.get_territories_owned_by(self.player_id)
         attack_events = []
 
@@ -91,6 +93,7 @@ class RandomAgent(BaseAgent):
         It will only make one of these routes per turn, chosen at random, if
         possible.
         """
+        print(f"simple-random-agent-{self.player_id} planning for movement")
         # Get all territories owned by this agent
         safe, frontline = find_safe_frontline_territories(
             game_state=game_state, player_id=self.player_id
