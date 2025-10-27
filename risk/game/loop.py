@@ -249,10 +249,9 @@ class GameLoop:
         status = "PAUSED" if self.paused else "UNPAUSED"
 
         if self.paused:
-            self.sim_controller.event_stack.push(SystemInterruptEvent())
+            self.sim_controller.force_processing_of(SystemInterruptEvent())
         else:
-            self.sim_controller.event_stack.push(SystemResumeEvent())
-            self.sim_controller.event_stack.push(SystemStepEvent())
+            self.sim_controller.force_processing_of(SystemResumeEvent())
 
         # Update window title to show pause state
         if self.paused:
@@ -375,23 +374,20 @@ class GameLoop:
 
     async def _simulation_loop(self) -> None:
         """Async simulation loop."""
-        started = time.time()
         processed = 0
         while self.running:
             if not self.paused:
-
+                step_time = time.time()
                 # batch process to speed up simulation
                 for _ in range(self._sim_speed):
                     action = self.sim_controller.step()
                     if action:
                         processed += 1
 
-                curr = time.time()
-                if curr - started >= 1.0:
-                    timing = max(1, curr - started)
-                    self._caption = f"Agent Risk - Dynamic Board Simulation ({processed / timing:.2f} actions/sec)"
-                    started = curr
-                    processed = 0
+                self._caption = f"Agent Risk - Dynamic Board Simulation ({processed:0d} actions/render)"
+                elapsed = time.time() - step_time
+                print("[DEBUG] Simulation step took {:.4f} seconds for {processed:0d} actions".format(elapsed, processed=processed))
+                processed = 0
 
             # release control back to draw
             await asyncio.sleep(self.sim_delay)

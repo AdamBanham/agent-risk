@@ -58,7 +58,7 @@ class SimulationController:
             return False
 
         if not self._processing and not force:
-            return True
+            return False
 
         element = self.event_stack.pop()
         self._print_debug(f"Processing element: {element}")
@@ -189,7 +189,7 @@ class SimulationController:
 
 from ..state.event_stack import PauseProcessingEvent
 import threading
-
+import asyncio
 
 class PauseEngine(Engine):
     """
@@ -204,20 +204,19 @@ class PauseEngine(Engine):
         self._thread = None
         self.delay = 0
 
-    @staticmethod
-    def _launch_pause(self: "PauseEngine", controller: SimulationController) -> None:
+    async def _launch_pause(self: "PauseEngine", controller: SimulationController) -> None:
         """Launch a pause in processing for the specified duration."""
         import time
 
         start = time.time()
         controller.pause_processing()
         while time.time() - start < self.delay:
-            time.sleep(0.1)
             paused_for = self.delay - (time.time() - start)
             print(
                 f"[SYSTEM] Pausing for {paused_for:.2f} seconds...",
                 end="\r",
             )
+            await asyncio.sleep(0.01)
         controller.resume_processing()
         self._thread = None
         print("\033[2K\033[1G", end="", flush=True)
@@ -228,14 +227,13 @@ class PauseEngine(Engine):
             delay = element.context.delay
 
             if self._thread:
-                self.delay += delay
+                self.delay = min(0.25, self.delay + delay)
             else:
                 self.delay = delay
-                self._thread = threading.Thread(
-                    target=PauseEngine._launch_pause, args=(self, self.controller)
+                self._thread = asyncio.create_task(
+                    self._launch_pause(self.controller)
                 )
-                self._thread.start()
-
+                
         return super().process(state, element)
 
 
