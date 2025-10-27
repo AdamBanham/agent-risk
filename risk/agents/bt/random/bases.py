@@ -82,6 +82,8 @@ class SelectTerritory(Behaviour):
         if isinstance(values, set):
             values = list(values)
         values = list(filter(self.condition, values))
+        if len(values) == 0:
+            return Status.FAILURE
         terr = random.choice(values)
         setattr(state, self.put_name, terr)
         return Status.SUCCESS
