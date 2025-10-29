@@ -1,5 +1,6 @@
 from .simple import RandomAgent
 from .bt.random import BTRandomAgent
+from .htn.random import HTNRandomAgent
 
 from enum import Enum
 from .agent import BaseAgent
@@ -41,6 +42,19 @@ class BTAgents(AgentFamily):
         raise ValueError(f"Unknown strategy: {strategy}")
 
 
+class HTNAgents(AgentFamily):
+
+    class TYPES(Enum):
+        RANDOM = HTNRandomAgent
+
+    @staticmethod
+    def get_agent(strategy: AgentStrategies):
+        for agent in HTNAgents.TYPES:
+            if agent.name == strategy.name:
+                return agent.value
+        raise ValueError(f"Unknown strategy: {strategy}")
+
+
 class RandomAgents(AgentFamily):
 
     class TYPES(Enum):
@@ -55,14 +69,13 @@ class RandomAgents(AgentFamily):
 
 
 class AgentTypes(Enum):
-    SIMPLE = "simple"
-    BEHAVIOR_TREE = "bt"
+    SIMPLE = ("simple", RandomAgents)
+    BEHAVIOR_TREE = ("bt", BTAgents)
+    HIERARCHICAL_TASK_NETWORK = ("htn", HTNAgents)
 
     @staticmethod
     def get_selector(type: str) -> AgentFamily:
-        if type == AgentTypes.SIMPLE.value:
-            return RandomAgents
-        elif type == AgentTypes.BEHAVIOR_TREE.value:
-            return BTAgents
-        else:
-            raise ValueError(f"Unknown agent type: {type}")
+        for agent_type in AgentTypes:
+            if agent_type.value[0] == type:
+                return agent_type.value[1]
+        raise ValueError(f"Unknown agent type: {type}")
