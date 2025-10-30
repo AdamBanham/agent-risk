@@ -68,7 +68,7 @@ class BTRandomAgent(BaseAgent):
 
         planner = RandomMovements(
             self.player_id,
-            3,
+            1,
             [t.id for t in game_state.get_territories_owned_by(self.player_id)],
             game_state,
         )

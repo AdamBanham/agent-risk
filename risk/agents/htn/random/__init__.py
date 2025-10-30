@@ -8,6 +8,7 @@ from risk.state import GameState
 
 from .placement import RandomPlacements
 from .attack import RandomAttacks
+from .move import RandomMovements
 
 
 class HTNRandomAgent(BaseAgent):
@@ -57,4 +58,19 @@ class HTNRandomAgent(BaseAgent):
         return events
     
     def decide_movement(self, game_state, goal):
-        return super().decide_movement(game_state, goal)
+        print(
+            f"htn-random-agent-{self.player_id} - planning for movement"
+        )
+
+        plan = RandomMovements.construct_plan(
+            self.player_id,
+            1,
+            game_state,
+        )
+
+        events = []
+        while not plan.is_done():
+            step = plan.pop_step()
+            events.extend(step.execute(game_state))
+
+        return events

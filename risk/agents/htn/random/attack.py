@@ -1,7 +1,6 @@
 from risk.agents.htn import gtpyhop as ghop
 from risk.state.game_state import GameState
 from ..bases import HTNStateWithPlan
-from risk.state import Territory
 from ...plans import AttackPlan, AttackStep
 
 from typing import Dict, Dict, Set
