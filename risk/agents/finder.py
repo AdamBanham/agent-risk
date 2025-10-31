@@ -1,6 +1,7 @@
 from .simple import RandomAgent
 from .bt.random import BTRandomAgent
 from .htn.random import HTNRandomAgent
+from .mcts.random import MCSTRandomAgent
 
 from enum import Enum
 from .agent import BaseAgent
@@ -55,6 +56,19 @@ class HTNAgents(AgentFamily):
         raise ValueError(f"Unknown strategy: {strategy}")
 
 
+class MCTSAgents(AgentFamily):
+
+    class TYPES(Enum):
+        RANDOM = MCSTRandomAgent
+
+    @staticmethod
+    def get_agent(strategy: AgentStrategies):
+        for agent in MCTSAgents.TYPES:
+            if agent.name == strategy.name:
+                return agent.value
+        raise ValueError(f"Unknown strategy: {strategy}")
+
+
 class RandomAgents(AgentFamily):
 
     class TYPES(Enum):
@@ -72,6 +86,7 @@ class AgentTypes(Enum):
     SIMPLE = ("simple", RandomAgents)
     BEHAVIOR_TREE = ("bt", BTAgents)
     HIERARCHICAL_TASK_NETWORK = ("htn", HTNAgents)
+    MONTE_CARLO_TREE_SEARCH = ("mcts", MCTSAgents)
 
     @staticmethod
     def get_selector(type: str) -> AgentFamily:
