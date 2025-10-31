@@ -97,6 +97,10 @@ def parse_arguments():
 if __name__ == "__main__":
     args = parse_arguments()
 
+    from risk.utils.logging import setLevel
+    from logging import DEBUG
+    setLevel(DEBUG)
+
     # Validate arguments
     if args.regions < 1:
         print("Error: Number of regions must be at least 1", file=sys.stderr)
