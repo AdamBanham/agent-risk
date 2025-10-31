@@ -13,6 +13,8 @@ from .attack import RandomAttacks
 from .movement import RandomMovements
 from .placement import RandomPlacements
 
+
+
 class MCSTRandomAgent(BaseAgent):
     """
     A simple MCTS agent that makes random decisions during placement, attack,
@@ -26,7 +28,7 @@ class MCSTRandomAgent(BaseAgent):
     def decide_placement(self, state: GameState, goal: Goal = None) -> List:
         print(f"mcts-random-agent-{self.player_id} planning placement")
         planner = RandomPlacements()
-        plan = planner.construct_plan(state)
+        plan = planner.construct_plan(state, state.placements_left)
 
         events = []
         while not plan.is_done():
