@@ -2,17 +2,19 @@ from typing import Callable, Tuple, Union
 from risk.engine.controller import SimulationController
 from risk.state.event_stack import Event, Level
 from risk.state.game_state import GameState
-from risk.agents.ai import create_ai_setup
 from risk.engine.risk import RiskSimulationController
 from risk.engine.risk import RiskForwardEngine
 from risk.engine.risk import RiskRecordEngine
+from risk.engine.risk import RiskPlayerScoresEngine
+from risk.utils.logging import debug
+from risk.utils.copy import copy_game_state 
 from dataclasses import dataclass
-
 
 @dataclass
 class SimulationConfiguration:
     attack_rate: float = 0.5
     load_ai_from_file: bool = False
+    score: bool = False
 
 
 def simulate_turns(
@@ -26,15 +28,13 @@ def simulate_turns(
     :returns: A tuple of the final GameState and the RiskRecordEngine used
     to record the simulation events.
     """
+    from risk.agents.ai import create_ai_setup
 
-    # import needed classes for the repr to work
-    from risk.state.game_state import GameState, Player, Territory, GamePhase
-    from risk.state.territory import TerritoryState
 
     if config is None:
         config = SimulationConfiguration()
 
-    state: GameState = eval(repr(game_state))
+    state = copy_game_state(game_state)
     state.initialise(False)
     state.update_player_statistics()
 
@@ -53,15 +53,22 @@ def simulate_turns(
     controller.add_engine(
         RiskForwardEngine(turns, starting_turn=state.current_turn)
     )
+    if config.score:
+        scorer = RiskPlayerScoresEngine(state.num_players)
+        controller.add_engine(
+           scorer
+        )
 
     action = controller.step()
     while action:
         action = controller.step()
 
-    print("Simulation complete.")
-    print(f"Started from turn {start}.")
-    print(f"Simulated until final turn of {controller.game_state.current_turn}")
+    debug("Simulation complete.")
+    debug(f"Started from turn {start}.")
+    debug(f"Simulated until final turn of {controller.game_state.current_turn}")
 
+    if config.score:
+        return state, controller.tape, scorer
     return state, controller.tape
 
 
