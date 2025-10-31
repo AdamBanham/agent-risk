@@ -16,6 +16,7 @@ from os.path import exists, join
 from json import loads
 
 from typing import Dict, List, Optional
+from risk.utils.logging import debug
 
 
 class AiEngine(Engine):
@@ -92,7 +93,7 @@ def create_ai_setup(
 
     ai_engine = AiEngine("AI Engine")
     for player_id in ai_player_ids:
-        print(f"Configuring AI for player {player_id}")
+        debug(f"Configuring AI for player {player_id}")
         if configure_from_file:
             if not determine_ai_policy(player_id, ai_engine):
                 add_random_ai_policy(player_id, attack_probability, ai_engine)
@@ -120,7 +121,7 @@ def add_random_ai_policy(
         player_id,
         attack_probability=attack_probability,
     )
-    print(
+    debug(
         f"Add random agent policy for player {player_id} with attack probability {attack_probability}"
     )
     engine.add_ai_for_player(agent, player_id)
@@ -135,7 +136,7 @@ def determine_ai_policy(player_id: int, engine: AiEngine) -> bool:
     :return: whether the AI policy was successfully determined
     """
     if exists(join(".", "ai.config")):
-        print("ai.config file found, configuring AI agents accordingly.")
+        debug("ai.config file found, configuring AI agents accordingly.")
         config = loads(open(join(".", "ai.config"), "r").read())
 
         player_setup = config.get(str(player_id), None)
@@ -148,7 +149,7 @@ def determine_ai_policy(player_id: int, engine: AiEngine) -> bool:
             agent = agent_class(
                 player_id=player_id, attack_probability=attack_probability
             )
-            print(
+            debug(
                 (
                     f"Configured AI Agent for player {player_id}: "
                     f"Type={agent_type}, "

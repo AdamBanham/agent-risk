@@ -3,6 +3,7 @@ from .bt.random import BTRandomAgent
 from .htn.random import HTNRandomAgent
 from .mcts.random import MCSTRandomAgent
 
+
 from enum import Enum
 from .agent import BaseAgent
 from typing import Protocol
@@ -57,6 +58,7 @@ class HTNAgents(AgentFamily):
 
 
 class MCTSAgents(AgentFamily):
+    
 
     class TYPES(Enum):
         RANDOM = MCSTRandomAgent
@@ -94,3 +96,11 @@ class AgentTypes(Enum):
             if agent_type.value[0] == type:
                 return agent_type.value[1]
         raise ValueError(f"Unknown agent type: {type}")
+    
+if __name__ == "__main__":
+
+    # Example usage
+    agent_family = AgentTypes.get_selector("mcts")
+    agent_class = agent_family.get_agent(AgentStrategies.RANDOM)
+    agent = agent_class(player_id=1)
+    print(f"Created agent: {agent.name}")
