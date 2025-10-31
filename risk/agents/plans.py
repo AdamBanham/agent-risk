@@ -1,5 +1,7 @@
-from typing import List
+from abc import abstractmethod
+from typing import List, Protocol
 from risk.state.event_stack.events.turns import MovementOfTroopsEvent
+from risk.state.game_state import GameState
 from risk.state.plan import Step, Plan, Goal
 from risk.state.event_stack import TroopPlacementEvent, AttackOnTerritoryEvent
 
@@ -186,3 +188,16 @@ class MovementPlan(Plan):
         super().__init__(
             "Agent's plan for its movement phase", MovementFrequency(moves)
         )
+
+
+class Planner(Protocol):
+    """
+    A behavioural interface for planning agents.
+    """
+
+    @abstractmethod
+    def construct_plan(self, state: GameState) -> Plan:
+        """
+        Constructs a plan for the given game state.
+        """
+        pass

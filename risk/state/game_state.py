@@ -187,14 +187,16 @@ class GameState:
             # determine adjacencies
             self.set_adjacent_territories()
 
-        # set first player
-        self.current_player_id = random.choice(list(self.players.keys()))
-        self.starting_player = self.current_player_id
+        if self.current_player_id is None:
+            # set first player
+            self.current_player_id = random.choice(list(self.players.keys()))
+            self.starting_player = self.current_player_id
 
         self.ui_turn_manager = TurnManager(self)
         self.ui_turn_state = TurnUI(self.screen_width, self.screen_height)
 
-        self.phase = GamePhase.PLAYER_TURN
+        if self.phase == GamePhase.INIT:
+            self.phase = GamePhase.PLAYER_TURN
 
     def calculate_reinforcements(self, player_id: int) -> int:
         """
