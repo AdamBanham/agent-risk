@@ -22,6 +22,7 @@ project_root = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, project_root)
 
 from risk.agents import create_ai_game
+from risk.engine.risk import RiskPlayerScoresEngine
 
 
 def parse_arguments():
@@ -177,6 +178,9 @@ if __name__ == "__main__":
             )
         else:
             print("Game created successfully. All players are AI agents...")
+
+        scorer = RiskPlayerScoresEngine(args.players)
+        game.sim_controller.add_engine(scorer)
         game.run()
 
     except KeyboardInterrupt:
@@ -197,3 +201,5 @@ if __name__ == "__main__":
             f.write(str(recorder.stack))
         with open("simulation.state", "w") as f:
             f.write(repr(state))
+
+        scorer.plot_scores()
