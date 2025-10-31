@@ -6,6 +6,7 @@ name = "pypi"
 [packages]
 pygame = "*"
 py-trees = "*"
+monte-carlo-tree-search = "*"
 
 [dev-packages]
 

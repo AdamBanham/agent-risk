@@ -1,7 +1,7 @@
 {
     "_meta": {
         "hash": {
-            "sha256": "29a4f5ecbf3e0e4fe26bddc39520978d6f1e73ad8bb5b9ba83a8d9439156bbd7"
+            "sha256": "02a9caa8fd410e7c021176e29ec0d84555c1964f36ea3bf6fcaebbcffd613262"
         },
         "pipfile-spec": 6,
         "requires": {
@@ -17,6 +17,13 @@
         ]
     },
     "default": {
+        "monte-carlo-tree-search": {
+            "hashes": [
+                "sha256:128d4cdf6ebb7617f6029cd54a41ad83b4ff69ab233fb4ad6dec56c8c770274b"
+            ],
+            "index": "pypi",
+            "version": "==2.1.0"
+        },
         "py": {
             "hashes": [
                 "sha256:51c75c4126074b472f746a24399ad32f6053d1b34b68d2fa41e558e6f4a98719",
