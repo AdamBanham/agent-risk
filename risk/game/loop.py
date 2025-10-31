@@ -378,7 +378,7 @@ class GameLoop:
         while self.running:
             if not self.paused:
                 step_time = time.time()
-                # batch process to speed up simulation
+                # batch processing to speed up simulation
                 for _ in range(self._sim_speed):
                     action = self.sim_controller.step()
                     if action:
