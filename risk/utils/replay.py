@@ -6,7 +6,7 @@ from risk.engine.risk import RiskSimulationController
 from risk.engine.risk import RiskForwardEngine
 from risk.engine.risk import RiskRecordEngine
 from risk.engine.risk import RiskPlayerScoresEngine
-from risk.utils.logging import debug
+from risk.utils.logging import debug, info
 from risk.utils.copy import copy_game_state 
 from dataclasses import dataclass
 
@@ -19,7 +19,7 @@ class SimulationConfiguration:
 
 def simulate_turns(
     game_state: GameState, turns: int, config: SimulationConfiguration = None
-) -> Tuple[GameState, RiskRecordEngine]:
+) -> Tuple[GameState, RiskRecordEngine, RiskPlayerScoresEngine]:
     """
     Runs a risk simulation forward for a specified number of turns.
     Uses a random policy for all player turns and will make a copy
@@ -60,8 +60,12 @@ def simulate_turns(
         )
 
     action = controller.step()
+    last_turn = state.current_turn
     while action:
         action = controller.step()
+        if state.current_turn != last_turn:
+            info(f"Simulated turn {state.current_turn}")
+            last_turn = state.current_turn
 
     debug("Simulation complete.")
     debug(f"Started from turn {start}.")

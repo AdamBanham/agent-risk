@@ -1,6 +1,7 @@
 from risk.agents.htn import gtpyhop as ghop
 from risk.state import plan
 from risk.state.game_state import GameState, Territory
+from risk.utils.logging import debug
 from ..bases import HTNStateWithPlan
 from ...plans import MovementPlan, RouteMovementStep, MovementStep
 from ....utils.movement import (
@@ -32,7 +33,7 @@ class MovementState(HTNStateWithPlan):
 ###
 def c_select_troops(dom):
     state: MovementState = dom.planning
-    print(f"Selecting troops from safe territory {state.safe} with {state.armies[state.safe]} armies")
+    debug(f"Selecting troops from safe territory {state.safe} with {state.armies[state.safe]} armies")
     max_troops = state.armies[state.safe] - 1
     if max_troops > 0:
         state.troops = max_troops
@@ -70,7 +71,7 @@ def c_set_frontline(dom, frontline: int):
 ### actions
 def select_troops(dom):
     state: MovementState = dom.planning
-    print(f"Selecting troops from safe territory {state.safe} with {state.armies[state.safe]} armies")
+    debug(f"Selecting troops from safe territory {state.safe} with {state.armies[state.safe]} armies")
     max_troops = state.armies[state.safe] - 1
     if max_troops > 0:
         state.troops = max_troops
@@ -119,7 +120,7 @@ def m_find_safe(dom):
     safes = state.safes.copy()
     if len(safes) > 0:
         safe = safes.pop()
-        print(f"Considering safe territory {safe} with {state.armies[safe]} armies")
+        debug(f"Considering safe territory {safe} with {state.armies[safe]} armies")
         if state.armies[safe] > 1:
             return [('set_safe', safe), 
                     ("select_front",),]
@@ -217,9 +218,9 @@ class RandomMovements:
         res = ghop.run_lazy_lookahead(dom, [("planning", "routes", moves)])
         if res:
             # res = ghop.run_lazy_lookahead(dom, res, 100000)
-            # print(f"result :: {res.planning.ret}")
+            debug(f"result :: {res.planning.ret}")
             for safe, front, troops in res.planning.ret:
-                print(f"Moving {troops} troops from {safe} to {front}")
+                debug(f"Moving {troops} troops from {safe} to {front}")
                 movements = find_movement_sequence(
                             game_state.get_territory(safe), 
                             game_state.get_territory(front), 

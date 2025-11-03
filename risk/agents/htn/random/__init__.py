@@ -5,6 +5,7 @@ Random Agent Implementation.
 
 from ...agent import BaseAgent
 from risk.state import GameState
+from risk.utils.logging import debug, info
 
 from .placement import RandomPlacements
 from .attack import RandomAttacks
@@ -21,7 +22,7 @@ class HTNRandomAgent(BaseAgent):
         super().__init__(player_id, "HTN-Random-Agent-{}".format(player_id), attack_probability)
 
     def decide_placement(self, state: GameState, goal) -> object:
-        print(
+        debug(
             f"htn-random-agent-{self.player_id} - planning for placement"
         )
 
@@ -39,7 +40,7 @@ class HTNRandomAgent(BaseAgent):
         return events
     
     def decide_attack(self, game_state, goal):
-        print(
+        debug(
             f"htn-random-agent-{self.player_id} - planning for attacking"
         )
 
@@ -58,7 +59,7 @@ class HTNRandomAgent(BaseAgent):
         return events
     
     def decide_movement(self, game_state, goal):
-        print(
+        debug(
             f"htn-random-agent-{self.player_id} - planning for movement"
         )
 
