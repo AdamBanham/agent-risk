@@ -98,8 +98,8 @@ if __name__ == "__main__":
     args = parse_arguments()
 
     from risk.utils.logging import setLevel
-    from logging import DEBUG
-    setLevel(DEBUG)
+    from logging import INFO
+    setLevel(INFO)
 
     # Validate arguments
     if args.regions < 1:
