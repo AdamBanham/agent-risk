@@ -11,8 +11,7 @@ from mcts.base.base import BaseState, BaseAction
 from mcts.searcher.mcts import MCTS
 
 from typing import List
-import asyncio
-
+import random
 
 class PlacementAction(BaseAction):
     """
@@ -24,11 +23,15 @@ class PlacementAction(BaseAction):
         self.num_armies = num_armies
         self.act = act
 
-    def execute(self, state: GameState) -> GameState:
-        # Implementation of placement action execution
+    def execute(self, state: 'PlacementState') -> 'PlacementState':
         if self.act:
-            state.get_territory(self.territory_id).add_armies(self.num_armies)
-        return state
+            return PlacementState(
+                state.placements_left - self.num_armies, state.terrs
+            )
+        else:
+            return PlacementState(
+                state.placements_left, state.terrs, acting=False
+            )
 
     def is_acting(self) -> bool:
         return self.act
@@ -63,24 +66,17 @@ class PlacementState(BaseState):
     """
 
     def __init__(
-        self, game_state: GameState, placements_left: int, acting: bool = True
+        self, placements_left: int, terrs: set[int], acting: bool = True,
     ):
-        self.game_state = game_state
         self.placements_left = placements_left
         self.acting = acting
-        self._rewards = None
-        self._terrs = [
-            t.id
-            for t in game_state.get_territories_owned_by(game_state.current_player_id)
-        ]
+        self.terrs = terrs
         if self.placements_left <= 0 or not self.acting:
             self._actions = []
         else:
-            self._actions =[
-                PlacementAction(terr.id, 1, True)
-                for terr in self.game_state.get_territories_owned_by(
-                    self.game_state.current_player_id
-                )
+            self._actions = [
+                PlacementAction(terr, 1, True)
+                for terr in self.terrs
             ]
 
     def get_current_player(self):
@@ -88,34 +84,17 @@ class PlacementState(BaseState):
 
     def get_possible_actions(self) -> List[PlacementAction]:
         return self._actions
-        
 
     def take_action(self, action: PlacementAction) -> "PlacementState":
-        new_game_state = copy_game_state(self.game_state)
-        new_game_state = action.execute(new_game_state)
-        if not action.is_acting():
-            return PlacementState(new_game_state, self.placements_left, acting=False)
-        return PlacementState(new_game_state, self.placements_left - action.num_armies)
+        return action.execute(self)
 
     def is_terminal(self) -> bool:
         return self.placements_left <= 0 or not self.acting
 
     def get_reward(self) -> float:
-        if self._rewards is None and self.is_terminal():
-            # Simulate some turns to evaluate the placement
-            print("simulating...")
-            future, _ = simulate_turns(self.game_state, 2)
-            self._rewards = calculate_player_position_rewards(
-                future
-            )[self.game_state.current_player_id]
-        elif self._rewards is None:
-            self._rewards = 1 / self.placements_left + 1
-
-        return self._rewards
-    
-def policy(state: PlacementState) -> float:
-
-    return state.get_reward()
+        base = 1.0 / (1.0 + self.placements_left)
+        jitter = 0.25 + random.random() * (base - 0.25)
+        return base + jitter
 
 
 def extractStatistics(searcher, action) -> dict:
@@ -139,30 +118,35 @@ class RandomPlacements(Planner):
     def construct_plan(self, state: GameState, placements: int) -> Plan:
         # Implementation of random placement plan construction
         plan = PlacementPlan(placements)
-        max_runtime = 100
-        run_time_per_action = max_runtime / placements
-        sim_state = copy_game_state(state)
-
-        mcts_state = PlacementState(sim_state, placements)
-        mcts = MCTS(time_limit=max_runtime, rollout_policy=policy)
+        max_runtime = 50 # milliseconds
+        terrs = set(
+            terr.id 
+            for terr 
+            in state.get_territories_owned_by(state.current_player_id)
+        )
+        mcts_state = PlacementState(placements, terrs)
+        mcts = MCTS(time_limit=max_runtime)
         action, reward = mcts.search(mcts_state, need_details=True)
 
-        print(extractStatistics(mcts, action))
+        debug(extractStatistics(mcts, action))
 
+        # recursively extract actions
         seq_actions = []
         node = mcts.root.children[action]
         seq_actions.append(action)
+        depth = 0
+        debug(f"Depth {depth}: Selected Action: {action}")
         while len(node.children.values()) > 0:
-            print(node.children.values())
             for child in node.children.values():
-                print(
+                debug(
                     f"Child: {child}, Total Reward: {child.totalReward}, Num Visits: {child.numVisits}"
                 )
-            node = max(node.children.values(), key=lambda n: n.numVisits)
+            action, node = max(node.children.items(), key=lambda n: n[1].totalReward)
+            depth += 1
+            debug(f"Depth {depth}: Selected Action: {action}")
+            seq_actions.append(action)
 
-        print(seq_actions)
-
-        info(f"Best action: {node}, Expected reward: {node.totalReward}")
+        # Convert actions to plan steps
         for action in seq_actions:
             step = action.to_step()
             plan.add_step(step)
@@ -171,9 +155,9 @@ class RandomPlacements(Planner):
 
 if __name__ == "__main__":
     from risk.utils.logging import setLevel
-    from logging import INFO
+    from logging import INFO, DEBUG
 
-    setLevel(INFO)
+    setLevel(DEBUG)
 
     state = GameState.create_new_game(25, 2, 50)
     state.initialise()
