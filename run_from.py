@@ -70,6 +70,7 @@ if __name__ == "__main__":
     else:
         ai_players = [player.id for player in test_state.players.values()]
     game_loop = create_ai_game(
+        num_players=len(test_state.players),
         ai_player_ids=ai_players,
         play_from_state=test_state,
         ai_delay=args.ai_delay,
