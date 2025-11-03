@@ -74,10 +74,15 @@ class PlacementState(BaseState):
         if self.placements_left <= 0 or not self.acting:
             self._actions = []
         else:
-            self._actions = [
-                PlacementAction(terr, 1, True)
-                for terr in self.terrs
-            ]
+            self._actions = []
+            for drop in range(1, self.placements_left + 1):
+                debug(f"Possible placement: {drop} troops")
+                self._actions.extend([
+                    PlacementAction(terr, drop, True)
+                    for terr in self.terrs
+                ])
+            self._actions.append(PlacementAction(-1, 0, False)) 
+            random.shuffle(self._actions)
 
     def get_current_player(self):
         return 1.0

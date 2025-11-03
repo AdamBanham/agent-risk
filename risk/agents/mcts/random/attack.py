@@ -98,6 +98,7 @@ class AttackState(BaseState):
                             )
             # Add a no-op action to end attack phase
             actions.append(AttackAction(-1, -1, 0, act=False))
+            random.shuffle(actions)
         return actions
 
     def get_current_player(self):
@@ -142,16 +143,17 @@ class RandomAttacks(Planner):
 
     def construct_plan(self, state: GameState) -> Plan:
         # flip for the number of attacks 
-        num_attacks = 0
+        num_attacks = 1
         pick = random.uniform(0, 1)
         while pick <= self.attack_probability:
             num_attacks += 1
             pick = random.uniform(0, 1)
 
         owned_terrs = state.get_territories_owned_by(self.player)
+        _, frontlines = find_safe_frontline_territories(state, self.player)
         terrs = dict(
             (terr.id, set(adj.id for adj in terr.adjacent_territories))
-            for terr in owned_terrs
+            for terr in frontlines
         )
         plan = AttackPlan(self.pos_attacks) 
         
@@ -163,33 +165,28 @@ class RandomAttacks(Planner):
         )
 
         debug(f"Is starting state terminal? {starting_state.is_terminal()}")
-        max_runtime = 50  # milliseconds
+        max_runtime = 15  # milliseconds
 
         if starting_state.is_terminal():
             return plan
-
-        mcts = MCTS(time_limit=max_runtime)
-        action, reward = mcts.search(starting_state, need_details=True)
-
-        debug(extractStatistics(mcts, action))
-
-        # recursively extract actions
         seq_actions = []
-        node = mcts.root.children[action]
-        seq_actions.append(action)
-        depth = 0
-        debug(f"Depth {depth}: Selected Action: {action}")
-        while len(node.children.values()) > 0:
-            for child in node.children.values():
-                debug(
-                    f"Child: {child}, Total Reward: {child.totalReward}, Num Visits: {child.numVisits}"
-                )
-            action, node = max(node.children.items(), key=lambda n: n[1].totalReward)
-            depth += 1
-            debug(f"Depth {depth}: Selected Action: {action}")
+
+        for attack in range(num_attacks):
+            debug(f"Starting MCTS for attack {attack + 1}/{num_attacks}")
+
+            if starting_state.is_terminal():
+                debug("Reached terminal state, ending attack planning.")
+                break
+
+            mcts = MCTS(time_limit=max_runtime)
+            action, reward = mcts.search(starting_state, need_details=True)
             seq_actions.append(action)
 
+            debug(extractStatistics(mcts, action))
+            starting_state = starting_state.take_action(action)
+
         # Convert actions to plan steps
+        debug(f"Constructed sequence of actions: {seq_actions}")
         for action in seq_actions:
             step = action.to_step()
             if step is not None:

@@ -121,6 +121,7 @@ class MovementState(BaseState):
                         )
             # Add a no-op action to end movement phase
             actions.append(MovementAction(-1, -1, 0, act=False))
+            random.shuffle(actions)
         return actions
 
     def get_current_player(self):
