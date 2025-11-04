@@ -2,6 +2,7 @@ from .simple import RandomAgent
 from .bt.random import BTRandomAgent
 from .htn.random import HTNRandomAgent
 from .mcts.random import MCSTRandomAgent
+from .dpn.random import DPNRandomAgent
 
 
 from enum import Enum
@@ -58,7 +59,6 @@ class HTNAgents(AgentFamily):
 
 
 class MCTSAgents(AgentFamily):
-    
 
     class TYPES(Enum):
         RANDOM = MCSTRandomAgent
@@ -66,6 +66,19 @@ class MCTSAgents(AgentFamily):
     @staticmethod
     def get_agent(strategy: AgentStrategies):
         for agent in MCTSAgents.TYPES:
+            if agent.name == strategy.name:
+                return agent.value
+        raise ValueError(f"Unknown strategy: {strategy}")
+
+
+class DPNAgents(AgentFamily):
+
+    class TYPES(Enum):
+        RANDOM = DPNRandomAgent
+
+    @staticmethod
+    def get_agent(strategy: AgentStrategies):
+        for agent in DPNAgents.TYPES:
             if agent.name == strategy.name:
                 return agent.value
         raise ValueError(f"Unknown strategy: {strategy}")
@@ -89,6 +102,7 @@ class AgentTypes(Enum):
     BEHAVIOR_TREE = ("bt", BTAgents)
     HIERARCHICAL_TASK_NETWORK = ("htn", HTNAgents)
     MONTE_CARLO_TREE_SEARCH = ("mcts", MCTSAgents)
+    DATA_PETRI_NET = ("dpn", DPNAgents)
 
     @staticmethod
     def get_selector(type: str) -> AgentFamily:
@@ -96,11 +110,12 @@ class AgentTypes(Enum):
             if agent_type.value[0] == type:
                 return agent_type.value[1]
         raise ValueError(f"Unknown agent type: {type}")
-    
+
+
 if __name__ == "__main__":
 
     # Example usage
-    agent_family = AgentTypes.get_selector("mcts")
+    agent_family = AgentTypes.get_selector("dpn")
     agent_class = agent_family.get_agent(AgentStrategies.RANDOM)
     agent = agent_class(player_id=1)
     print(f"Created agent: {agent.name}")
