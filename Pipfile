@@ -9,6 +9,7 @@ py-trees = "*"
 monte-carlo-tree-search = "*"
 matplotlib = "*"
 pyqt6 = "*"
+simpn = "*"
 
 [dev-packages]
 
