@@ -150,10 +150,9 @@ class RandomAttacks(Planner):
             pick = random.uniform(0, 1)
 
         owned_terrs = state.get_territories_owned_by(self.player)
-        _, frontlines = find_safe_frontline_territories(state, self.player)
         terrs = dict(
             (terr.id, set(adj.id for adj in terr.adjacent_territories))
-            for terr in frontlines
+            for terr in owned_terrs
         )
         plan = AttackPlan(self.pos_attacks) 
         
