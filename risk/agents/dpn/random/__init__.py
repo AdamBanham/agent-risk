@@ -5,9 +5,11 @@ Random Agent Implementation.
 
 from ...agent import BaseAgent
 from risk.state.plan import Goal
-from risk.utils.logging import info
+from risk.utils.logging import info, debug
 
 from .placement import RandomPlacement
+from .attack import RandomAttacks
+from .movement import RandomMovement
 
 
 class DPNRandomAgent(BaseAgent):
@@ -22,9 +24,9 @@ class DPNRandomAgent(BaseAgent):
         )
 
     def decide_placement(self, game_state, goal):
-        info("dpn-agent-random deciding placement")
+        debug("dpn-agent-random deciding placement")
         planner = RandomPlacement(self.player_id, game_state.placements_left)
-        plan = planner.construct_plan(game_state)   
+        plan = planner.construct_plan(game_state)
 
         events = []
         while not plan.is_done():
@@ -33,9 +35,27 @@ class DPNRandomAgent(BaseAgent):
         return events
 
     def decide_attack(self, game_state, goal):
-        info("dpn-agent-random deciding attack")
-        return super().decide_attack(game_state, goal)
+        debug("dpn-agent-random deciding attack")
+        planner = RandomAttacks(
+            self.player_id, 10, self.attack_probability
+        )
+        plan = planner.construct_plan(game_state)
+
+        events = []
+        while not plan.is_done():
+            step = plan.pop_step()
+            events.extend(step.execute(game_state))
+        return events
 
     def decide_movement(self, game_state, goal):
-        info("dpn-agent-random deciding movement")
-        return super().decide_movement(game_state, goal)
+        debug("dpn-agent-random deciding movement")
+        planner = RandomMovement(
+            self.player_id, 1
+        )
+        plan = planner.construct_plan(game_state)
+
+        events = []
+        while not plan.is_done():
+            step = plan.pop_step()
+            events.extend(step.execute(game_state))
+        return events
