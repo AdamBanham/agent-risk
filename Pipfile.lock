@@ -719,12 +719,12 @@
         },
         "simpn": {
             "hashes": [
-                "sha256:59ac41be87318818488658f0ef002ed85e77e46d17758bec7ba274f053b8fcce",
-                "sha256:c2509d2a45b5478ce9525e8d1977ee87fa9b93d514db4249dbeef6c5178d7dce"
+                "sha256:a411cf2bed69cd958991f3b2bc504fbe82e424b97abbc663e6a1546aeec1936c",
+                "sha256:cb4753d41f00e2856dfef6c1359602d370ffc51f8cfbed72c2a2d282cc8f3589"
             ],
             "index": "pypi",
             "markers": "python_version >= '3.9'",
-            "version": "==1.7.1"
+            "version": "==1.7.2"
         },
         "six": {
             "hashes": [
