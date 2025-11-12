@@ -4,3 +4,5 @@ Provides basic random decision-making agents for testing and baseline gameplay.
 """
 
 from .random import *
+from .defensive import *
+from .aggressive import *

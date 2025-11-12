@@ -1,4 +1,4 @@
-from .simple import RandomAgent
+from .simple import RandomAgent, DefensiveAgent, AggressiveAgent
 from .bt.random import BTRandomAgent
 from .htn.random import HTNRandomAgent
 from .mcts.random import MCSTRandomAgent
@@ -84,6 +84,7 @@ class DPNAgents(AgentFamily):
                 return agent.value
         raise ValueError(f"Unknown strategy: {strategy}")
 
+
 class BPMNAgents(AgentFamily):
 
     class TYPES(Enum):
@@ -101,6 +102,8 @@ class RandomAgents(AgentFamily):
 
     class TYPES(Enum):
         RANDOM = RandomAgent
+        DEFENSIVE = DefensiveAgent
+        AGGRESSIVE = AggressiveAgent
 
     @staticmethod
     def get_agent(strategy: AgentStrategies):

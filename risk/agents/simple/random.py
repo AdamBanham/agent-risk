@@ -10,7 +10,7 @@ from ...state.game_state import GameState
 from ...utils.movement import find_movement_sequence, Movement
 from ...utils.movement import find_safe_frontline_territories
 from ...utils.movement import find_connected_frontline_territories
-from risk.utils.logging import debug, info
+from risk.utils.logging import debug
 
 
 from ..agent import BaseAgent
@@ -134,7 +134,7 @@ class RandomAgent(BaseAgent):
         if valid_movements:
             route: List[Movement] = random.choice(valid_movements)
 
-            for move in route:
+            for move in reversed(route):
                 events.append(
                     MovementOfTroopsEvent(
                         player=self.player_id,
