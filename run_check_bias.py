@@ -1,5 +1,4 @@
-from risk.state.game_state import GameState, Player, Territory, GamePhase
-from risk.state.territory import TerritoryState
+from risk.state.game_state import GameState
 from risk.utils.replay import simulate_turns, SimulationConfiguration
 
 from matplotlib import pyplot as plt
@@ -64,7 +63,7 @@ def parse_arguments():
 if __name__ == "__main__":
     args = parse_arguments()
 
-    from risk.utils.logging import setLevel
+    from risk.utils.logging import setLevel, info
     from logging import INFO
     from json import load
 
@@ -94,21 +93,21 @@ if __name__ == "__main__":
                 ),
             )
 
-            print("Final Scores:")
+            info(f"[RUN {run+1:04d}] Final Scores:")
             for player_id, score in scorer.get_total_scores().items():
-                print(f"Player {player_id}: {score} points")
+                info(f"Player {player_id}: {score} points")
                 total_scores[player_id].append(score)
                 scores[player_id].extend([tick[1] for tick in scorer.scores[player_id]])
     finally:
 
-        print("\nAverage Scores over runs:")
+        info("\nAverage Scores over runs:")
         for player_id, score_list in scores.items():
             average_score = sum(score_list) / len(score_list)
-            print(f"Player {player_id} running score avg: {average_score:.2f}%")
-        print("\nOverall Average Scores per turn:")
+            info(f"Player {player_id} running score avg: {average_score:.2f}%")
+        info("\nOverall Average Scores per turn:")
         for player_id, score_list in total_scores.items():
             average_score = sum(score_list) / len(score_list)
-            print(f"Player {player_id} overall score avg: {average_score:.2f} points")
+            info(f"Player {player_id} overall score avg: {average_score:.2f} points")
 
         fig = plt.figure(figsize=(10, 6))
 
