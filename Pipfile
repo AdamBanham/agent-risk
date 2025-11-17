@@ -10,6 +10,7 @@ monte-carlo-tree-search = "*"
 matplotlib = "*"
 pyqt6 = "*"
 simpn = "*"
+xdevs = "*"
 
 [dev-packages]
 
