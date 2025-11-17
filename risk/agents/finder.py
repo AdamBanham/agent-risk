@@ -4,6 +4,7 @@ from .htn.random import HTNRandomAgent
 from .mcts.random import MCSTRandomAgent
 from .dpn.random import DPNRandomAgent
 from .bpmn.random import BPMNRandomAgent
+from .devs.random import DEVSRandomAgent
 
 
 from enum import Enum
@@ -96,6 +97,18 @@ class BPMNAgents(AgentFamily):
             if agent.name == strategy.name:
                 return agent.value
         raise ValueError(f"Unknown strategy: {strategy}")
+    
+class DEVSAgents(AgentFamily):
+
+    class TYPES(Enum):
+        RANDOM = DEVSRandomAgent
+
+    @staticmethod
+    def get_agent(strategy: AgentStrategies):
+        for agent in DEVSAgents.TYPES:
+            if agent.name == strategy.name:
+                return agent.value
+        raise ValueError(f"Unknown strategy: {strategy}")
 
 
 class RandomAgents(AgentFamily):
@@ -120,6 +133,7 @@ class AgentTypes(Enum):
     MONTE_CARLO_TREE_SEARCH = ("mcts", MCTSAgents)
     DATA_PETRI_NET = ("dpn", DPNAgents)
     BPMN = ("bpmn", BPMNAgents)
+    DEVS = ("devs", DEVSAgents)
 
     @staticmethod
     def get_selector(type: str) -> AgentFamily:
