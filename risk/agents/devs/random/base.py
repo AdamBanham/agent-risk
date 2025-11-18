@@ -5,7 +5,7 @@ Base constructs for random DEVS agents.
 from risk.utils.logging import debug
 from xdevs.models import Atomic, Port
 
-from typing import Set, List, Dict
+from typing import Set, List, Dict, Collection
 import random
 
 
@@ -61,22 +61,22 @@ class Selector(Atomic):
         pass
 
 
-class SelectFrom[T, J](Selector):
+class SelectFrom[K, V](Selector):
     """
     Selector that selects from a given mapping of choices.
     Other services send the key of the mapping to select from.
     """
 
-    def __init__(self, name: str, choices: Dict[T, J]):
+    def __init__(self, name: str, choices: Dict[K, Collection[V]]):
         super().__init__(name)
         self.choices = choices
 
     def deltext(self, e):
         debug(f"SelectFrom::{self.name} external transition")
         if self.i_terrs:
-            key: T = self.i_terrs.get()
+            key: K = self.i_terrs.get()
             if key in self.choices:
-                options: Set[J] = self.choices[key]
+                options: Set[V] = self.choices[key]
                 self._selected = random.choice(list(options))
                 debug(f"SelectFrom::{self.name} selected option: {self._selected}")
                 self.activate()

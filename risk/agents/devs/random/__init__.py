@@ -4,7 +4,7 @@ Random Agent Implementation.
 """
 
 from risk.agents.agent import BaseAgent
-from risk.utils.logging import debug
+from risk.utils.logging import info
 
 from .placement import RandomPlacement
 from .attack import RandomAttack
@@ -23,7 +23,7 @@ class DEVSRandomAgent(BaseAgent):
         )
 
     def decide_placement(self, game_state, goal):
-        debug(f"{self.name} - planning for placement")
+        info(f"{self.name} - planning for placement")
         planner = RandomPlacement(self.player_id, game_state.placements_left)
         plan = planner.construct_plan(game_state)
 
@@ -32,11 +32,10 @@ class DEVSRandomAgent(BaseAgent):
             step = plan.pop_step()
             events.extend(step.execute(game_state))
 
-        debug(f"result :: {events}")
         return events
 
     def decide_attack(self, game_state, goal):
-        debug(f"{self.name} - planning for attack")
+        info(f"{self.name} - planning for attack")
         planner = RandomAttack(self.player_id, 10, self.attack_probability)
         plan = planner.construct_plan(game_state)
 
@@ -45,11 +44,10 @@ class DEVSRandomAgent(BaseAgent):
             step = plan.pop_step()
             events.extend(step.execute(game_state))
         
-        debug(f"result :: {events}")
         return events
 
     def decide_movement(self, game_state, goal):
-        debug(f"{self.name} - planning for movement")
+        info(f"{self.name} - planning for movement")
         planner = RandomMovement(self.player_id, 1)
         plan = planner.construct_plan(game_state)
 
@@ -58,5 +56,4 @@ class DEVSRandomAgent(BaseAgent):
             step = plan.pop_step()
             events.extend(step.execute(game_state))
 
-        debug(f"result :: {events}")
         return events
