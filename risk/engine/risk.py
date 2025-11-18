@@ -106,7 +106,18 @@ class RiskPlayerScoresEngine(Engine):
 
         totals = self.get_total_scores()
 
-        for player_id, score_history in self.scores.items():
+        colours =  [
+                (200, 50, 50),  # Red
+                (50, 200, 50),  # Green
+                (50, 50, 200),  # Blue
+                (200, 200, 50),  # Yellow
+                (200, 50, 200),  # Magenta
+                (50, 200, 200),  # Cyan
+                (150, 75, 0),  # Brown
+                (255, 165, 0),  # Orange
+        ]
+
+        for (player_id, score_history), colour in zip(self.scores.items(), colours):
             sorted_history = sorted(score_history, key=lambda x: x[0])
             turns, scores = zip(*sorted_history)
             # smooth scores
@@ -120,6 +131,7 @@ class RiskPlayerScoresEngine(Engine):
             axes[0].plot(
                 turns,
                 scores,
+                c=[colour[0]/255, colour[1]/255, colour[2]/255],
                 label=f"Player {player_id} (Total: {totals[player_id]:.2f})",
             )
         axes[0].grid(True)
@@ -131,7 +143,7 @@ class RiskPlayerScoresEngine(Engine):
         axes[0].legend()
 
         # plot the cummulative scores as a line chart
-        for player_id, score_history in self.scores.items():
+        for (player_id, score_history), colour in zip(self.scores.items(), colours):
             sorted_history = sorted(score_history, key=lambda x: x[0])
             turns, scores = zip(*sorted_history)
             # calculate cumulative sum
@@ -143,6 +155,7 @@ class RiskPlayerScoresEngine(Engine):
             axes[1].plot(
                 turns,
                 cumulative_scores,
+                c=[colour[0]/255, colour[1]/255, colour[2]/255],
                 label=f"Player {player_id} (Total: {totals[player_id]:.2f})",
             )
         axes[1].grid(True)
