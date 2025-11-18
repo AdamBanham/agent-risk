@@ -109,7 +109,7 @@ if __name__ == "__main__":
             average_score = sum(score_list) / len(score_list)
             info(f"Player {player_id} overall score avg: {average_score:.2f} points")
 
-        fig = plt.figure(figsize=(10, 6))
+        fig = plt.figure(figsize=(8, 4))
 
         colours = [
             (200, 50, 50),  # Red
@@ -135,7 +135,12 @@ if __name__ == "__main__":
                 ],
                 label=f"P-{player_id}-{names[player_id]}",
             )
+
+        min_score = float("inf")
+        max_score = float("-inf")
         for player_id, score_list in total_scores.items():
+            min_score = min(min_score, min(score_list))
+            max_score = max(max_score, max(score_list))
             axes[1].hist(
                 score_list,
                 bins=25,
@@ -156,8 +161,7 @@ if __name__ == "__main__":
         axes[1].set_title("Distribution of Total Player Scores")
         axes[1].set_xlabel("Total Score (points)")
         axes[1].set_ylabel("Frequency")
-        axes[1].set_xlim(left=0)
-        axes[1].legend()
+        axes[1].set_xlim(left=int(min_score * 0.9), right=int(max_score * 1.1))
         plt.show()
 
         fig.savefig(
