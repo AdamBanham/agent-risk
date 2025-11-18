@@ -106,15 +106,15 @@ class RiskPlayerScoresEngine(Engine):
 
         totals = self.get_total_scores()
 
-        colours =  [
-                (200, 50, 50),  # Red
-                (50, 200, 50),  # Green
-                (50, 50, 200),  # Blue
-                (200, 200, 50),  # Yellow
-                (200, 50, 200),  # Magenta
-                (50, 200, 200),  # Cyan
-                (150, 75, 0),  # Brown
-                (255, 165, 0),  # Orange
+        colours = [
+            (200, 50, 50),  # Red
+            (50, 200, 50),  # Green
+            (50, 50, 200),  # Blue
+            (200, 200, 50),  # Yellow
+            (200, 50, 200),  # Magenta
+            (50, 200, 200),  # Cyan
+            (150, 75, 0),  # Brown
+            (255, 165, 0),  # Orange
         ]
 
         for (player_id, score_history), colour in zip(self.scores.items(), colours):
@@ -125,13 +125,13 @@ class RiskPlayerScoresEngine(Engine):
             if len(scores) >= window_size:
                 smoothed_scores = []
                 for i in range(len(scores)):
-                    window = scores[max(0, i - window_size + 1):i + 1]
+                    window = scores[max(0, i - window_size + 1) : i + 1]
                     smoothed_scores.append(sum(window) / len(window))
                 scores = smoothed_scores
             axes[0].plot(
                 turns,
                 scores,
-                c=[colour[0]/255, colour[1]/255, colour[2]/255],
+                c=[colour[0] / 255, colour[1] / 255, colour[2] / 255],
                 label=f"Player {player_id} (Total: {totals[player_id]:.2f})",
             )
         axes[0].grid(True)
@@ -155,7 +155,7 @@ class RiskPlayerScoresEngine(Engine):
             axes[1].plot(
                 turns,
                 cumulative_scores,
-                c=[colour[0]/255, colour[1]/255, colour[2]/255],
+                c=[colour[0] / 255, colour[1] / 255, colour[2] / 255],
                 label=f"Player {player_id} (Total: {totals[player_id]:.2f})",
             )
         axes[1].grid(True)

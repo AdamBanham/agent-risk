@@ -111,12 +111,28 @@ if __name__ == "__main__":
 
         fig = plt.figure(figsize=(10, 6))
 
+        colours = [
+            (200, 50, 50),  # Red
+            (50, 200, 50),  # Green
+            (50, 50, 200),  # Blue
+            (200, 200, 50),  # Yellow
+            (200, 50, 200),  # Magenta
+            (50, 200, 200),  # Cyan
+            (150, 75, 0),  # Brown
+            (255, 165, 0),  # Orange
+        ]
+
         axes = fig.subplots(1, 2)
         for player_id, score_list in scores.items():
             axes[0].hist(
                 score_list,
                 bins=100,
                 alpha=0.5,
+                color=[
+                    colours[player_id][0] / 255,
+                    colours[player_id][1] / 255,
+                    colours[player_id][2] / 255,
+                ],
                 label=f"P-{player_id}-{names[player_id]}",
             )
         for player_id, score_list in total_scores.items():
@@ -124,6 +140,11 @@ if __name__ == "__main__":
                 score_list,
                 bins=25,
                 alpha=0.5,
+                color=[
+                    colours[player_id][0] / 255,
+                    colours[player_id][1] / 255,
+                    colours[player_id][2] / 255,
+                ],
                 label=f"P-{player_id}-{names[player_id]}",
             )
 
