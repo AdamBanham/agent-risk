@@ -85,7 +85,7 @@ class DefensiveAgent(BaseAgent):
                         break
 
         if len(events) > 10:
-            events = events[:10]
+            events = random.choices(events, k=10)
         elif len(events) < 1:
             debug(f"simple-defensive-agent-{self.player_id} did not find attack")
 
