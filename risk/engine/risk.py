@@ -168,10 +168,10 @@ class RiskPlayerScoresEngine(Engine):
 
         plt.show()
 
-    def get_total_scores(self):
+    def get_total_scores(self, zero_if_eliminated: bool = True) -> dict:
         total = {}
         for player_id, score_history in self.scores.items():
-            if any(score == 0 for _, score in score_history):
+            if any(score == 0 for _, score in score_history) and zero_if_eliminated:
                 total[player_id] = 0
             else:
                 total[player_id] = sum(score for _, score in score_history)
