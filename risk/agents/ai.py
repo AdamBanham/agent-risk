@@ -85,6 +85,7 @@ def create_ai_setup(
     attack_probability: float = 0.5,
     ai_delay: float = 1.0,
     configure_from_file: bool = True,
+    configuration: Optional[Dict] = None,
     with_delay_engine: bool = True,
 ) -> List[Engine]:
     """
@@ -100,7 +101,10 @@ def create_ai_setup(
     ai_engine = AiEngine("AI Engine")
     for player_id in ai_player_ids:
         debug(f"Configuring AI for player {player_id}")
-        if configure_from_file:
+        if configuration:
+            if not determine_ai_policy(player_id, ai_engine, configuration):
+                add_random_ai_policy(player_id, attack_probability, ai_engine)
+        elif configure_from_file:
             if not determine_ai_policy(player_id, ai_engine):
                 add_random_ai_policy(player_id, attack_probability, ai_engine)
         else:
@@ -133,7 +137,9 @@ def add_random_ai_policy(
     engine.add_ai_for_player(agent, player_id)
 
 
-def determine_ai_policy(player_id: int, engine: AiEngine) -> bool:
+def determine_ai_policy(
+    player_id: int, engine: AiEngine, configuration: Optional[Dict] = None
+) -> bool:
     """
     Determine the AI policy for a given player ID from a configuration file.
     Looks locally for an 'ai.config' file in JSON format.
@@ -141,13 +147,17 @@ def determine_ai_policy(player_id: int, engine: AiEngine) -> bool:
     :param player_id: ID of the player
     :return: whether the AI policy was successfully determined
     """
-    if exists(join(".", "ai.config")):
-        debug("ai.config file found, configuring AI agents accordingly.")
-        config = loads(open(join(".", "ai.config"), "r").read())
+    if not configuration:
+        if exists(join(".", "ai.config")):
+            debug("ai.config file found, configuring AI agents accordingly.")
+            config = loads(open(join(".", "ai.config"), "r").read())
+    else:
+        config = configuration
 
+    if config:
         player_setup = config.get(str(player_id), None)
         if player_setup:
-            agent_type = player_setup.get("type", "bt")
+            agent_type = player_setup.get("type", "simple")
             attack_probability = player_setup.get("attack_probability", 0.5)
             agent_family = AgentTypes.get_selector(agent_type)
             strat = AgentStrategies.find(player_setup.get("strat", "random"))
