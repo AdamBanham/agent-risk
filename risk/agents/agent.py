@@ -29,6 +29,7 @@ class BaseAgent(ABC):
         self.player_id = player_id
         self.name = name
         self.attack_probability = max(0.0, min(1.0, attack_probability))
+        self.runtime = 0.0
 
     @abstractmethod
     def decide_placement(self, game_state: GameState, goal: Goal) -> List[Event]:
@@ -72,3 +73,11 @@ class BaseAgent(ABC):
         returns: a plan of events to move armies
         """
         pass
+
+    def add_runtime(self, duration: float):
+        """
+        Adds the given duration to the agent's total runtime.
+
+        :param duration: Time in seconds to add to the agent's runtime
+        """
+        self.runtime += duration

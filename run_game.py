@@ -222,4 +222,13 @@ if __name__ == "__main__":
         with open("simulation.state", "w") as f:
             f.write(repr(state))
 
+        scores = scorer.get_total_scores(False)
+        print("Final Player Scores:")
+        for player in range(args.players):
+            print(
+                (f"  Player {player}: Cum. Score = "
+                 f"{scores.get(player, 0.0):.2f}, "
+                 f"Runtime = {state.players[player].runtime:.2f}s")
+            )
+
         scorer.plot_scores()

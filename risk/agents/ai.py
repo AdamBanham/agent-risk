@@ -16,7 +16,8 @@ from os.path import exists, join
 from json import loads
 
 from typing import Dict, List, Optional
-from risk.utils.logging import debug
+from risk.utils.logging import debug, info
+from time import time
 
 
 class AiEngine(Engine):
@@ -37,17 +38,22 @@ class AiEngine(Engine):
         else:
             return super().process(state, element)
 
+        start = time()
         if isinstance(element, MovementPhase):
-            # Process movement phase with AI logic
-            return agent.decide_movement(state, goal=None)
+            ret = agent.decide_movement(state, goal=None)
         elif isinstance(element, AttackPhase):
-            # Process attack phase with AI logic
-            return agent.decide_attack(state, goal=None)
+            ret = agent.decide_attack(state, goal=None)
         elif isinstance(element, PlacementPhase):
-            # Process placement phase with AI logic
-            return agent.decide_placement(state, goal=None)
-
-        return super().process(state, element)
+            ret = agent.decide_placement(state, goal=None)
+        runtime = time() - start
+        agent.add_runtime(runtime)
+        state.players[agent.player_id].runtime += runtime
+        info(
+            f"Agent {agent.name} "
+            f"took {runtime:.2f} secs "
+            f"(total: {agent.runtime:.2f} secs)"
+        )
+        return ret
 
     def add_ai_for_player(self, agent: BaseAgent, player_id: int) -> None:
         """

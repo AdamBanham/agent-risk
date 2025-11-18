@@ -471,6 +471,18 @@ class GameRenderer:
             name_text = self.font.render(player.name, True, self.colors["text"])
             self.screen.blit(name_text, (text_x, text_y))
 
+            # Player runtime
+            runtime_text = self.small_font.render(
+                f"({player.runtime:.2f}s)", True, self.colors["text"]
+            )
+            self.screen.blit(
+                runtime_text,
+                (
+                  box_rect.x + box_rect.width - 8 - runtime_text.get_width(),
+                  text_y
+                )
+            )
+
             # Territory count and army size with larger, clearer numbers
             territory_count = player.get_territory_count()
             total_armies = player.total_armies

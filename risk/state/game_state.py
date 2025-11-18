@@ -51,6 +51,7 @@ class Player:
     territories_controlled: Set[int] = field(default_factory=set)
     total_armies: int = 0
     reinforcements_available: int = 0
+    runtime: float = 0.0  # Total runtime of the agent
 
     def get_territory_count(self) -> int:
         """
