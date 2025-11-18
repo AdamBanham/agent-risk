@@ -30,7 +30,7 @@ class SafeNode(Node):
 
 @dataclass
 class NetworkNode(Node):
-    value: float
+    value: int
     safe: bool = False
 
     def __str__(self):
@@ -160,6 +160,13 @@ class SafeGraph(Graph[SafeNode, Edge]):
         """
         return [n for n in self.nodes if n.value]
 
+    @property
+    def frontline_nodes(self) -> Collection[SafeNode]:
+        """
+        Returns all frontline nodes in the graph.
+        """
+        return [n for n in self.nodes if not n.value]
+
     def is_safe(self, territory_id: int) -> bool:
         """
         Checks if the given territory is safe.
@@ -212,41 +219,57 @@ class NetworkGraph(Graph[NetworkNode, Edge]):
     """
 
     @property
-    def networks(self) -> Collection[float]:
+    def networks(self) -> Collection[int]:
         """
         Returns all unique network IDs in the graph.
         """
         return set(n.value for n in self.nodes)
 
-    def nodes_in_network(self, network_id: float) -> Collection[NetworkNode]:
+    def nodes_in_network(self, network: int) -> Collection[NetworkNode]:
         """
         Returns all nodes belonging to the given network.
 
         :param network_id: ID of the network
         :return: Collection of nodes in the network
         """
-        return [n for n in self.nodes if n.value == network_id]
+        return [n for n in self.nodes if n.value == network]
 
-    def safes_in_network(self, network_id: float) -> Collection[NetworkNode]:
+    def safes_in_network(self, network: int) -> Collection[NetworkNode]:
         """
         Returns all safe nodes belonging to the given network.
 
         :param network_id: ID of the network
         :return: Collection of safe nodes in the network
         """
-        return [n for n in self.nodes if n.value == network_id and n.safe]
+        return [n for n in self.nodes if n.value == network and n.safe]
 
-    def frontlines_in_network(self, network_id: float) -> Collection[NetworkNode]:
+    def frontlines_in_network(self, network: int) -> Collection[NetworkNode]:
         """
         Returns all frontline nodes belonging to the given network.
 
         :param network_id: ID of the network
         :return: Collection of frontline nodes in the network
         """
-        return [n for n in self.nodes if n.value == network_id and not n.safe]
+        return [n for n in self.nodes if n.value == network and not n.safe]
+
+    def network_view(self, network: int) -> "NetworkGraph":
+        """
+        Returns a subgraph view of the given network.
+
+        :param network: ID of the network
+        :return: A NetworkGraph representing the subgraph of the network
+        """
+        nodes = self.nodes_in_network(network)
+        edges = []
+        for edge in self.edges:
+            src_in_network = any(n.id == edge.src for n in nodes)
+            dest_in_network = any(n.id == edge.dest for n in nodes)
+            if src_in_network and dest_in_network:
+                edges.append(edge)
+        return NetworkGraph(nodes=nodes, edges=edges)
 
 
-def construct_network_graph(map: Graph[Node, Edge], player: int) -> NetworkGraph:
+def construct_network_view(map: Graph[Node, Edge], player: int) -> NetworkGraph:
     """
     Constructs a map of the simulation from the perspective of the given player,
     where each node's value showns the network of nodes that it belongs to. A
@@ -338,7 +361,7 @@ if __name__ == "__main__":
         print(safe_graph)
 
         input("show player 0 network view?")
-        network_map = construct_network_graph(map, 0)
+        network_map = construct_network_view(map, 0)
         print(network_map)
 
         input("show player 1 safe view?")
@@ -346,7 +369,7 @@ if __name__ == "__main__":
         print(safe_graph)
 
         input("show player 1 network view?")
-        network_map = construct_network_graph(map, 1)
+        network_map = construct_network_view(map, 1)
         print(network_map)
 
         input("continue?")
