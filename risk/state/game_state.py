@@ -12,6 +12,7 @@ import time
 from .territory import Territory
 from .ui import TurnUI
 from .turn_manager import TurnManager
+from risk.utils.map import Graph, Node, Edge, construct_graph
 
 
 @dataclass
@@ -103,6 +104,7 @@ class GameState:
     # Game entities
     territories: Dict[int, Territory] = field(default_factory=dict)
     players: Dict[int, Player] = field(default_factory=dict)
+    map: Optional[Graph[Node, Edge]] = None
 
     # Timing and metadata
     created_at: float = field(default_factory=time.time)
@@ -194,6 +196,8 @@ class GameState:
 
         self.ui_turn_manager = TurnManager(self)
         self.ui_turn_state = TurnUI(self.screen_width, self.screen_height)
+
+        self.map = construct_graph(self)
 
         if self.phase == GamePhase.INIT:
             self.phase = GamePhase.PLAYER_TURN
@@ -355,6 +359,7 @@ class GameState:
                 player.is_active = False
 
         self.last_updated = time.time()
+        self.map = construct_graph(self)
 
     def get_game_summary(self) -> Dict:
         """

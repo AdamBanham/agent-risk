@@ -11,6 +11,7 @@ def copy_game_state(game_state: GameState) -> GameState:
     # import needed classes for the repr to work
     from risk.state.game_state import GameState, Player, Territory, GamePhase
     from risk.state.territory import TerritoryState
+    from risk.utils.map import Graph, Node, Edge
     state:GameState = eval(repr(game_state))
     state.initialise(False)
     state.update_player_statistics()
