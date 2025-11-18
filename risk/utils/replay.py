@@ -1,4 +1,4 @@
-from typing import Callable, Tuple, Union
+from typing import Callable, Tuple, Union, Optional
 from risk.engine.controller import SimulationController
 from risk.state.event_stack import Event, Level
 from risk.state.game_state import GameState
@@ -14,6 +14,7 @@ from dataclasses import dataclass
 class SimulationConfiguration:
     attack_rate: float = 0.5
     load_ai_from_file: bool = False
+    configuration: Optional[dict] = None
     score: bool = False
 
 
@@ -30,7 +31,6 @@ def simulate_turns(
     """
     from risk.agents.ai import create_ai_setup
 
-
     if config is None:
         config = SimulationConfiguration()
 
@@ -46,6 +46,7 @@ def simulate_turns(
         config.attack_rate,
         0,
         config.load_ai_from_file,
+        config.configuration,
         False,
     ):
         controller.add_engine(engine)
