@@ -4,6 +4,7 @@ processing loop.
 """
 
 from typing import Union
+from risk.utils.logging import debug    
 from ..engine.base import Engine, EngineProccesableError, EngineProcessingError
 from .base import DebugEngine, SideEffectEngine
 from ..state import GameState
@@ -38,7 +39,7 @@ class SimulationController:
 
     def _print_debug(self, message: str) -> None:
         if self.debug:
-            print(f"[DEBUG] {message}")
+            debug(f"{message}")
 
     def step(self, force: bool = False) -> bool:
         """

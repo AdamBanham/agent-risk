@@ -5,7 +5,7 @@ Random Agent Implementation.
 
 from ...agent import BaseAgent
 from risk.state import GameState
-from risk.utils.logging import debug, info
+from risk.utils.logging import info
 
 from .placement import RandomPlacements
 from .attack import RandomAttacks
@@ -19,12 +19,12 @@ class HTNRandomAgent(BaseAgent):
     """
 
     def __init__(self, player_id: int, attack_probability: float = 0.5):
-        super().__init__(player_id, "HTN-Random-Agent-{}".format(player_id), attack_probability)
+        super().__init__(
+            player_id, "HTN-Random-Agent-{}".format(player_id), attack_probability
+        )
 
     def decide_placement(self, state: GameState, goal) -> object:
-        debug(
-            f"htn-random-agent-{self.player_id} - planning for placement"
-        )
+        info(f"htn-random-agent-{self.player_id} - planning for placement")
 
         plan = RandomPlacements.construct_plan(
             self.player_id,
@@ -38,11 +38,9 @@ class HTNRandomAgent(BaseAgent):
             events.extend(step.execute(state))
 
         return events
-    
+
     def decide_attack(self, game_state, goal):
-        debug(
-            f"htn-random-agent-{self.player_id} - planning for attacking"
-        )
+        info(f"htn-random-agent-{self.player_id} - planning for attacking")
 
         plan = RandomAttacks.construct_plan(
             self.player_id,
@@ -57,11 +55,9 @@ class HTNRandomAgent(BaseAgent):
             events.extend(step.execute(game_state))
 
         return events
-    
+
     def decide_movement(self, game_state, goal):
-        debug(
-            f"htn-random-agent-{self.player_id} - planning for movement"
-        )
+        info(f"htn-random-agent-{self.player_id} - planning for movement")
 
         plan = RandomMovements.construct_plan(
             self.player_id,

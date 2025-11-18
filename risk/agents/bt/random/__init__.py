@@ -3,7 +3,7 @@ This module contains the logic for Behaviour Tree (BT)
 Random Agent Implementation.
 """
 from risk.agents import BaseAgent
-from risk.utils.logging import debug, info
+from risk.utils.logging import info
 
 from .placement import RandomPlacements
 from .attack import RandomAttacks
@@ -22,7 +22,7 @@ class BTRandomAgent(BaseAgent):
         )
 
     def decide_placement(self, game_state, goal):
-        debug(f"bt-random-agent-{self.player_id} planning for placement")
+        info(f"bt-random-agent-{self.player_id} planning for placement")
 
         terrs = game_state.get_territories_owned_by(self.player_id)
 
@@ -43,7 +43,7 @@ class BTRandomAgent(BaseAgent):
         return events
 
     def decide_attack(self, game_state, goal):
-        debug(f"bt-random-agent-{self.player_id} planning for attacking")
+        info(f"bt-random-agent-{self.player_id} planning for attacking")
 
         terrs = game_state.get_territories_owned_by(self.player_id)
 
@@ -65,7 +65,7 @@ class BTRandomAgent(BaseAgent):
         return events
 
     def decide_movement(self, game_state, goal):
-        debug(f"bt-random-agent-{self.player_id} planning for movement")
+        info(f"bt-random-agent-{self.player_id} planning for movement")
 
         planner = RandomMovements(
             self.player_id,

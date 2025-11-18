@@ -9,6 +9,7 @@ import pygame
 from typing import Optional
 
 from risk.engine.risk import RiskSimulationController
+from risk.utils.logging import info
 from risk.game.rendering.stack_renderer import StackRenderer
 from risk.state.event_stack.events.players import TerritorySelectedEvent
 from risk.state.event_stack.events.ui import UIActionEvent
@@ -387,7 +388,7 @@ class GameLoop:
                 if processed > 0:
                     elapsed = time.time() - step_time
                     self._caption = f"Agent Risk - Dynamic Board Simulation ({processed:0d} actions/render) (processed in {elapsed:.4f} seconds)"
-                    print("[DEBUG] Simulation step took {:.4f} seconds for {processed:0d} actions".format(elapsed, processed=processed))
+                    info("Simulation step took {:.4f} seconds for {processed:0d} actions".format(elapsed, processed=processed))
                 processed = 0
 
             # release control back to draw

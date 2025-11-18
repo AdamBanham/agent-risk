@@ -4,8 +4,7 @@ Random Agent Implementation.
 """
 
 from ...agent import BaseAgent
-from risk.state.plan import Goal
-from risk.utils.logging import info, debug
+from risk.utils.logging import info
 
 from .placement import RandomPlacement
 from .attack import RandomAttacks
@@ -24,7 +23,7 @@ class DPNRandomAgent(BaseAgent):
         )
 
     def decide_placement(self, game_state, goal):
-        debug("dpn-agent-random deciding placement")
+        info("dpn-agent-random deciding placement")
         planner = RandomPlacement(self.player_id, game_state.placements_left)
         plan = planner.construct_plan(game_state)
 
@@ -35,7 +34,7 @@ class DPNRandomAgent(BaseAgent):
         return events
 
     def decide_attack(self, game_state, goal):
-        debug("dpn-agent-random deciding attack")
+        info("dpn-agent-random deciding attack")
         planner = RandomAttacks(
             self.player_id, 10, self.attack_probability
         )
@@ -48,7 +47,7 @@ class DPNRandomAgent(BaseAgent):
         return events
 
     def decide_movement(self, game_state, goal):
-        debug("dpn-agent-random deciding movement")
+        info("dpn-agent-random deciding movement")
         planner = RandomMovement(
             self.player_id, 1
         )

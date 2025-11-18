@@ -8,7 +8,7 @@ from typing import List
 from risk.state.game_state import GameState
 from risk.agents import BaseAgent
 from risk.state.plan import Goal
-from risk.utils.logging import debug, info
+from risk.utils.logging import info
 
 from .attack import RandomAttacks
 from .movement import RandomMovements
@@ -27,7 +27,7 @@ class MCSTRandomAgent(BaseAgent):
         )
 
     def decide_placement(self, state: GameState, goal: Goal = None) -> List:
-        debug(f"mcts-random-agent-{self.player_id} planning placement")
+        info(f"mcts-random-agent-{self.player_id} planning placement")
         planner = RandomPlacements()
         plan = planner.construct_plan(state, state.placements_left)
 
@@ -37,7 +37,7 @@ class MCSTRandomAgent(BaseAgent):
         return events
 
     def decide_attack(self, state: GameState, goal: Goal = None) -> List:
-        debug(f"mcts-random-agent-{self.player_id} planning attack")
+        info(f"mcts-random-agent-{self.player_id} planning attack")
         planner = RandomAttacks(
             10, player=self.player_id, attack_probability=self.attack_probability
         )
@@ -49,7 +49,7 @@ class MCSTRandomAgent(BaseAgent):
         return events
 
     def decide_movement(self, state: GameState, goal: Goal = None) -> List:
-        debug(f"mcts-random-agent-{self.player_id} planning movement")
+        info(f"mcts-random-agent-{self.player_id} planning movement")
         planner = RandomMovements(player=self.player_id)
         plan = planner.construct_plan(state)
 

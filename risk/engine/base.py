@@ -16,6 +16,7 @@ Examples
 """
 
 from risk.state.event_stack import Event, Level
+from risk.utils.logging import debug
 from risk.state import GameState
 
 from typing import List, Union
@@ -117,7 +118,7 @@ class DebugEngine(Engine):
 
     def process(self, state: GameState, element: Union[Event]) -> None:
         """Log the processing of the event or level."""
-        print(f"[DEBUG] Engine crashed out : {element.name}")
+        debug(f"Engine crashed out : {element.name}")
 
         return None
 
