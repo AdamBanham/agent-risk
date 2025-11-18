@@ -91,6 +91,18 @@ def parse_arguments():
         help="Simulation batch size between steps (default: 120)",
     )
 
+    parser.add_argument(
+        "--debug",
+        action="store_true",
+        help="Enable debug mode with verbose logging",
+    )
+
+    parser.add_argument(
+        "--info",
+        action="store_true",
+        help="Enable info mode with standard logging",
+    )
+
     return parser.parse_args()
 
 
@@ -98,8 +110,12 @@ if __name__ == "__main__":
     args = parse_arguments()
 
     from risk.utils.logging import setLevel
-    from logging import INFO
-    setLevel(INFO)
+    from logging import DEBUG, INFO
+
+    if args.info:
+        setLevel(INFO)
+    elif args.debug:
+        setLevel(DEBUG)
 
     # Validate arguments
     if args.regions < 1:
