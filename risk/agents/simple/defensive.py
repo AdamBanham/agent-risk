@@ -8,10 +8,8 @@ from typing import List
 
 from ...state.game_state import GameState
 from ...utils.movement import find_movement_sequence
-from ...utils.movement import find_safe_frontline_territories
-from ...utils.groups import find_connected_groups
 from risk.utils.logging import debug, info
-
+from risk.utils import map
 
 from ..agent import BaseAgent
 from risk.state.plan import Goal
@@ -38,19 +36,22 @@ class DefensiveAgent(BaseAgent):
         )
 
     def decide_placement(self, game_state: GameState, goal: Goal) -> List[Event]:
+        info(f"{self.name} deciding placements...")
+        current_map = game_state.map
+        safe_map = map.construct_safe_view(current_map, self.player_id)
 
-        _, frontlines = find_safe_frontline_territories(
-            game_state=game_state, player_id=self.player_id
-        )
+        n_most = random.randint(1, len(safe_map.frontline_nodes))
+        top_most = sorted(
+            safe_map.frontline_nodes,
+            key=lambda t: game_state.get_territory(t.id).armies,
+            reverse=True,
+        )[: int(n_most)]
 
-        n_most = random.uniform(1, len(frontlines))
-        top_most = sorted(frontlines, key=lambda t: t.armies, reverse=True)[
-            : int(n_most)
-        ]
         events = []
         for i in range(game_state.placements_left):
             if top_most:
-                selected_territory = top_most[int(i % len(top_most))]
+                map_node = top_most[int(i % len(top_most))]
+                selected_territory = game_state.get_territory(map_node.id)
                 event = TroopPlacementEvent(
                     turn=game_state.total_turns,
                     player=self.player_id,
@@ -62,18 +63,19 @@ class DefensiveAgent(BaseAgent):
         return events
 
     def decide_attack(self, game_state: GameState, goal: Goal) -> List[Event]:
-
-        _, frontlines = find_safe_frontline_territories(
-            game_state=game_state, player_id=self.player_id
-        )
+        info(f"{self.name} deciding attacks...")
+        current_map = game_state.map
+        safe_map = map.construct_safe_view(current_map, self.player_id)
 
         events = []
 
-        for front in frontlines:
-            for adjacent in front.adjacent_territories:
+        for front in safe_map.frontline_nodes:
+            front_terr = current_map.get_node(front.id)
+            for adjacent in current_map.get_adjacent_nodes(front.id):
                 if adjacent.owner != self.player_id:
-                    safe_troop_count = max(adjacent.armies + 5, adjacent.armies * 2)
-                    if front.armies > safe_troop_count:
+                    adj_terr = current_map.get_node(adjacent.id)
+                    safe_troop_count = max(adj_terr.value + 5, adj_terr.value * 3)
+                    if (front_terr.value - 1) > safe_troop_count:
                         event = AttackOnTerritoryEvent(
                             player=self.player_id,
                             turn=game_state.total_turns,
@@ -86,63 +88,35 @@ class DefensiveAgent(BaseAgent):
 
         if len(events) > 10:
             events = random.choices(events, k=10)
-        elif len(events) < 1:
-            debug(f"simple-defensive-agent-{self.player_id} did not find attack")
-
-            strongest_front = max(
-                frontlines, key=lambda t: t.armies, default=None
-            )
-            if strongest_front:
-                enemies = [
-                    adj
-                    for adj in strongest_front.adjacent_territories
-                    if adj.owner != self.player_id
-                ]
-                weakest_enemy = min(
-                    enemies, key=lambda t: t.armies, default=None
-                )
-                if weakest_enemy:
-                    event = AttackOnTerritoryEvent(
-                        player=self.player_id,
-                        turn=game_state.total_turns,
-                        from_territory=strongest_front.id,
-                        to_territory=weakest_enemy.id,
-                        attacking_troops=strongest_front.armies // 2,
-                    )
-                    events.append(event)
 
         return events
 
     def decide_movement(self, game_state: GameState, goal: Goal) -> List[Event]:
+        info(f"{self.name} deciding movement...")
+        current_map = game_state.map
+        network_map = map.construct_network_view(current_map, self.player_id)
 
-        safes, frontlines = find_safe_frontline_territories(
-            game_state=game_state, player_id=self.player_id
-        )
-        if len(safes) == 0 or len(frontlines) == 0:
-            return []
-        
-        groups = find_connected_groups(safes + frontlines)
-        events = []
+        for network in network_map.networks:
+            group = network_map.view(network)
+            debug(f"Processing group: {set(g for g in group.nodes)}")
 
-        info(f"Found groups: {len(groups)}")
-        for group in groups:
-            info(f"Processing group: {set(g.id for g in group)}")
-
-            if len(group) < 2:
+            if group.size <= 1:
                 continue
 
-            total_armies = sum(t.armies for t in group)
-            armies = {t.id: t.armies for t in group}
-            moveable = total_armies - len(group)
-            fronts = [t for t in group if t in frontlines]
+            armies = {t.id: current_map.get_node(t.id).value for t in group.nodes}
+            total_armies = sum(armies.values())
+            moveable = total_armies - group.size
+            fronts = group.frontlines_in_network(network)
             ideal_troops = moveable // len(fronts)
             missing = dict(
-                (t, ideal_troops - t.armies)
-                for t in fronts if t.armies < ideal_troops
+                (t, ideal_troops - armies[t.id])
+                for t in fronts
+                if armies[t.id] < ideal_troops
             )
 
+            events = []
             for tgt, troops in missing.items():
-                for src in group:
+                for src in group.nodes:
                     if src.id == tgt.id or src.id in missing:
                         continue
 
@@ -150,14 +124,14 @@ class DefensiveAgent(BaseAgent):
                         can_move = armies[src.id] - 1
                     else:
                         can_move = armies[src.id] - ideal_troops
-                        
+
                     if can_move <= 0:
                         continue
 
                     path = find_movement_sequence(
-                        src,
-                        tgt,
-                        can_move
+                        game_state.get_territory(src.id),
+                        game_state.get_territory(tgt.id),
+                        can_move,
                     )
 
                     if path:
@@ -174,7 +148,8 @@ class DefensiveAgent(BaseAgent):
                             )
                             events.append(event)
                         troops -= move_troops
-                        if troops <= 0:
-                            break
+
+                    if troops <= 0:
+                        break
 
         return events

@@ -19,6 +19,14 @@ class Node:
     def __str__(self):
         return "[{},{},{}]".format(self.id, self.owner, self.value)
 
+    def __hash__(self):
+        return hash((self.id))
+
+    def __eq__(self, other):
+        if not isinstance(other, Node):
+            return False
+        return self.id == other.id
+
 
 @dataclass
 class SafeNode(Node):
@@ -26,6 +34,14 @@ class SafeNode(Node):
 
     def __str__(self):
         return "[{}:{}]".format(self.id, self.value)
+
+    def __hash__(self):
+        return hash((self.id))
+
+    def __eq__(self, other):
+        if not isinstance(other, Node):
+            return False
+        return self.id == other.id
 
 
 @dataclass
@@ -35,6 +51,14 @@ class NetworkNode(Node):
 
     def __str__(self):
         return "[{}#{}]:{}".format(self.id, self.value, self.safe)
+
+    def __hash__(self):
+        return hash((self.id))
+
+    def __eq__(self, other):
+        if not isinstance(other, Node):
+            return False
+        return self.id == other.id
 
 
 @dataclass
@@ -117,6 +141,13 @@ class Graph[N, E]:
             if e.src == src and e.dest == dest:
                 return e
         return None
+
+    @property
+    def size(self) -> int:
+        """
+        Returns the number of nodes in the graph.
+        """
+        return len(self.nodes)
 
     def __str__(self):
         ret = "MapView:\n  Nodes:\n"
@@ -252,7 +283,7 @@ class NetworkGraph(Graph[NetworkNode, Edge]):
         """
         return [n for n in self.nodes if n.value == network and not n.safe]
 
-    def network_view(self, network: int) -> "NetworkGraph":
+    def view(self, network: int) -> "NetworkGraph":
         """
         Returns a subgraph view of the given network.
 
