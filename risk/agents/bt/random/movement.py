@@ -14,7 +14,7 @@ from risk.state import GameState
 from risk.utils.movement import Movement, find_movement_sequence
 from risk.utils.movement import find_safe_frontline_territories
 from risk.utils.movement import find_connected_frontline_territories
-from .bases import StateWithPlan, func_name, CheckPlan, SelectTerritory
+from ..bases import StateWithPlan, func_name, CheckPlan, Selector
 
 
 @dataclass
@@ -82,7 +82,7 @@ class FindSafeFrontlines(Behaviour):
         return Status.SUCCESS
 
 
-class FilterForMoveable(SelectTerritory):
+class FilterForMoveable(Selector):
     """
     Filters safe territories for moveable ones.
     """
@@ -99,7 +99,7 @@ class FilterForMoveable(SelectTerritory):
         return Status.SUCCESS
 
 
-class PopMovable(SelectTerritory):
+class PopMovable(Selector):
     """
     Pops a territory from moveable territories.
     """
@@ -264,7 +264,7 @@ class RandomMovements(Sequence):
                                 finder,
                                 filter,
                                 Inverter("found routes", builder),
-                                SelectTerritory("movements", "routes", "route"),
+                                Selector("movements", "routes", "route"),
                                 AddToPlan(),
                             ],
                         ),

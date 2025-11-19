@@ -11,9 +11,9 @@ import random
 from risk.state.territory import Territory
 from risk.agents.plans import PlacementPlan, TroopPlacementStep
 from risk.state import GameState
-from .bases import (
+from ..bases import (
     StateWithPlan, func_name,
-    CheckPlan, SelectTerritory
+    CheckPlan, Selector
 )
 
 
@@ -83,7 +83,10 @@ class AddToPlan(Behaviour):
 class RandomPlacements(Sequence):
 
     def __init__(
-        self, player: int, placements: int, territories: Set[int], game_state: GameState
+        self, player: int,
+        placements: int,
+        territories: Set[int],
+        game_state: GameState
     ):
         super().__init__(name="Placement Decision Making", memory=False)
 
@@ -94,7 +97,7 @@ class RandomPlacements(Sequence):
         self.placement_state.plan = PlacementPlan(placements)
 
         checker = CheckPlan(game_state, "placements")
-        select_terr = SelectTerritory("placements", "territories")
+        select_terr = Selector("placements", "territories")
         select_troops = SelectTroops()
         add_to_plan = AddToPlan()
 

@@ -12,11 +12,11 @@ from risk.state.territory import Territory
 from risk.agents.plans import AttackStep, AttackPlan
 from risk.state import GameState
 
-from .bases import (
+from ..bases import (
     StateWithPlan,
     func_name,
     CheckPlan,
-    SelectTerritory,
+    Selector,
 )
 
 
@@ -146,9 +146,9 @@ class RandomAttacks(Sequence):
         self.state.plan = AttackPlan(pos_attacks)
 
         checker = ShouldAttack(game_state, "attacks")
-        select_terr = SelectTerritory("attacks", "territories")
+        select_terr = Selector("attacks", "territories")
         find_adj = FindsAdjacent(game_state, "terr")
-        select_adj = SelectTerritory("attacks", "adjacents", "adjacent")
+        select_adj = Selector("attacks", "adjacents", "adjacent")
         select_troops = SelectTroops(game_state)
         add_to_plan = AddToPlan()
 

@@ -1,5 +1,5 @@
 from .simple import RandomAgent, DefensiveAgent, AggressiveAgent
-from .bt.random import BTRandomAgent
+from .bt import BTRandomAgent, BTDefensiveAgent
 from .htn.random import HTNRandomAgent
 from .mcts.random import MCSTRandomAgent
 from .dpn.random import DPNRandomAgent
@@ -38,6 +38,7 @@ class BTAgents(AgentFamily):
 
     class TYPES(Enum):
         RANDOM = BTRandomAgent
+        DEFENSIVE = BTDefensiveAgent
 
     @staticmethod
     def get_agent(strategy: AgentStrategies):
