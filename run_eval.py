@@ -16,14 +16,6 @@ def parse_arguments():
     )
 
     parser.add_argument(
-        "-s",
-        "--state",
-        type=str,
-        default="test.state",
-        help="Path to the state file to load (default: test.state)",
-    )
-
-    parser.add_argument(
         "--ai-delay",
         type=float,
         default=0.1,
@@ -38,23 +30,10 @@ def parse_arguments():
     )
 
     parser.add_argument(
-        "--sim-delay",
-        type=float,
-        default=0.2,
-        help="Delay between simulation steps in seconds (default: 0.2)",
-    )
-
-    parser.add_argument(
         "--turns",
         type=int,
         default=10,
         help="Number of turns to simulate forward (default: 10)",
-    )
-
-    parser.add_argument(
-        "--configured",
-        action="store_true",
-        help="Use configured AI agents instead of default random agents.",
     )
 
     return parser.parse_args()
