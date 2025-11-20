@@ -46,7 +46,7 @@ class TroopPlacementEvent(Event):
     """
 
     def __init__(self, 
-        turn:int, player: str, territory: Territory, num_troops: int):
+        turn:int, player: str, territory: int, num_troops: int):
         super().__init__(
           f"Troop Placement-T{turn}-P{player}-R{territory}x{num_troops}",
           dict(
