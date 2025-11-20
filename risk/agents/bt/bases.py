@@ -1,4 +1,5 @@
 from py_trees.behaviour import Behaviour
+from py_trees.composites import Selector as Selection
 from py_trees.common import Status
 from py_trees.common import Access
 
@@ -6,9 +7,10 @@ from dataclasses import dataclass
 from abc import abstractmethod
 import inspect
 import random
-from typing import Callable
+from typing import Callable, List
 
 from risk.state.plan import Plan
+from risk.utils.logging import debug
 
 
 def func_name():
@@ -29,23 +31,23 @@ class CheckPlan(Behaviour):
         self.bd_name = state_name
 
     def initialise(self):
-        self.logger.debug(f"{self.__class__.__name__}::{self.name}::{func_name()}")
+        debug(f"{self.__class__.__name__}::{self.name}::{func_name()}")
         self.bd = self.attach_blackboard_client(self.bd_name)
         self.bd.register_key(key="state", access=Access.READ)
 
     def update(self):
-        self.logger.debug(f"{self.__class__.__name__}::{self.name}::{func_name()}")
+        debug(f"{self.__class__.__name__}::{self.name}::{func_name()}")
         # Check if we have placements remaining
         state: StateWithPlan = self.bd.state
         if not state.plan.goal_achieved(self.game_state):
-            self.logger.debug("Plan not Acheived.")
+            debug("Plan not Acheived.")
             return Status.SUCCESS
         else:
-            self.logger.debug("Plan Acheived.")
+            debug("Plan Acheived.")
             return Status.FAILURE
 
     def terminate(self, new_status):
-        self.logger.debug(f"{self.__class__.__name__}::{self.name}::{func_name()}")
+        debug(f"{self.__class__.__name__}::{self.name}::{func_name()}")
         return super().terminate(new_status)
 
 
@@ -67,7 +69,7 @@ class Selector(Behaviour):
         condition: Callable = None,
         with_replacement: bool = True,
     ):
-        super().__init__("Select from Blackboard")
+        super().__init__("Select from {} to put in {}".format(attr_name, put_name))
         self.state_name = state_name
         self.attr_name = attr_name
         self.put_name = put_name
@@ -78,7 +80,7 @@ class Selector(Behaviour):
             self.condition = condition
 
     def initialise(self):
-        self.logger.debug(f"{self.__class__.__name__}::{self.name}::{func_name()}")
+        debug(f"{self.__class__.__name__}::{self.name}::{func_name()}")
         self._ticks = 0
         self.bd = self.attach_blackboard_client(self.state_name)
         self.bd.register_key(key="state", access=Access.WRITE)
@@ -91,11 +93,13 @@ class Selector(Behaviour):
             values = list(values)
         values = list(filter(self.condition, values))
         if len(values) == 0:
+            debug("No valid values to select from.")
             return Status.FAILURE
         terr = random.choice(values)
         if not self.replacement:
             values.remove(terr)
             setattr(state, self.attr_name, values)
+            debug(f"Selected {terr}, remaining: {values}")
         setattr(state, self.put_name, terr)
         return Status.SUCCESS
 
@@ -118,13 +122,13 @@ class Checker(Behaviour):
         attr_name: str,
         condition: Callable,
     ):
-        super().__init__("Check Blackboard Condition")
+        super().__init__("Checking {}".format(attr_name))
         self.state_name = state_name
         self.attr_name = attr_name
         self.condition = condition
 
     def initialise(self):
-        self.logger.debug(f"{self.__class__.__name__}::{self.name}::{func_name()}")
+        debug(f"{self.__class__.__name__}::{self.name}::{func_name()}")
         self._ticks = 0
         self.bd = self.attach_blackboard_client(self.state_name)
         self.bd.register_key(key="state", access=Access.READ)
@@ -165,7 +169,7 @@ class BuildAction(Behaviour):
         self.attr_name = attr_name
 
     def initialise(self):
-        self.logger.debug(f"{self.__class__.__name__}::{self.name}::{func_name()}")
+        debug(f"{self.__class__.__name__}::{self.name}::{func_name()}")
         self._ticks = 0
         self.bd = self.attach_blackboard_client(self.state_name)
         self.bd.register_key(key="state", access=Access.WRITE)
@@ -184,4 +188,33 @@ class BuildAction(Behaviour):
         pass
 
     def terminate(self, new_status):
+        return super().terminate(new_status)
+
+
+class ExecuteIf(Selection):
+    """
+    Executes a child behaviour only if all the given checkers return
+    false.
+
+    :param condition: Condition to check
+    """
+
+    def __init__(
+        self,
+        name: str,
+        checks: List[Checker],
+        child: Behaviour,
+    ):
+        super().__init__(name, False, [])
+
+        self.add_children(
+            checks + [child]
+        )
+
+    def initialise(self):
+        debug(f"{self.__class__.__name__}::{self.name}::{func_name()}")
+        return super().initialise()
+
+    def terminate(self, new_status):
+        debug(f"{self.__class__.__name__}::{self.name}::{func_name()}")
         return super().terminate(new_status)
