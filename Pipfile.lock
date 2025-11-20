@@ -551,12 +551,12 @@
         },
         "py-trees": {
             "hashes": [
-                "sha256:02831face639b15edd5830df76dd59f358358177384543cf17a5e019370bffc2",
-                "sha256:ff36cf3f228589d2efaaaa26eaebb08e1f9f7baa2b06398bc721e953aa45531f"
+                "sha256:c26a2d23f70871ce093abd5f8425998529bfe7b97cc563316e9c3c9cec20c312",
+                "sha256:cd8738a80e7422aec2b133270b6aa92e3e83926ded2ba9b3614028dba99cdb41"
             ],
             "index": "pypi",
             "markers": "python_version >= '3.9' and python_version < '4.0'",
-            "version": "==2.3.0"
+            "version": "==2.4.0"
         },
         "pydot": {
             "hashes": [

@@ -5,12 +5,12 @@ name = "pypi"
 
 [packages]
 pygame = "*"
-py-trees = "*"
 monte-carlo-tree-search = "*"
 matplotlib = "*"
 pyqt6 = "*"
 simpn = "*"
 xdevs = "*"
+py-trees = "*"
 
 [dev-packages]
 
