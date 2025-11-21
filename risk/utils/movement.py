@@ -1,4 +1,5 @@
 from risk.state.game_state import GameState
+from risk.utils.logging import debug
 from ..state import Territory
 
 from typing import Tuple, Union, List, Set, Optional
@@ -28,18 +29,22 @@ def find_movement_sequence(
     """
     # Validate inputs
     if not src or not tgt or amount <= 0:
+        raise ValueError("Invalid parameters for find_movement_sequence")
         return None
 
     # Check if source and target have the same owner
     if src.owner != tgt.owner or src.owner is None:
+        raise ValueError("Source and target territories have different owners")
         return None
 
-    # Check if source has enough armies (must leave at least 1)
-    if src.armies <= amount:
-        return None
+    # # Check if source has enough armies (must leave at least 1)
+    # if src.armies <= amount:
+    #     debug("Source territory does not have enough armies to move")
+    #     return None
 
     # If source and target are the same, no movement needed
     if src.id == tgt.id:
+        ("Source and target territories are the same")
         return []
 
     # If source and target are adjacent, direct movement
@@ -49,6 +54,7 @@ def find_movement_sequence(
     # Use BFS to find shortest path through owned territories
     path = _find_path_bfs(src, tgt)
     if not path:
+        raise ValueError("No valid path found between source and target territories")
         return None
 
     # Convert path to movement sequence
