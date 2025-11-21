@@ -314,7 +314,7 @@ class MovementPlanner(Planner):
 
         plan = MovementPlan(len(actions))
 
-        for move in actions:
+        for move in reversed(actions):
             debug(f"Planned movement: {move}")
 
             movements = find_movement_sequence(
@@ -322,6 +322,9 @@ class MovementPlanner(Planner):
                 state.get_territory(move.destination),
                 move.troops,
             )
+
+            if not movements:
+                raise ValueError(f"No movement path found from {move.source} to {move.destination}!!!!")
 
             movements = [
                 MovementStep(
