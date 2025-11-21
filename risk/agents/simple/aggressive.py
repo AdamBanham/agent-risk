@@ -3,12 +3,11 @@ Simple random AI agent for the Risk simulation.
 Makes aggressive decisions for placement, attacking, and movement phases.
 """
 
-import random
 from typing import List
 from copy import deepcopy
 
 from ...state.game_state import GameState
-from ...utils.movement import find_movement_sequence, Movement
+from ...utils.movement import find_movement_sequence
 from risk.utils import map as mapping
 from risk.utils.logging import debug, info
 
@@ -53,7 +52,7 @@ class AggressiveAgent(BaseAgent):
             for neighbor in map.get_adjacent_nodes(node.id):
                 if neighbor.owner != self.player_id:
                     total += armies / neighbor.value
-            return total 
+            return total
 
         fronts = sorted(fronts, key=sum_of_adjacents, reverse=True)
         self.front = fronts[0]
@@ -100,11 +99,11 @@ class AggressiveAgent(BaseAgent):
                 attacking_troops=attacking,
             )
         ]
-        ## it would be nice if we had a way to connect further attacks 
-        ## with the outcomes of the previous 
-        ## future work likely though...
-        attacking = attacking // 2 
-        last = target.id 
+        ## it would be nice if we had a way to connect future attacks
+        ## with the outcomes of the previous
+        ## this is likely future work though...
+        attacking = attacking // 2
+        last = target.id
         while attacking > 1:
             adjacents = map.get_adjacent_nodes(last)
             adjacents = [o for o in adjacents if o.owner != self.player_id]
@@ -137,7 +136,7 @@ class AggressiveAgent(BaseAgent):
             for neighbor in map.get_adjacent_nodes(node.id):
                 if neighbor.owner != self.player_id:
                     total += armies / neighbor.value
-            return total 
+            return total
 
         # distribute within network based on possible next attacks
         map = game_state.map
@@ -175,6 +174,10 @@ class AggressiveAgent(BaseAgent):
                             num_troops,
                             move_map.get_node(node.id).value - 1,
                         )
+
+                        if movable <= 0:
+                            continue
+
                         path = find_movement_sequence(
                             game_state.get_territory(node.id),
                             game_state.get_territory(front.id),
