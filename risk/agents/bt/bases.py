@@ -107,6 +107,136 @@ class Selector(Behaviour):
         return super().terminate(new_status)
 
 
+class Compute(Behaviour):
+    """
+    Performs a computation using a provided blackboard and
+    stores the result back on the blackboard.
+
+    :param state_name: Name of the blackboard to read from
+    :param put_name: Name of the attribute to put the computed value into
+
+    :method compute(state) -> Any: Computes the value based on the state.
+        Must be implemented by subclasses.
+    """
+
+    def __init__(self, state_name: str, put_name: str):
+        super().__init__("Computing value for {}".format(put_name))
+        self.state_name = state_name
+        self.put_name = put_name
+
+    def initialise(self):
+        debug(f"{self.__class__.__name__}::{self.name}::{func_name()}")
+        self.bd = self.attach_blackboard_client(self.state_name)
+        self.bd.register_key(key="state", access=Access.WRITE)
+        return super().initialise()
+
+    def update(self):
+        state = self.bd.state
+        value = self.compute(state)
+        setattr(state, self.put_name, value)
+        return Status.SUCCESS
+
+    @abstractmethod
+    def compute(self, state):
+        pass
+
+
+class PutInto(Behaviour):
+    """
+    Places a value on the blackboard into a collection on
+    the blackboard.
+
+    :param state_name: Name of the blackboard to read from
+    :param from_name: Name of the attribute to read value from
+    :param to_name: Name of the attribute to put the value into
+    :param key: Optional key to use from the blackboard as the key
+        for dictionary collections.
+    """
+
+    def __init__(
+        self,
+        state_name: str,
+        from_name: str,
+        to_name: str,
+        key: str,
+    ):
+        super().__init__("Put {} into {}".format(from_name, to_name))
+        self.state_name = state_name
+        self.from_name = from_name
+        self.to_name = to_name
+        self.key_name = key
+
+    def initialise(self):
+        debug(f"{self.__class__.__name__}::{self.name}::{func_name()}")
+        self.bd = self.attach_blackboard_client(self.state_name)
+        self.bd.register_key(key="state", access=Access.WRITE)
+        return super().initialise()
+
+    def update(self):
+        state = self.bd.state
+        value = getattr(state, self.from_name)
+        collection = getattr(state, self.to_name)
+        if isinstance(collection, dict):
+            if self.key_name is not None:
+                key = getattr(state, self.key_name)
+                collection[key] = value
+            else:
+                debug("No key provided for dictionary collection.")
+                return Status.FAILURE
+        elif isinstance(collection, list):
+            collection.append(value)
+        elif isinstance(collection, set):
+            collection.add(value)
+        else:
+            debug(f"Unsupported collection type: {type(collection)}")
+            return Status.FAILURE
+        setattr(state, self.to_name, collection)
+        return Status.SUCCESS
+
+
+class GetBestFrom(Behaviour):
+    """
+    Reterives the best value from a collection on the blackboard.
+
+    :param state_name: Name of the blackboard to read from
+    :param from_name: Name of the attribute to read values from
+    :param to_name: Name of the attribute to put the best value into
+
+    :method best(collection) -> object: Determines the best value
+        from the collection. Must be implemented by subclasses.
+    """
+
+    def __init__(self, state_name: str, from_name: str, to_name: str):
+        super().__init__("Finding best in {}".format(from_name))
+        self.state_name = state_name
+        self.from_name = from_name
+        self.to_name = to_name
+
+    def initialise(self):
+        debug(f"{self.__class__.__name__}::{self.name}::{func_name()}")
+        self.bd = self.attach_blackboard_client(self.state_name)
+        self.bd.register_key(key="state", access=Access.WRITE)
+        return super().initialise()
+
+    def update(self):
+        state = self.bd.state
+        collection = getattr(state, self.from_name)
+        if not collection:
+            debug("No values in collection to select best from.")
+            return Status.FAILURE
+        best_value = self.best(collection)
+        setattr(state, self.to_name, best_value)
+        return Status.SUCCESS
+
+    @abstractmethod
+    def best(self, collection) -> object:
+        """
+        Determines the best value from the collection and
+        returns it.
+        """
+        pass
+
+
 class Checker(Behaviour):
     """
     Checks if a condition is met on a blackboard attribute.
@@ -207,9 +337,7 @@ class ExecuteIf(Selection):
     ):
         super().__init__(name, False, [])
 
-        self.add_children(
-            checks + [child]
-        )
+        self.add_children(checks + [child])
 
     def initialise(self):
         debug(f"{self.__class__.__name__}::{self.name}::{func_name()}")
