@@ -13,6 +13,7 @@ from .territory import Territory
 from .ui import TurnUI
 from .turn_manager import TurnManager
 from risk.utils.map import Graph, Node, Edge, construct_graph
+from risk.utils.logging import info
 
 
 @dataclass
@@ -185,7 +186,7 @@ class GameState:
             from ..state.board_generator import generate_sample_board
 
             generate_sample_board(self, self.screen_width, self.screen_height - 120)
-            print(f"Generated initial board with {len(self.territories)} territories")
+            info(f"Generated initial board with {len(self.territories)} territories")
         else:
             # determine adjacencies
             self.set_adjacent_territories()
@@ -198,7 +199,7 @@ class GameState:
         self.ui_turn_manager = TurnManager(self)
         self.ui_turn_state = TurnUI(self.screen_width, self.screen_height)
 
-        self.map = construct_graph(self)
+        self.update_player_statistics()
 
         if self.phase == GamePhase.INIT:
             self.phase = GamePhase.PLAYER_TURN
