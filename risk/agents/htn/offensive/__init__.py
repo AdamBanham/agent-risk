@@ -3,7 +3,7 @@ This module contains the logic for Hierarchical Task Network (HTN)
 Offensive Agent Implementation.
 """
 
-from ..agent import BaseAgent
+from ...agent import BaseAgent
 
 class HTNOffensiveAgent(BaseAgent):
     """
