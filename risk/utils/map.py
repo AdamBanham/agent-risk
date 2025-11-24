@@ -5,6 +5,7 @@ the current state of the map in the simulation.
 
 from dataclasses import dataclass
 from typing import Collection, TYPE_CHECKING
+from copy import deepcopy
 
 if TYPE_CHECKING:
     from risk.state import GameState
@@ -148,6 +149,12 @@ class Graph[N, E]:
         Returns the number of nodes in the graph.
         """
         return len(self.nodes)
+
+    def clone(self) -> "Graph[N, E]":
+        """
+        Creates a deep copy of the graph.
+        """
+        return Graph(nodes=deepcopy(self.nodes), edges=deepcopy(self.edges))
 
     def __str__(self):
         ret = "MapView:\n  Nodes:\n"
