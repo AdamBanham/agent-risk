@@ -43,7 +43,8 @@ def debug(msg: str, *args, **kwargs):
     """
     Sends a debug message to the koalas logger.
     """
-    get_logger().debug(msg, stacklevel=2, *args, **kwargs)
+    stacklevel= 2 if 'stacklevel' not in kwargs else kwargs.pop('stacklevel')
+    get_logger().debug(msg, stacklevel=stacklevel, *args, **kwargs)
 
 
 def warn(msg: str, *args, **kwargs):
