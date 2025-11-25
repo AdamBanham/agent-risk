@@ -51,8 +51,12 @@ class Selector:
         self.namespace = namespace
         self.__name__ = f"select_{to_key}"
 
-    def __call__(self, dom: object, collection: Collection) -> object:
+    def __call__(self, dom: object, collection: Collection | str) -> object:
         state = getattr(dom, self.namespace, None)
+
+        if isinstance(collection, str):
+            collection = getattr(state, collection, None)
+
         debug(
             f"Action '{self.__name__}' called with collection: {collection}",
         )

@@ -6,6 +6,7 @@ Defensive Agent Implementation.
 from ...agent import BaseAgent
 
 from .placement import PlacementPlanner
+from .attack import AttackPlanner
 from risk.utils.logging import info
 
 
@@ -37,7 +38,19 @@ class HTNDefensiveAgent(BaseAgent):
 
     def decide_attack(self, game_state, goal):
         info(f"{self.name} is deciding attacks...")
-        return super().decide_attack(game_state, goal)
+
+        planner = AttackPlanner(
+            self.player_id, max_attacks=10
+        )
+        plan = planner.construct_plan(game_state)
+
+        events = []
+        assert len(plan.steps) <= 10, \
+            "Attack plan steps has too many attacks."
+        while not plan.is_done():
+            step = plan.pop_step()
+            events.extend(step.execute(game_state))
+        return events
 
     def decide_movement(self, game_state, goal):
         info(f"{self.name} is deciding movements...")
