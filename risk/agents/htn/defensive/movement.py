@@ -242,7 +242,7 @@ class MovementPlanner(Planner):
             pstate, [("moving", "balanced", len(pstate.moving.networks))]
         )
         actions: list[MovementStep] = final_state.moving.actions
-        debug(f"Generated actions for placement plan: {actions}")
+        debug(f"Generated actions for movement plan: {actions}")
 
         plan = MovementPlan(moves=len(actions))
         for action in actions:
