@@ -5,6 +5,7 @@ from risk.utils import map as mapping
 from ...plans import PlacementPlan, TroopPlacementStep
 
 import random
+from typing import List
 
 from mcts.base.base import BaseState, BaseAction
 from mcts.searcher.mcts import MCTS
@@ -29,6 +30,12 @@ class Placement(BaseAction):
 
     def __hash__(self):
         return hash((self.territory))
+    
+    def __str__(self):
+        return f"(#{self.territory}, 1)"
+    
+    def __repr__(self):
+        return self.__str__()
 
 
 class PlacementState(BaseState):
@@ -47,7 +54,7 @@ class PlacementState(BaseState):
     def get_current_player(self) -> int:
         return 1  # Maximizer
 
-    def get_possible_actions(self) -> [Placement]:
+    def get_possible_actions(self) -> List[Placement]:
         actions = []
         if self.placements_left > 0:
             for terr in self.map.nodes_for_player(self.player):

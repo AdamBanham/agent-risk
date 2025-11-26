@@ -216,6 +216,9 @@ class SafeGraph(Graph[SafeNode, Edge]):
         if node:
             return node.value
         return False
+    
+    def clone(self):
+        return SafeGraph(nodes=deepcopy(self.nodes), edges=deepcopy(self.edges))
 
 
 def construct_safe_view(map: Graph[Node, Edge], player: int) -> SafeGraph:
