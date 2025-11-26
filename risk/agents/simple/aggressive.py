@@ -56,21 +56,17 @@ class AggressiveAgent(BaseAgent):
             return total
 
         fronts = sorted(fronts, key=sum_of_adjacents, reverse=True)
-        self.front = fronts[0]
-
-        if sum_of_adjacents(self.front) < 0.25:
-            self.front = None
-            return []
-
+        fronter = fronts[0]
         events = [
             TroopPlacementEvent(
                 turn=game_state.current_turn,
                 player=self.player_id,
-                territory=self.front.id,
+                territory=fronter.id,
                 num_troops=game_state.placements_left,
             )
         ]
 
+        self.front = fronter if sum_of_adjacents(fronter) > 0.25 else None
         return events
 
     def decide_attack(self, game_state: GameState, goal: Goal) -> List[Event]:
@@ -163,7 +159,7 @@ class AggressiveAgent(BaseAgent):
 
             # normalize weights and assign troops
             total_weight = sum(w for f, w in options)
-            weights = [w / total_weight for f, w in options]
+            options = [(f, w / total_weight) for f, w in options]
             options = [(f, min(1, int(movable_armies * w))) for f, w in options]
 
             # sort by most important frontline first
