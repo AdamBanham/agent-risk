@@ -5,4 +5,4 @@ implementation.
 
 from .random import HTNRandomAgent
 from .defensive import HTNDefensiveAgent
-from .offensive import HTNOffensiveAgent
+from .offensive import HTNAggressiveAgent
