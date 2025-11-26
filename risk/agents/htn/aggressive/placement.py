@@ -29,8 +29,38 @@ class PlacementState(HTNStateWithPlan):
     actions: List[TroopPlacementStep] = field(default_factory=list)
 
 
+def sum_of_adjacents(node: mapping.SafeNode, map: mapping.Graph, player: int) -> float:
+    total = 0
+    armies = map.get_node(node.id).value
+    for neighbor in map.get_adjacent_nodes(node.id):
+        if neighbor.owner != player:
+            total += armies / neighbor.value
+    return total
+
+
+def compute_terr(state: PlacementState):
+    fronts = state.safe_map.frontline_nodes
+    if len(fronts) == 0:
+        return None
+
+    fronts = sorted(
+        fronts,
+        key=lambda node: sum_of_adjacents(node, state.map, state.player),
+        reverse=True,
+    )
+
+    return fronts[0]
+
+
 def drop_placements(dom, arg, places):
-    pass
+    return [("compute_terr",), ("build_step",), ("compute_placed",)]
+
+
+def construct_step(state: PlacementState) -> TroopPlacementStep:
+    return TroopPlacementStep(
+        territory=state.terr.id,
+        troops=state.placements,
+    )
 
 
 def construct_planning_domain(state: GameState):
@@ -39,7 +69,11 @@ def construct_planning_domain(state: GameState):
     include_commands()
 
     ## declare actions
-    include_methods()
+    include_methods(
+        Computer("terr", "placing", compute_terr),
+        BuildStep("actions", "placing", construct_step),
+        Computer("placed", "placing", lambda s: s.placements),
+    )
 
     ## declear unigoal methods
     ghop.declare_unigoal_methods(
@@ -116,7 +150,8 @@ if __name__ == "__main__":
 
     print("Generated Placement Plan:", plan)
     assert (
-        len(plan.steps) == placements
-    ), "Number of placement steps should equal placements"
+        len(plan.steps) == 1
+    ), "Number of placement steps should be one"
     for step in plan.steps:
         print(step)
+        assert step.troops == placements, "The placement step should place all troops"

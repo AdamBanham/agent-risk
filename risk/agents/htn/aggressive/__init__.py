@@ -31,8 +31,8 @@ class HTNAggressiveAgent(BaseAgent):
 
         events = []
         assert (
-            len(plan.steps) == game_state.placements_left
-        ), "Placement plan steps do not match placements left."
+            len(plan.steps) == 1
+        ), "Placement plan steps are not singular."
         while not plan.is_done():
             step = plan.pop_step()
             events.extend(step.execute(game_state))
@@ -53,6 +53,8 @@ class HTNAggressiveAgent(BaseAgent):
 
     def decide_movement(self, game_state, goal):
         info(f"{self.name} deciding movements...")
+        game_state.update_player_statistics()
+
         planner = MovementPlanner(
             self.player_id,
         )
