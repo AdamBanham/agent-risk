@@ -93,9 +93,10 @@ class DefensiveAgent(BaseAgent):
 
     def decide_movement(self, game_state: GameState, goal: Goal) -> List[Event]:
         info(f"{self.name} deciding movement...")
-        current_map = game_state.map
+        current_map = map.construct_graph(game_state)
         network_map = map.construct_network_view(current_map, self.player_id)
 
+        all_events = []
         for network in network_map.networks:
             group = network_map.view(network)
             debug(f"Processing group: {set(g for g in group.nodes)}")
@@ -105,8 +106,8 @@ class DefensiveAgent(BaseAgent):
 
             armies = {t.id: current_map.get_node(t.id).value for t in group.nodes}
             total_armies = sum(armies.values())
-            moveable = total_armies - group.size
             fronts = group.frontlines_in_network(network)
+            moveable = total_armies - (group.size - len(fronts))
             ideal_troops = moveable // len(fronts)
             missing = dict(
                 (t, ideal_troops - armies[t.id])
@@ -151,5 +152,6 @@ class DefensiveAgent(BaseAgent):
 
                     if troops <= 0:
                         break
+            all_events.extend(reversed(events))
 
-        return events
+        return all_events
