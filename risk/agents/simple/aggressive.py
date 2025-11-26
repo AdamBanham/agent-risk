@@ -5,6 +5,7 @@ Makes aggressive decisions for placement, attacking, and movement phases.
 
 from typing import List
 from copy import deepcopy
+import random
 
 from ...state.game_state import GameState
 from ...utils.movement import find_movement_sequence
@@ -128,34 +129,46 @@ class AggressiveAgent(BaseAgent):
 
     def decide_movement(self, game_state: GameState, goal: Goal) -> List[Event]:
         info(f"{self.name} deciding movement...")
-        events = []
 
         def sum_of_adjacents(node: mapping.SafeNode) -> int:
             total = 0
-            armies = map.get_node(node.id).value
             for neighbor in map.get_adjacent_nodes(node.id):
                 if neighbor.owner != self.player_id:
-                    total += armies / neighbor.value
+                    total += (1.0 / neighbor.value) * 10
             return total
 
         # distribute within network based on possible next attacks
-        map = game_state.map
+        map = mapping.construct_graph(game_state)
         network_map = mapping.construct_network_view(map, self.player_id)
 
+        all_events = []
         for network in network_map.networks:
             network_view = network_map.view(network)
 
             # work out the distribution of troops to each frontline territory
             fronts = network_view.frontlines_in_network(network)
-            movable_armies = sum(node.value for node in network_view.nodes)
-            movable_armies -= network_view.size
+            movable_armies = sum(
+                map.get_node(node.id).value for node in network_view.nodes
+            )
+            movable_armies -= network_view.size - len(fronts)
             weights = [sum_of_adjacents(node) for node in fronts]
-            total_weight = sum(weights)
-            weights = [w / total_weight for w in weights]
-            troops = [min(1, int(movable_armies * w)) for w in weights]
 
+            # sort them to keep only the top three positions
+            top_most = random.randint(1, min(3, len(fronts)))
+            options = sorted(
+                zip(fronts, weights),
+                key=lambda x: x[1],
+                reverse=True,
+            )[:top_most]
+
+            # normalize weights and assign troops
+            total_weight = sum(w for f, w in options)
+            weights = [w / total_weight for f, w in options]
+            options = [(f, min(1, int(movable_armies * w))) for f, w in options]
+
+            # sort by most important frontline first
             ordered_fronts = sorted(
-                zip(fronts, troops),
+                options,
                 key=lambda x: x[1],
                 reverse=True,
             )
@@ -163,6 +176,7 @@ class AggressiveAgent(BaseAgent):
             # fill frontline territories from most to least important
             secured_terrs = set()
             move_map = deepcopy(map)
+            events = []
             for front, num_troops in ordered_fronts:
                 for node in network_view.nodes:
                     if (
@@ -195,12 +209,13 @@ class AggressiveAgent(BaseAgent):
                                         moving_troops=move.amount,
                                     )
                                 )
-                            events.extend(reversed(route))
                             move_map.get_node(node.id).value -= movable
                             move_map.get_node(front.id).value += movable
+                            events.extend(route)
 
                     if num_troops <= 0:
                         secured_terrs.add(front.id)
                         break
+            all_events.extend(reversed(events))
 
-        return events
+        return all_events
