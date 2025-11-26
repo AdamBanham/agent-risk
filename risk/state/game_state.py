@@ -166,12 +166,18 @@ class GameState:
         Determine and set adjacent territories based on shared vertices.
         Updates each territory's adjacency list.
         """
+        from risk.utils.distance import euclidean_distance
+        from risk.utils.distance import Point
+        from itertools import product
+
+        espilson = 1e-4  # small value to avoid floating point issues
         for territory in self.territories.values():
             for other in self.territories.values():
                 if other.id == territory.id:
                     continue
                 shared_vertices = any(
-                    vertex in other.vertices for vertex in territory.vertices
+                    euclidean_distance(Point(*l), Point(*r)) < espilson
+                    for l, r in product(territory.vertices, other.vertices)
                 )
                 if shared_vertices:
                     territory.add_adjacent_territory(other)
@@ -298,17 +304,17 @@ class GameState:
 
         next_id = (self.current_player_id + 1) % len(self.players.keys())
         self.current_player_id = next_id
-        
+
         if self.current_player_id == self.starting_player:
             self.total_turns += 1
             self.current_turn += 1
-        
+
         next_player = self.get_player(self.current_player_id)
         if not next_player.is_active:
             return self.advance_turn()
 
         self.last_updated = time.time()
-        return 
+        return
 
     def check_victory_condition(self) -> Optional[int]:
         """
@@ -341,19 +347,9 @@ class GameState:
         # Reset all player territory sets
         for player in self.players.values():
             terrs = self.get_territories_owned_by(player.id)
-            player.territories_controlled = set(
-                [
-                    t.id
-                    for t 
-                    in terrs
-                ]
-            )
+            player.territories_controlled = set([t.id for t in terrs])
 
-            player.total_armies = sum(
-                t.armies
-                for t 
-                in terrs
-            )
+            player.total_armies = sum(t.armies for t in terrs)
 
         # Check for eliminated players
         for player in self.players.values():
@@ -388,11 +384,7 @@ class GameState:
         """String representation for debugging."""
         ret = "GameState("
 
-        non_inserted = [
-            "ui_state",
-            "ui_turn_manager",
-            "ui_turn_state"
-        ]
+        non_inserted = ["ui_state", "ui_turn_manager", "ui_turn_state"]
 
         for attr, value in self.__dict__.items():
             if attr in non_inserted:
