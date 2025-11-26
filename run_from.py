@@ -55,10 +55,11 @@ def parse_arguments():
 
 
 if __name__ == "__main__":
+    from risk.utils.loading import load_game_state_from_file
     args = parse_arguments()
 
     print("Loading state from file:", args.state)
-    test_state: GameState = eval(open(join(".", args.state), "r").read())
+    test_state: GameState = load_game_state_from_file(join(".", args.state))
     test_state.initialise(False)
     if args.player != -1:
         # Set all other players to inactive
