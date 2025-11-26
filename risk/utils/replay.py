@@ -23,8 +23,17 @@ def simulate_turns(
 ) -> Tuple[GameState, RiskRecordEngine, RiskPlayerScoresEngine]:
     """
     Runs a risk simulation forward for a specified number of turns.
-    Uses a random policy for all player turns and will make a copy
-    of the given game state to avoid modifying the original.
+    By default, the simulation uses a random policy for all player turns 
+    and will make a copy of the given game state to avoid modifying the original.
+
+    :param game_state: The initial GameState to simulate from.
+    :param turns: The number of turns to simulate.
+    :param config: Optional SimulationConfiguration to customize the simulation.
+
+    :param config.attack_rate: The attack rate for AI agents (default 0.5).
+    :param config.load_ai_from_file: Whether to load AI configurations from file (default False).
+    :param config.configuration: A dictionary specifying AI configurations (default None).
+    :param config.score: Whether to compute and return player scores (default False).
 
     :returns: A tuple of the final GameState and the RiskRecordEngine used
     to record the simulation events.
