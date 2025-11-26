@@ -134,7 +134,7 @@ class AggressiveAgent(BaseAgent):
             return total
 
         # distribute within network based on possible next attacks
-        map = mapping.construct_graph(game_state)
+        map = game_state.map
         network_map = mapping.construct_network_view(map, self.player_id)
 
         all_events = []

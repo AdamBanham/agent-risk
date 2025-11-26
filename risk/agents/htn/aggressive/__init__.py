@@ -53,7 +53,6 @@ class HTNAggressiveAgent(BaseAgent):
 
     def decide_movement(self, game_state, goal):
         info(f"{self.name} deciding movements...")
-        game_state.update_player_statistics()
 
         planner = MovementPlanner(
             self.player_id,

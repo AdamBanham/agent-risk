@@ -271,3 +271,33 @@ class ClearTerritory(SideEffectEvent):
         if territory:
             territory.set_owner(self.context.previous_owner_id)
         state.update_player_statistics()
+
+
+class UpdateState(SideEffectEvent):
+    """
+    Triggers an update of the game state statistics.
+    """
+
+    def __init__(self):
+        super().__init__("UpdateStatistics", {})
+
+    def apply(self, state: "GameState") -> None:
+        state.update_player_statistics()
+
+    def revert(self, state: "GameState") -> None:
+        pass
+
+
+class EndTurn(SideEffectEvent):
+    """
+    Ends the current player's turn.
+    """
+
+    def __init__(self):
+        super().__init__("EndTurn", {})
+
+    def apply(self, state: "GameState") -> None:
+        state.advance_turn()
+
+    def revert(self, state: "GameState") -> None:
+        pass

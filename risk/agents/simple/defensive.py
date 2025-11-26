@@ -43,7 +43,7 @@ class DefensiveAgent(BaseAgent):
         n_most = random.randint(1, len(safe_map.frontline_nodes))
         top_most = sorted(
             safe_map.frontline_nodes,
-            key=lambda t: game_state.get_territory(t.id).armies,
+            key=lambda t: current_map.get_node(t.id).value,
             reverse=True,
         )[: int(n_most)]
 
@@ -93,7 +93,7 @@ class DefensiveAgent(BaseAgent):
 
     def decide_movement(self, game_state: GameState, goal: Goal) -> List[Event]:
         info(f"{self.name} deciding movement...")
-        current_map = map.construct_graph(game_state)
+        current_map = game_state.map
         network_map = map.construct_network_view(current_map, self.player_id)
 
         all_events = []

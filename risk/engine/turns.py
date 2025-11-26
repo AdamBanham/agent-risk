@@ -57,6 +57,10 @@ from ..state.event_stack import (
     UpdateReinforcements,
     ClearReinforcements,
 )
+from ..state.event_stack.events.sideffects import (
+    UpdateState,
+    EndTurn
+)
 
 
 class RiskTurnEngine(Engine):
@@ -94,7 +98,9 @@ class RiskTurnEngine(Engine):
         if isinstance(element, AgentTurnPhase):
             phases = [
                 MovementPhase(game_state.total_turns, game_state.current_player_id),
+                UpdateState(),
                 AttackPhase(game_state.total_turns, game_state.current_player_id),
+                UpdateState(),
                 PlacementPhase(game_state.total_turns, game_state.current_player_id),
                 UpdateReinforcements(game_state.current_player_id),
             ]
@@ -119,8 +125,10 @@ class RiskTurnEngine(Engine):
                 ),
             ]
         elif isinstance(element, AgentTurnEndEvent):
-            game_state.advance_turn()
-            game_state.update_player_statistics()
+            return [
+                EndTurn(),
+                UpdateState(),
+            ]
 
         return super().process(game_state, element)
 
@@ -152,7 +160,7 @@ class RiskPlacementEngine(Engine):
     def process(self, game_state: GameState, element: Union[Event, Level]) -> None:
 
         if isinstance(element, PlacementPhaseEndEvent):
-            return [ClearReinforcements(game_state.placements_left)]
+            return [ClearReinforcements(game_state.placements_left),]
         elif isinstance(element, TroopPlacementEvent):
             return self._handle_placement(game_state, element)
 
