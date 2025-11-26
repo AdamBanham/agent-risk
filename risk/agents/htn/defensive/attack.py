@@ -4,7 +4,10 @@ from risk.utils import map as mapping
 from risk.utils.logging import debug
 
 from risk.agents.htn import gtpyhop as ghop
-from ..bases import Selector, HTNStateWithPlan, BuildStep, Computer, Filter
+from ..bases import (
+    include_commands, include_methods,
+    Selector, HTNStateWithPlan, BuildStep, Computer, Filter
+)
 
 import random
 from dataclasses import dataclass, field
@@ -110,8 +113,10 @@ def attacking(dom, arg, tgt):
 def construct_planning_domain(state: GameState):
     ghop.current_domain = ghop.Domain("htn_defensive_attack")
 
+    include_commands()
+
     ## declare actions
-    ghop.declare_actions(
+    include_methods(
         Filter("fronts", "attacking", filter_fronts),
         Selector("attacker", "attacking"),
         Computer("adjacents", "attacking", compute_adjacents),

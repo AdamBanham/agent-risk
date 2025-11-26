@@ -25,6 +25,34 @@ class HTNStateWithPlan:
         return getattr(self, key)
 
 
+# low level commands for actions
+def c_append(dom, namespace: str, key: str, value: object) -> object:
+    state = getattr(dom, namespace, None)
+    debug(f"Command 'add' called to add value: {value} to key: {key}")
+    collection: list = getattr(state, key, None)
+    collection.append(value)
+    setattr(state, key, collection)
+    return dom
+
+def c_set(dom, namespace: str, key: str, value: object) -> object:
+    state = getattr(dom, namespace, None)
+    debug(f"Command 'set' called to set key: {key} to value: {value}")
+    setattr(state, key, value)
+    return dom
+
+
+def include_commands():
+    from risk.agents.htn import gtpyhop as ghop
+
+    ghop.declare_actions(c_set, c_append)
+
+def include_methods(*methods):
+    from risk.agents.htn import gtpyhop as ghop
+
+    for method in methods:
+        ghop.declare_methods(method.__name__, method)
+
+# high level abstractions for actions
 class Selector:
     """
     An action for selecting from a given collection,
@@ -66,7 +94,13 @@ class Selector:
             else:
                 selected = random.choice(collection)
             debug(f"Action '{self.__name__}' selected: {selected}")
+            return [
+                ("c_set", self.namespace, self.to_key, selected),
+            ]
             setattr(state, self.to_key, selected)
+        else:
+            debug(f"Action '{self.__name__}' found empty collection, failing.")
+            raise RuntimeError("Cannot select from empty collection")
 
         return dom
 
@@ -102,6 +136,9 @@ class Filter:
         debug(f"Action '{self.__name__}' called with collection: {collection}")
         filtered = self.filter(state, collection)
         debug(f"Action '{self.__name__}' filtered result: {filtered}")
+        return [
+            ("c_set", self.namespace, self.to_key, filtered),
+        ]
         setattr(state, self.to_key, filtered)
         return dom
 
@@ -136,6 +173,9 @@ class BuildStep:
         debug(f"Action '{self.__name__}' called to build step for key: {self.to_key}")
         step = self.builder(state)
         debug(f"Action '{self.__name__}' built step: {step}")
+        return [
+            ("c_append", self.namespace, self.to_key, step),
+        ]
         collection: list = getattr(state, self.to_key, None)
         collection.append(step)
         setattr(state, self.to_key, collection)
@@ -175,5 +215,42 @@ class Computer:
         )
         value = self.computer(state)
         debug(f"Action '{self.__name__}' computed value: {value}")
+        return [
+            ("c_set", self.namespace, self.to_key, value),
+        ]
         setattr(state, self.to_key, value)
+        return dom
+
+
+class Reseter:
+    """
+    An action for resetting a state variable to a default value.
+
+    :fieldname key: The key in the state to reset
+    :fieldname namespace: The namespace for state variable to reset
+    :fieldname default: The default value to reset to
+
+    The class is a callable object, so it can be used as an action in GTpyhop.
+    The name of the action will be 'reset_{to_key}'.
+
+    ^^^^^^^^
+    __call__ method signature
+    ^^^^^^^^
+        :param dom: The domain state to operate on
+        :returns: The modified domain state with the reset value
+    """
+
+    def __init__(self, key: str, namespace: str, default: object):
+        self.key = key
+        self.namespace = namespace
+        self.default = default
+        self.__name__ = f"reset_{key}"
+
+    def __call__(self, dom: object) -> object:
+        state = getattr(dom, self.namespace, None)
+        debug(f"Action 'reset_{self.key}' called to reset value for key: {self.key}")
+        return [
+            ("c_set", self.namespace, self.key, self.default),
+        ]
+        setattr(state, self.key, self.default)
         return dom

@@ -7,6 +7,7 @@ from ...agent import BaseAgent
 
 from .placement import PlacementPlanner
 from .attack import AttackPlanner
+from .movement import MovementPlanner
 from risk.utils.logging import info
 
 
@@ -17,19 +18,22 @@ class HTNDefensiveAgent(BaseAgent):
     """
 
     def __init__(self, player_id: int, attack_probability: float = 0.5):
-        super().__init__(player_id, "htn-defensive-agent-{}".format(player_id), attack_probability=attack_probability)
+        super().__init__(
+            player_id,
+            "htn-defensive-agent-{}".format(player_id),
+            attack_probability=attack_probability,
+        )
 
     def decide_placement(self, game_state, goal):
         info(f"{self.name} is deciding placements...")
 
-        planner = PlacementPlanner(
-            self.player_id, game_state.placements_left
-        )
+        planner = PlacementPlanner(self.player_id, game_state.placements_left)
         plan = planner.construct_plan(game_state)
 
         events = []
-        assert len(plan.steps) == game_state.placements_left, \
-            "Placement plan steps do not match placements left."
+        assert (
+            len(plan.steps) == game_state.placements_left
+        ), "Placement plan steps do not match placements left."
         while not plan.is_done():
             step = plan.pop_step()
             events.extend(step.execute(game_state))
@@ -39,14 +43,11 @@ class HTNDefensiveAgent(BaseAgent):
     def decide_attack(self, game_state, goal):
         info(f"{self.name} is deciding attacks...")
 
-        planner = AttackPlanner(
-            self.player_id, max_attacks=10
-        )
+        planner = AttackPlanner(self.player_id, max_attacks=10)
         plan = planner.construct_plan(game_state)
 
         events = []
-        assert len(plan.steps) <= 10, \
-            "Attack plan steps has too many attacks."
+        assert len(plan.steps) <= 10, "Attack plan steps has too many attacks."
         while not plan.is_done():
             step = plan.pop_step()
             events.extend(step.execute(game_state))
@@ -54,4 +55,14 @@ class HTNDefensiveAgent(BaseAgent):
 
     def decide_movement(self, game_state, goal):
         info(f"{self.name} is deciding movements...")
-        return super().decide_movement(game_state, goal)
+
+        planner = MovementPlanner(
+            self.player_id,
+        )
+        plan = planner.construct_plan(game_state)
+
+        events = []
+        while not plan.is_done():
+            step = plan.pop_step()
+            events.extend(step.execute(game_state))
+        return events
