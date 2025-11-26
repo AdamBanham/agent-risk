@@ -279,29 +279,16 @@ if __name__ == "__main__":
 
     setLevel(DEBUG)
 
-    ghop.verbose = 1
+    ghop.verbose = 0
     placements = random.randint(1, 5)
 
     state = GameState.create_new_game(20, 2, 1000)
     state.initialise()
-    
-    # state_path = join(".", "simulation.state")
-    # state = load_game_state_from_file(state_path)
-    # state.initialise(False)
-
-    # terrs = mapping.construct_safe_view(state.map, 0).safe_nodes
-    # terr = random.choice(terrs)
-    # terr = state.get_territory(terr.id)
-    # terr.armies += 150
-    # info(
-    #     f"Modified territory to have highest armies: {terr.id} with {terr.armies} armies, owned by player {terr.owner}"
-    # )
-    # state.update_player_statistics()
 
     planner = MovementPlanner(0)
     plan = planner.construct_plan(state)
 
-    print("Generated Movement Plan:", plan)
+    info(f"Generated Movement Plan:  {plan}")
 
     for step in plan.steps:
-        print(step)
+        info(step)
