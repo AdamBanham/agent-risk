@@ -6,8 +6,8 @@ import random
 
 from simpn.helpers import Place, Transition
 from simpn.simulator import SimTokenValue, SimToken
-from .base import ExpressiveSimProblem as SimProblem
-from .base import GuardedTransition
+from ..bases import ExpressiveSimProblem as SimProblem
+from ..bases import GuardedTransition
 
 
 def create_simulator(placements: int, terrs: Set[int]) -> SimProblem:

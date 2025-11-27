@@ -11,10 +11,9 @@ from risk.utils.movement import (
 
 from simpn.helpers import Place, Transition
 from simpn.simulator import SimTokenValue, SimToken
-from .base import ExpressiveSimProblem as SimProblem
-from .base import GuardedTransition
+from ..bases import ExpressiveSimProblem as SimProblem
+from ..bases import GuardedTransition
 
-import random
 from typing import Dict, Set
 
 
