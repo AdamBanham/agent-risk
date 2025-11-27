@@ -7,15 +7,13 @@ from risk.agents.htn import gtpyhop as ghop
 from ..bases import (
     include_commands,
     include_methods,
-    Selector,
     HTNStateWithPlan,
     BuildStep,
     Computer,
-    Filter,
 )
 import random
 from dataclasses import dataclass, field
-from typing import List, Collection
+from typing import List
 
 
 @dataclass
