@@ -9,7 +9,7 @@ from risk.utils.logging import info
 
 from .placement import RandomPlacements
 from .attack import RandomAttacks
-from .move import RandomMovements
+from .movement import RandomMovements
 
 
 class HTNRandomAgent(BaseAgent):
