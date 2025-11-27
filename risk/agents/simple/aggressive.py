@@ -146,7 +146,7 @@ class AggressiveAgent(BaseAgent):
             movable_armies = sum(
                 map.get_node(node.id).value for node in network_view.nodes
             )
-            movable_armies -= network_view.size - len(fronts)
+            movable_armies -= network_view.size
             weights = [sum_of_adjacents(node) for node in fronts]
 
             # sort them to keep only the top three positions

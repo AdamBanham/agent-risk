@@ -91,7 +91,7 @@ class PlacementState(BaseState):
 
 
 class PlacementPlanner(Planner):
-    """A planner for placing troops aggressively in Risk."""
+    """A planner for placing troops defensively in Risk."""
 
     def __init__(self, player_id: int, placements: int):
         super().__init__()
