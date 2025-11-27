@@ -1,11 +1,9 @@
 from ...plans import Planner, MovementStep, RouteMovementStep, MovementPlan
-
 from ..bases import GuardedTransition, ExpressiveSimProblem
 from risk.utils import map as mapping
 from risk.utils.movement import find_movement_sequence
 
 import random
-from typing import Set
 
 from simpn.helpers import Place
 from simpn.simulator import SimToken, SimTokenValue
