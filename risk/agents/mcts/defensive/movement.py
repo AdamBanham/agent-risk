@@ -1,9 +1,7 @@
 from risk.agents.plans import Planner
 from risk.state.game_state import GameState
 from risk.utils.movement import (
-    find_connected_frontline_territories,
     find_movement_sequence,
-    find_safe_frontline_territories,
 )
 from risk.utils.logging import debug, info
 from risk.agents.plans import MovementPlan, RouteMovementStep, MovementStep
@@ -11,7 +9,6 @@ from risk.utils import map as mapping
 from ..base import extractStatistics
 
 from typing import List, Set, Dict
-from copy import deepcopy
 import random
 
 from mcts.base.base import BaseState, BaseAction

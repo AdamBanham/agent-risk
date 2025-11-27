@@ -5,7 +5,7 @@ from risk.utils.logging import debug, info
 from risk.utils import map as mapping
 from ..base import extractStatistics
 
-from typing import Dict, Set, List
+from typing import Set, List
 import random
 
 from mcts.base.base import BaseState, BaseAction
