@@ -10,13 +10,8 @@ from py_trees.composites import Sequence
 from py_trees.decorators import Retry
 from py_trees.common import Status
 from ..bases import (
-    Selector,
     Checker,
     BuildAction,
-    PutInto,
-    Compute,
-    GetBestFrom,
-    ExecuteIf,
 )
 from .bases import BuildAndFindBestPotential
 import py_trees
