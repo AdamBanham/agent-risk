@@ -2,6 +2,7 @@ from ...plans import Planner, MovementStep, RouteMovementStep, MovementPlan
 
 from ..bases import GuardedTransition, ExpressiveSimProblem
 from risk.utils import map as mapping
+from risk.utils.movement import find_movement_sequence
 
 import random
 from typing import Set
@@ -136,6 +137,20 @@ class MovementPlanner(Planner):
         actions = list(n for n in sim.var("actions").marking)
         for token in reversed(actions):
             step: MovementStep = token.value.action
+
+            route = find_movement_sequence(
+                state.get_territory(step.source),
+                state.get_territory(step.destination),
+                step.troops
+            )
+
+            step = RouteMovementStep(
+                [
+                    MovementStep(move.src.id, move.tgt.id, move.amount)
+                    for move in route
+                ], step.troops
+            )
+
             plan.add_step(step)
 
         return plan

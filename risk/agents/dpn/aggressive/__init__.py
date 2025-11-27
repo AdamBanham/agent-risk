@@ -4,6 +4,7 @@ Aggressive Agent Implementation.
 """
 
 from ...agent import BaseAgent
+from risk.utils.logging import info
 
 class DPNAggressiveAgent(BaseAgent):
     """

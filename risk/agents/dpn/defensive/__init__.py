@@ -8,6 +8,7 @@ from risk.utils.logging import info
 
 from .placement import PlacementPlanner
 from .attack import AttackPlanner
+from .movement import MovementPlanner
 
 
 class DPNDefensiveAgent(BaseAgent):
