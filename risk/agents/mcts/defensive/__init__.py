@@ -8,6 +8,7 @@ from ...agent import BaseAgent
 
 from .placement import PlacementPlanner
 from .attack import AttackPlanner
+from .movement import MovementPlanner
 
 
 class MCTSDefensiveAgent(BaseAgent):
@@ -26,9 +27,7 @@ class MCTSDefensiveAgent(BaseAgent):
     def decide_placement(self, game_state, goal):
         info(f"{self.name} deciding placement...")
 
-        planner = PlacementPlanner(
-            self.player_id, game_state.placements_left
-        )
+        planner = PlacementPlanner(self.player_id, game_state.placements_left)
         plan = planner.construct_plan(game_state)
 
         events = []
@@ -41,9 +40,7 @@ class MCTSDefensiveAgent(BaseAgent):
     def decide_attack(self, game_state, goal):
         info(f"{self.name} deciding attacks...")
 
-        planner = AttackPlanner(
-            self.player_id, 10
-        )
+        planner = AttackPlanner(self.player_id, 10)
         plan = planner.construct_plan(game_state)
 
         events = []
@@ -53,7 +50,15 @@ class MCTSDefensiveAgent(BaseAgent):
 
         return events
 
-
     def decide_movement(self, game_state, goal):
         info(f"{self.name} deciding movement...")
-        return super().decide_movement(game_state, goal)
+
+        planner = MovementPlanner(self.player_id, 20)
+        plan = planner.construct_plan(game_state)
+
+        events = []
+        while not plan.is_done():
+            step = plan.pop_step()
+            events.extend(step.execute(game_state))
+
+        return events

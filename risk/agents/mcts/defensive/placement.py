@@ -3,6 +3,7 @@ from risk.state.game_state import GameState
 from risk.utils.logging import debug
 from risk.utils import map as mapping
 from ...plans import PlacementPlan, TroopPlacementStep
+from..base import extractStatistics
 
 import random
 from typing import List
@@ -30,10 +31,10 @@ class Placement(BaseAction):
 
     def __hash__(self):
         return hash((self.territory))
-    
+
     def __str__(self):
         return f"(#{self.territory}, 1)"
-    
+
     def __repr__(self):
         return self.__str__()
 
@@ -47,6 +48,13 @@ class PlacementState(BaseState):
         self, placements_left: int, map: mapping.Graph, player: int, frontlines: int
     ):
         self.placements_left = placements_left
+        self.fronts = set(
+            n
+            for n in map.nodes_for_player(player)
+            if any(
+                neighbor.owner != player for neighbor in map.get_adjacent_nodes(n.id)
+            )
+        )
         self.player = player
         self.map = map
         self.frontlines = frontlines
@@ -57,7 +65,7 @@ class PlacementState(BaseState):
     def get_possible_actions(self) -> List[Placement]:
         actions = []
         if self.placements_left > 0:
-            for terr in self.map.nodes_for_player(self.player):
+            for terr in self.fronts:
                 actions.append(Placement(terr.id))
         return actions
 
@@ -72,24 +80,14 @@ class PlacementState(BaseState):
         return self.placements_left == 0
 
     def get_reward(self):
-        safe_map = mapping.construct_safe_view(self.map, self.player)
         armies = sorted(
-            [self.map.get_node(t.id).value for t in safe_map.frontline_nodes],
+            [t.value for t in self.fronts],
             reverse=True,
         )[: self.frontlines]
         armies_on_top = sum(t for t in armies)
 
         return (1 / (self.placements_left + 1)) * armies_on_top
 
-
-def extractStatistics(searcher, action) -> dict:
-    """Return simple statistics for ``action`` from ``searcher``."""
-    statistics = {}
-    statistics["rootNumVisits"] = searcher.root.numVisits
-    statistics["rootTotalReward"] = searcher.root.totalReward
-    statistics["actionNumVisits"] = searcher.root.children[action].numVisits
-    statistics["actionTotalReward"] = searcher.root.children[action].totalReward
-    return statistics
 
 
 class PlacementPlanner(Planner):
@@ -107,7 +105,7 @@ class PlacementPlanner(Planner):
         max_fronts = len(
             mapping.construct_safe_view(state.map, self.player).frontline_nodes
         )
-        max_runtime = 500  # milliseconds
+        max_runtime = 100  # milliseconds
 
         actions = []
         for _ in range(self.placements):
@@ -137,7 +135,6 @@ if __name__ == "__main__":
     from risk.state import GameState
     from risk.utils.logging import setLevel, info
     from logging import DEBUG
-    import random
 
     setLevel(DEBUG)
 
