@@ -9,7 +9,7 @@ import random
 
 from simpn.helpers import BPMN
 from simpn.simulator import SimTokenValue, SimToken
-from .base import ExpressiveSimProblem as SimProblem
+from ..bases import ExpressiveSimProblem as SimProblem
 
 
 def construct_simulator(

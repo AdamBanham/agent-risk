@@ -7,7 +7,7 @@ import random
 
 from simpn.helpers import BPMN, Place
 from simpn.simulator import SimTokenValue, SimToken
-from .base import ExpressiveSimProblem as SimProblem
+from ..bases import ExpressiveSimProblem as SimProblem
 
 
 def create_simulator(terrs: Set[int], placements: int):
