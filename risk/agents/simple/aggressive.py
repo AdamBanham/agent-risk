@@ -160,7 +160,7 @@ class AggressiveAgent(BaseAgent):
             # normalize weights and assign troops
             total_weight = sum(w for f, w in options)
             options = [(f, w / total_weight) for f, w in options]
-            options = [(f, min(1, int(movable_armies * w))) for f, w in options]
+            options = [(f, max(1, int(movable_armies * w))) for f, w in options]
 
             # sort by most important frontline first
             ordered_fronts = sorted(
