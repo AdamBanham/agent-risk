@@ -6,6 +6,10 @@ Aggressive Agent Implementation.
 from ...agent import BaseAgent
 from risk.utils.logging import info
 
+from .placement import PlacementPlanner
+from .attack import AttackPlanner
+from .movement import MovementPlanner
+
 class DPNAggressiveAgent(BaseAgent):
     """
     A simple DPN agent that makes aggressive decisions during placement, attack,
