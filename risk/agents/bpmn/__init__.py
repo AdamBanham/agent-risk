@@ -5,4 +5,4 @@ implementation.
 
 from .random import BPMNRandomAgent
 from .defensive import BPMNDefensiveAgent
-from .offensive import BPMNOffensiveAgent
+from .aggressive import BPMNAggressiveAgent

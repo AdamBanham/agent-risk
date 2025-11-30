@@ -3,7 +3,7 @@ from .bt import BTRandomAgent, BTDefensiveAgent, BTAggresiveAgent
 from .htn import HTNRandomAgent, HTNDefensiveAgent, HTNAggressiveAgent
 from .mcts import MCSTRandomAgent, MCTSAggressiveAgent, MCTSDefensiveAgent
 from .dpn import DPNRandomAgent, DPNAggressiveAgent, DPNDefensiveAgent
-from .bpmn.random import BPMNRandomAgent
+from .bpmn import BPMNRandomAgent, BPMNDefensiveAgent, BPMNAggressiveAgent
 from .devs.random import DEVSRandomAgent
 
 
@@ -98,6 +98,8 @@ class BPMNAgents(AgentFamily):
 
     class TYPES(Enum):
         RANDOM = BPMNRandomAgent
+        DEFENSIVE = BPMNDefensiveAgent
+        AGGRESSIVE = BPMNAggressiveAgent
 
     @staticmethod
     def get_agent(strategy: AgentStrategies):
