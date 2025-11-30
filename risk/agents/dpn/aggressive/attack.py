@@ -122,7 +122,6 @@ def create_problem(
             terr = SimTokenValue(adj.identify, armies=troops // 2)
             adj = adj.clone()
             adj.owner = player
-            print(terr)
             return [
                 SimToken(terr),
                 SimToken(adj),
