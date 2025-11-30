@@ -111,6 +111,14 @@ if __name__ == "__main__":
         info(f"Sample :: {combo}")
         assert len(combo) == players
 
+    # save out configurations
+    configurations = {}
+    for i, combo in enumerate(combos):
+        configurations[i] = convert_option_to_config(options.keys(), combo)
+
+        if i % 10 == 0:
+            info(f"saving combos {i} out of {len(combos)}...")
+
     config = convert_option_to_config(options.keys(), combos[0])
     info("Sample configuration:")
     info(config)
@@ -123,7 +131,10 @@ if __name__ == "__main__":
     mkdir(eval_path)
     info(f"Creating evaluation run folder at: {eval_path}")
 
-    starting_state = GameState.create_new_game(200, players, 200)
+    with open(join(eval_path, "configs.json"), "w") as f:
+        f.write(json.dumps(configurations, indent=4))
+
+    starting_state = GameState.create_new_game(50, players, 50)
     starting_state.initialise()
 
     all_runs_start = time()
