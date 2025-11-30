@@ -81,6 +81,7 @@ CAPTION = """Experimentation Results, currently reporting a demonstrative run
 SUFFIX = """    \\end{tabular}
 \\end{table}"""
 
+
 def parse_arguments():
     """Parse command line arguments for writing the evaluation table ."""
     parser = argparse.ArgumentParser(
