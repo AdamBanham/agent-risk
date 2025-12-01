@@ -2,10 +2,10 @@ from ...plans import Planner, MovementStep, RouteMovementStep, MovementPlan
 from risk.utils.logging import info
 from risk.utils import map as mapping
 from risk.utils.movement import find_movement_sequence
-from ..bases import ExpressiveSimProblem
 
 import random
 
+from ..bases import ExpressiveSimProblem
 from simpn.simulator import SimTokenValue, SimToken
 from simpn.helpers import Place, BPMN
 

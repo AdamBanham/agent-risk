@@ -10,7 +10,6 @@ from .placement import PlacementPlanner
 from .attack import AttackPlanner
 from .movement import MovementPlanner
 
-
 class BPMNAggressiveAgent(BaseAgent):
     """
     A simple BPMN agent that makes aggressive decisions during placement, attack,
@@ -53,7 +52,7 @@ class BPMNAggressiveAgent(BaseAgent):
     def decide_movement(self, game_state, goal):
         info(f"{self.name} deciding movement...")
 
-        planner = MovementPlanner(self.player_id, 20)
+        planner = MovementPlanner(self.player_id)
         plan = planner.construct_plan(game_state)
 
         events = []

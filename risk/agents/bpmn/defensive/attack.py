@@ -214,6 +214,7 @@ if __name__ == "__main__":
     from risk.utils.logging import setLevel
     from risk.utils.copy import copy_game_state
     from risk.state import GameState
+    from os import path
     from logging import DEBUG
 
     setLevel(DEBUG)
@@ -229,8 +230,13 @@ if __name__ == "__main__":
 
     problem = construct_problem(set(f.id for f in fronts), state.map.clone(), 2)
 
-    vis = Visualisation(problem)
+    if path.exists("test.layout"):
+        vis = Visualisation(problem, layout_file="test.layout")
+    else:
+        vis = Visualisation(problem)
     vis.show()
+
+    vis.save_layout("test.layout")
 
     for _ in range(10):
         new_state = copy_game_state(state)
@@ -246,9 +252,9 @@ if __name__ == "__main__":
 
         info(plan)
         assert len(plan.steps) > 0, "Expected one attack in the plan."
-        assert len(plan.steps) <= pick, "Expected at most {} attacks in the plan.".format(
-            pick
-        )
+        assert (
+            len(plan.steps) <= pick
+        ), "Expected at most {} attacks in the plan.".format(pick)
         for step in plan.steps:
             info(step)
         input("Press Enter to continue...")
