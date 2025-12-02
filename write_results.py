@@ -39,7 +39,7 @@ ELEMENTS = {
     "bt": {"random": "30", "defensive": "35", "aggressive": "49"},
     "htn": {"random": "25", "defensive": "30", "aggressive": "34"},
     "mcts": {"random": "6", "defensive": "8", "aggressive": "8"},
-    "bpmn": {"random": "24", "defensive": "n/a", "aggressive": "n/a"},
+    "bpmn": {"random": "24", "defensive": "32", "aggressive": "28"},
     "dpn": {"random": "25", "defensive": "14", "aggressive": "16"},
 }
 
@@ -49,7 +49,7 @@ CC = {
     "bt": {"random": "1.71", "defensive": "1.81", "aggressive": "1.91"},
     "htn": {"random": "2.13", "defensive": "2.50", "aggressive": "2.20"},
     "mcts": {"random": "2.29", "defensive": "2.16", "aggressive": "2.25"},
-    "bpmn": {"random": "3.17", "defensive": "n/a", "aggressive": "n/a"},
+    "bpmn": {"random": "3.17", "defensive": "2.35", "aggressive": "2.45"},
     "dpn": {"random": "3.52", "defensive": "3.05", "aggressive": "2.96"},
 }
 
@@ -92,6 +92,7 @@ def parse_arguments():
     parser.add_argument(
         "--path",
         type=str,
+        required=True,
         help="The path to the evaluation folder. This should be"
         " the root of the directory",
     )
