@@ -111,6 +111,10 @@ class BalanceReworker(Atomic):
         self.add_out_port(self.o_network)
         self.o_targets = Port(dict, "o_targets")
         self.add_out_port(self.o_targets)
+        self.o_work = Port(bool, "o_work")
+        self.add_out_port(self.o_work)
+
+        self._loop = False
 
     def initialize(self):
         self.passivate()
@@ -120,37 +124,122 @@ class BalanceReworker(Atomic):
         if self.i_network:
             self.network = self.i_network.get()
             debug(f"BalancerReworker received network: {self.network}")
-            if self.network is not None and self.targets is not None:
-                self.activate()
+            self.activate()
         if self.i_targets:
             self.targets = self.i_targets.get()
             debug(f"BalancerReworker received targets: {self.targets}")
-            if self.network is not None and self.targets is not None:
-                self.activate()
+            self.activate()
         if self.i_trigger:
-            if self.network is not None and self.targets is not None:
-                self.activate()
+            self.loop = True
+            self.activate()
         if self.i_done:
             _ = self.i_done.get()
             debug(f"BalancerReworker received done signal")
             self.network = None
             self.targets = None
+            self.sent = False
+            self.loop = False
             self.passivate()
 
     def deltint(self):
         self.passivate()
 
     def lambdaf(self):
-        self.o_network.add(self.network)
-        self.o_targets.add(self.targets)
+        if self.network is not None and self.targets is not None and not self.sent:
+            self.o_network.add(self.network)
+            self.o_targets.add(self.targets)
+            self.sent = True
+            self.i_trigger.put(True)
+        elif self.loop:
+            self.o_work.add(True)
 
+
+class IsBalanced(ConditionalXor):
+    """
+    Checks that all targets have enough troops on the map.
+    """
+
+    def __init__(self, map: mapping.Graph):
+        super().__init__("IsBalanced?")
+        self._map = map
+        self._targets = None
+
+    def condition(self, item):
+        balanced = True
+        for node, target in self._targets:
+            node = self._map.get_node(node)
+            balanced = balanced and node.value >= target
+
+        return balanced
+
+
+class BalanceMovementBuilder(Builder[MovementStep]):
+    """
+    Builds a movement within a network to balance
+    """
+
+    def __init__(self):
+        super().__init__("balance-build", {"source": int, "dest": int, "troops": int})
+
+    def build(self, inputs):
+        return MovementStep(
+            source=inputs["source"], destination=inputs["dest"], troops=inputs["troops"]
+        )
+
+
+class ComputeTroops(ComputeOnMany[int]):
+    """
+    Computes the troops to move from the source.
+    """
+
+    def __init__(
+        self,
+    ):
+        super().__init__("compute-troops",
+            {"source" : int, "target" : int})
+
+    def compute(self, values):
+        return super().compute(values)
+
+
+class ComputeTarget(ComputeOnMany[int]):
+    """
+    Computes what target needs balancing.
+    """
+
+    def __init__(self, map: mapping.Graph):
+        super().__init__("balance-target", {"targets": dict})
+        self._map = map
+
+    def compute(self, item: dict) -> int:
+        choices = []
+        for key, target in item.items():
+            node = self._map.get_node(key)
+            if node.value < target:
+                choices.append(key)
+
+        return random.choce(choices)
+    
+
+class ComputeSources(ComputeOnMany[Set[int]]):
+    """
+    Computes the sources for movement
+    """
+
+    def __init__(self):
+        super().__init__("balance-sources", {
+            "target" : int, "targets" : dict
+        })
+
+    def compute(self, values):
+        return super().compute(values)
 
 class BalancerModel(Coupled):
     """
     Implements a balancer that balances troops within a network.
     """
 
-    def __init__(self):
+    def __init__(self, map: mapping.Graph, network_map: mapping.NetworkGraph):
         super().__init__("NetworkBalancerModel")
 
         self.i_targets = Port(int, "i_targets")
@@ -165,10 +254,33 @@ class BalancerModel(Coupled):
         self.add_out_port(self.o_step)
 
         self.reworker = BalanceReworker()
+        self.builder = BalanceMovementBuilder()
+        self.is_balanced = IsBalanced(map)
+        self.compute_target = ComputeTarget()
+        self.compute_source = ComputeSources()
+        self.compute_troops = ComputeTroops()
 
-        self.add_component(self.selector)
+        self.add_component(self.reworker)
+        self.add_component(self.is_balanced)
+        self.add_component(self.builder)
+        self.add_component(self.compute_source)
+        self.add_component(self.compute_troops)
 
-        self.add_coupling(self.i_network, self.selector.i_input)
+        self.add_coupling(self.i_network, self.reworker.i_network)
+        self.add_coupling(self.i_targets, self.reworker.i_targets)
+        self.add_coupling(self.reworker.o_targets, self.compute_target.i_targets)
+
+        self.add_coupling(self.compute_source.o_output, self.builder.i_source)
+        self.add_coupling(..., self.select_source.i_terrs)
+
+        self.add_coupling(self.compute_target.o_output, self.builder.i_dest)
+        self.add_coupling(self.select_source.o_terr, self.compute_troops.i_input)
+        self.add_coupling(self.compute_troops.o_output, self.builder.i_troops)
+        self.add_coupling(self.builder.o_step, self.o_step)
+        self.add_coupling(self.builder.o_step, self.is_balanced.i_input)
+        self.add_coupling(self.is_balanced.o_false, self.reworker.i_trigger)
+        self.add_coupling(self.is_balanced.o_true, self.reworker.i_done)
+
         self.add_coupling(self.selector.o_output, self.o_balanced)
 
     def initialize(self):
