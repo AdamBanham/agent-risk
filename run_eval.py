@@ -136,6 +136,10 @@ if __name__ == "__main__":
 
     starting_state = GameState.create_new_game(50, players, 50)
     starting_state.initialise()
+    starting_state.update_player_statistics()
+
+    with open(join(eval_path, "starting_state.state"), "w") as f:
+        f.write(repr(starting_state))
 
     all_runs_start = time()
     runs = []
