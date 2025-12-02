@@ -7,7 +7,7 @@ from risk.utils.logging import debug
 
 from typing import Set, Dict
 
-from .base import Selector, Reworker, SelectFrom
+from ..base import Selector, Reworker, SelectFrom
 from xdevs.sim import Coupled, Port, Atomic
 from xdevs.sim import Coordinator
 

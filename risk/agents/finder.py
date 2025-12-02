@@ -4,7 +4,7 @@ from .htn import HTNRandomAgent, HTNDefensiveAgent, HTNAggressiveAgent
 from .mcts import MCSTRandomAgent, MCTSAggressiveAgent, MCTSDefensiveAgent
 from .dpn import DPNRandomAgent, DPNAggressiveAgent, DPNDefensiveAgent
 from .bpmn import BPMNRandomAgent, BPMNDefensiveAgent, BPMNAggressiveAgent
-from .devs.random import DEVSRandomAgent
+from .devs import DEVSRandomAgent, DEVSDefensiveAgent, DEVSAggressiveAgent
 
 
 from enum import Enum
@@ -112,6 +112,8 @@ class DEVSAgents(AgentFamily):
 
     class TYPES(Enum):
         RANDOM = DEVSRandomAgent
+        DEFENSIVE = DEVSDefensiveAgent
+        AGGRESSIVE = DEVSAggressiveAgent
 
     @staticmethod
     def get_agent(strategy: AgentStrategies):

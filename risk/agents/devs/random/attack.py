@@ -7,7 +7,7 @@ import random
 
 from xdevs.models import Atomic, Coupled, Port
 from xdevs.sim import Coordinator
-from .base import Selector, Reworker, SelectFrom
+from ..base import Selector, Reworker, SelectFrom
 
 
 class Builder(Atomic):

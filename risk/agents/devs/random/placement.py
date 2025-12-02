@@ -8,7 +8,7 @@ from xdevs.models import Atomic, Coupled, Port
 from xdevs.sim import Coordinator
 
 
-from .base import Selector, Reworker
+from ..base import Selector, Reworker
 
 
 class Builder(Atomic):

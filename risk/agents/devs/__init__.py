@@ -5,4 +5,4 @@ implementation.
 
 from .random import DEVSRandomAgent
 from .defensive import DEVSDefensiveAgent
-from .offensive import DEVSOffensiveAgent
+from .aggressive import DEVSAggressiveAgent
