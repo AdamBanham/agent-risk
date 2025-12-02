@@ -107,9 +107,10 @@ class BalanceReworker(Atomic):
         self.i_done = Port(bool, "i_done")
         self.add_out_port(self.i_done)
 
-        
-        self.o_work = Port(bool, "o_work")
-        self.add_out_port(self.o_work)
+        self.o_network = Port(int, "o_network")
+        self.add_out_port(self.o_network)
+        self.o_targets = Port(dict, "o_targets")
+        self.add_out_port(self.o_targets)
 
     def initialize(self):
         self.passivate()
@@ -120,27 +121,30 @@ class BalanceReworker(Atomic):
             self.network = self.i_network.get()
             debug(f"BalancerReworker received network: {self.network}")
             if self.network is not None and self.targets is not None:
-                self.i_trigger.add(True)
+                self.activate()
         if self.i_targets:
             self.targets = self.i_targets.get()
             debug(f"BalancerReworker received targets: {self.targets}")
             if self.network is not None and self.targets is not None:
-                self.i_trigger.add(True)
+                self.activate()
         if self.i_trigger:
             if self.network is not None and self.targets is not None:
-                self.o_work.add(True)
+                self.activate()
         if self.i_done:
-            done = self.i_done.get()
+            _ = self.i_done.get()
             debug(f"BalancerReworker received done signal")
             self.network = None
             self.targets = None
-    
+            self.passivate()
+
     def deltint(self):
         self.passivate()
 
     def lambdaf(self):
+        self.o_network.add(self.network)
+        self.o_targets.add(self.targets)
 
-        
+
 class BalancerModel(Coupled):
     """
     Implements a balancer that balances troops within a network.
