@@ -112,11 +112,9 @@ class Placements(Sequence):
         """
         Constructs a plan for the phasement phase.
         """
-        from time import sleep
 
         while self.status != Status.SUCCESS:
             self.tick_once()
-            # sleep(2)
         return self.state.actions
 
 

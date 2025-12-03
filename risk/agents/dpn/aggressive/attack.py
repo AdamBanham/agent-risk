@@ -77,6 +77,19 @@ def create_problem(
         name = "start"
         amount = attacks
 
+    class Attacked(Place):
+        model = problem 
+        name = "attacked"
+        amount = 0
+    
+    attacked = problem.var("attacked")
+    attacked.put(
+        SimTokenValue(
+            "attacked-1",
+            has_attacked=False
+        )
+    )
+
     class Territories(Place):
         model = problem
         name = "territories"
@@ -112,16 +125,19 @@ def create_problem(
     class AttackTerritory(GuardedTransition):
         model = problem
         name = "place-troops"
-        incoming = ["start", "territories", "adjacents"]
-        outgoing = ["territories", "adjacents", "actions"]
+        incoming = ["start", "territories", "adjacents", "attacked"]
+        outgoing = ["territories", "adjacents", "actions", "attacked"]
 
-        def behaviour(start, terr: SimTokenValue, adj: SimTokenValue):
+        def behaviour(start, terr: SimTokenValue, adj: SimTokenValue, atk: SimTokenValue):
             troops = terr.armies - 1
 
             action = AttackStep(terr.id, adj.identify, troops)
             terr = SimTokenValue(adj.identify, armies=troops // 2)
             adj = adj.clone()
             adj.owner = player
+
+            atk.clone()
+            atk.has_attacked = True
             return [
                 SimToken(terr),
                 SimToken(adj),
@@ -131,15 +147,19 @@ def create_problem(
                         action=action,
                     )
                 ),
+                SimToken(atk)
             ]
 
-        def guard(start: str, terr: SimTokenValue, adj: SimTokenValue):
+        def guard(start: str, terr: SimTokenValue, adj: SimTokenValue, atk: SimTokenValue):
             if adj.adj != terr.id:
                 return False
             if adj.owner == player:
                 return False
             if terr.armies < 2:
                 return False
+            if not atk.has_attacked:
+                safe_troops = max( adj.armies + 5, adj.armies * 3)
+                return terr.armies >= safe_troops
             return True
 
     return problem

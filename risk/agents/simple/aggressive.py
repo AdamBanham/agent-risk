@@ -87,6 +87,12 @@ class AggressiveAgent(BaseAgent):
         # build chain of attacks, starting with the first
         target = adjacents[0]
         attacking = map.get_node(self.front.id).value - 1
+
+        # check that the first attack is safe
+        safe_troops = max(target.value + 5, target.value * 3)
+        if attacking < safe_troops:
+            return [] 
+        
         events = [
             AttackOnTerritoryEvent(
                 turn=game_state.current_turn,
@@ -108,6 +114,7 @@ class AggressiveAgent(BaseAgent):
                 break
             adjacents = sorted(adjacents, key=strength)
             target = adjacents[0]
+
             events.append(
                 AttackOnTerritoryEvent(
                     turn=game_state.current_turn,

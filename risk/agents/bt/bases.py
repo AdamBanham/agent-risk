@@ -115,8 +115,10 @@ class Compute(Behaviour):
     :param state_name: Name of the blackboard to read from
     :param put_name: Name of the attribute to put the computed value into
 
-    :method compute(state) -> Any: Computes the value based on the state.
-        Must be implemented by subclasses.
+    .. Methods ::
+        compute(state) -> Any: 
+            Computes the value based on the state.
+            Must be implemented by subclasses.
     """
 
     def __init__(self, state_name: str, put_name: str):

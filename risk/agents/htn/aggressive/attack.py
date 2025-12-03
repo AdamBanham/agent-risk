@@ -32,6 +32,7 @@ class AttackState(HTNStateWithPlan):
     defender: mapping.Node = None
     troops: int = -1
     actions: List[AttackStep] = field(default_factory=list)
+    had_safe: bool = None
 
 
 def sum_of_adjacents(node: mapping.SafeNode, map: mapping.Graph, player: int) -> float:
@@ -65,6 +66,13 @@ def compute_fronter(state: AttackState):
     else:
         return None
 
+def check_adjacents(state: AttackState):
+    has_safe = False
+    attacker = state.map.get_node(state.fronter.id).value
+    for adj in state.adjacents:
+        safe_troops = max(adj.value + 5, adj.value * 3)
+        has_safe = has_safe or attacker >= safe_troops
+    return has_safe
 
 def compute_looked(state: AttackState):
     return True
@@ -133,7 +141,12 @@ def should_attack(dom):
 
     if len(state.adjacents) == 0:
         return []
-    else:
+    elif len(state.actions) == 0 and state.had_safe is None:
+        return [
+            ("compute_had_safe",),
+            ("should_attack",)
+        ]
+    elif state.had_safe:
         return [
             ("filter_adjacents", "adjacents"),
             ("select_defender", "adjacents"),
@@ -142,6 +155,10 @@ def should_attack(dom):
             ("compute_attacker",),
             ("compute_map",),
             ("continue_attack",),
+        ]
+    else:
+        return [
+
         ]
 
 
@@ -190,6 +207,7 @@ def construct_planning_domain(state: GameState):
         BuildStep("actions", "attacking", construct_step),
         Computer("attacker", "attacking", compute_attacker),
         Computer("map", "attacking", compute_map),
+        Computer("had_safe", "attacking", check_adjacents),
         find_attack,
         continue_attack,
         should_attack,

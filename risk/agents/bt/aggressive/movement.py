@@ -326,7 +326,6 @@ class Movements(Sequence):
         """
         Constructs a plan for the phasement phase.
         """
-        from time import sleep
 
         while self.status != Status.SUCCESS:
             self.tick_once()

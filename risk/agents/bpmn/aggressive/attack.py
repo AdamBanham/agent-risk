@@ -103,6 +103,13 @@ def construct_problem(fronts: Set[int], map: mapping.Graph, player: int, attacks
 
             val.defender = adjacents[0].id if adjacents else None
 
+            # check that the first attack is indeed safe
+            if len(res.actions) == 0 and val.defender is not None:
+                defender = val.map.get_node(val.defender)
+                safe_troops = max( defender.value + 5, defender.value * 3)
+                if val.troops < safe_troops:
+                    val.defender = None
+
             return [SimToken((val, res))]
 
     class FoundDefenderXorSplit(BPMN):
@@ -140,6 +147,7 @@ def construct_problem(fronts: Set[int], map: mapping.Graph, player: int, attacks
 
             val.map.get_node(val.attacker).value -= val.troops
             val.map.get_node(val.defender).value = val.troops // 2
+            val.map.get_node(val.defender).owner = val.map.get_node(val.attacker).owner
             val.attack_left -= 1
             val.troops = val.troops // 2
             val.attacker = val.defender

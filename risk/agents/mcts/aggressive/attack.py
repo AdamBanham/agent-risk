@@ -113,7 +113,11 @@ class AttackState(BaseState):
                     action = Attack(
                         self.attacker.id, adj.id, self.troops - 1, adj.value
                     )
-                    actions.append(action)
+                    if self.attacks == 0:
+                        if action.safe():
+                            actions.append(action)
+                    else:
+                        actions.append(action)
         if actions == []:
             actions.append(NoAttack())
         random.shuffle(actions)

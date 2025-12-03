@@ -91,6 +91,11 @@ def construct_problem(player: int, map: mapping.Graph):
                 moveable = total_armies - view.size
                 weights = [sum_of_adjacents(node, val.map, player) for node in fronts]
 
+                # if no fronts then exit
+                if len(fronts) == 0:
+                    val.targets = {}
+                    return [SimToken((val, res))]
+
                 # sort them to keep only the top three positions
                 top_most = random.randint(1, min(3, len(fronts)))
                 options = sorted(

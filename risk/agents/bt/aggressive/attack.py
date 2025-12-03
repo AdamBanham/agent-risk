@@ -3,7 +3,7 @@ from risk.state import GameState
 from risk.utils.logging import debug
 from risk.utils import map as mapping
 
-from ..bases import Checker, BuildAction, Compute
+from ..bases import Checker, BuildAction, Compute, ExecuteIf
 from .bases import BuildAndFindBestPotential
 from py_trees.behaviour import Behaviour
 from py_trees.composites import Sequence
@@ -28,6 +28,7 @@ class AttackState:
     defender: int = None
     troops: int = -1
     attacked: Set[int] = field(default_factory=set)
+    had_safe: bool = None
 
 
 class ComputeTroops(Compute):
@@ -106,6 +107,26 @@ class BuildAttackAction(BuildAction):
         return step
 
 
+class ComputeHasSafe(Compute):
+    """
+    Computes whether selected front has a safe attack.
+    """
+
+    def __init__(self):
+        super().__init__("attacks", "had_safe")
+
+    def compute(self, state: AttackState):
+
+        attacker = state.troops
+        had_safe = False
+        for adj in state.map.get_adjacent_nodes(state.front):
+            safe_troops = max(adj.value + 5, adj.value * 3)
+            had_safe = had_safe or attacker >= safe_troops
+        return had_safe
+        
+
+    
+
 class Attacks(Sequence):
     """
     Decides what frontline territories should attack based on
@@ -131,24 +152,35 @@ class Attacks(Sequence):
             [
                 BuildAndFindBestPotential("attacks", "attacker", map),
                 ComputeTroops(),
-                Retry(
-                    "Keep Attacking",
-                    Sequence(
-                        "Building Attack",
-                        False,
-                        [
-                            FindWeakest(),
-                            BuildAttackAction(),
-                            ComputeTroops(),
-                            Checker(
-                                "attacks",
-                                "troops",
-                                lambda s: s < 2,
-                            ),
-                        ],
+                ComputeHasSafe(),
+                ExecuteIf(
+                    "Execute only if first attack can be safe",
+                    [
+                        Checker(
+                            "attacks",
+                            "had_safe",
+                            lambda c: not c
+                        )
+                    ],
+                    Retry(
+                        "Keep Attacking",
+                        Sequence(
+                            "Building Attack",
+                            False,
+                            [
+                                FindWeakest(),
+                                BuildAttackAction(),
+                                ComputeTroops(),
+                                Checker(
+                                    "attacks",
+                                    "troops",
+                                    lambda s: s < 2,
+                                ),
+                            ],
+                        ),
+                        max_attacks,
                     ),
-                    max_attacks,
-                ),
+                )
             ]
         )
 
