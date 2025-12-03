@@ -13,7 +13,6 @@ from ..base import (
     Selector,
     Reworker,
     Builder,
-    Filter,
     Computer,
     ComputeOnMany,
     SeenByFilter,
