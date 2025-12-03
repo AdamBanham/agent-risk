@@ -35,7 +35,7 @@ TEMPLATE = """
 
 ELEMENTS = {
     "simple": {"random": "n/a", "defensive": "n/a", "aggressive": "n/a"},
-    "devs": {"random": "16", "defensive": "n/a", "aggressive": "n/a"},
+    "devs": {"random": "16", "defensive": "32", "aggressive": "32"},
     "bt": {"random": "30", "defensive": "35", "aggressive": "49"},
     "htn": {"random": "25", "defensive": "30", "aggressive": "34"},
     "mcts": {"random": "6", "defensive": "8", "aggressive": "8"},
@@ -45,7 +45,7 @@ ELEMENTS = {
 
 CC = {
     "simple": {"random": "4.4", "defensive": "6.6", "aggressive": "7.0"},
-    "devs": {"random": "2.06", "defensive": "n/a", "aggressive": "n/a"},
+    "devs": {"random": "2.06", "defensive": "2.10", "aggressive": "2.21"},
     "bt": {"random": "1.71", "defensive": "1.81", "aggressive": "1.91"},
     "htn": {"random": "2.13", "defensive": "2.50", "aggressive": "2.20"},
     "mcts": {"random": "2.29", "defensive": "2.16", "aggressive": "2.25"},
@@ -146,10 +146,12 @@ if __name__ == "__main__":
             pattern += 1
 
     prefix = PREFIX
+    avg = sum(all_data["individual_times"])
+    avg = avg / len(all_data["individual_times"])
     caption = CAPTION.format(
         combos=all_data["total_simulations"],
         total=f"{all_data["total_time"]/(60 * 60):.2f}",
-        average=f"{all_data["average_time"]/60:.2f}",
+        average=f"{avg/60:.2f}",
     )
     prefix = prefix.replace("##CAPTION", caption)
 

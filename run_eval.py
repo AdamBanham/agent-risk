@@ -203,7 +203,7 @@ def work():
     with open(join(eval_path, "configs.json"), "w") as f:
         f.write(json.dumps(configurations, indent=4))
 
-    starting_state = GameState.create_new_game(40, players, 50)
+    starting_state = GameState.create_new_game(42, players, 50)
     starting_state.initialise()
     starting_state.update_player_statistics()
 
