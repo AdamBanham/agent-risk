@@ -36,8 +36,8 @@ def parse_arguments():
         "-g",
         "--regions",
         type=int,
-        default=52,
-        help="Number of territories/regions to generate (default: 52)",
+        default=42,
+        help="Number of territories/regions to generate (default: 42)",
     )
 
     parser.add_argument(
