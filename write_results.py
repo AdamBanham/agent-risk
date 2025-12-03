@@ -76,7 +76,7 @@ PREFIX = """\\begin{table}[t]
          & Strat. & \\# & Comp. & Run. (std) & Score (std)  \\\\
         \\midrule"""
 CAPTION = """Experimentation Results, currently reporting a demonstrative run 
-        over 100 turns with {combos} combinations, taking a total of {total} hours, 
+        over 100 turns with {combos} combinations, taking a wall time of {total} hours, 
         averaging {average} minutes per simulation."""
 SUFFIX = """    \\end{tabular}
 \\end{table}"""
