@@ -11,6 +11,7 @@ pyqt6 = "*"
 simpn = "*"
 xdevs = "*"
 py-trees = "*"
+joblib = "*"
 
 [dev-packages]
 
