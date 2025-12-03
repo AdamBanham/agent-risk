@@ -2,10 +2,21 @@ from risk.state.game_state import GameState, Player, Territory, GamePhase
 from risk.state.territory import TerritoryState
 from risk.utils.replay import simulate_turns, SimulationConfiguration
 from risk.utils.logging import info, debug
+from risk.utils.loading import load_game_state_from_file
+
+from joblib import Parallel, delayed
 
 import argparse
-
 import math
+
+import random
+import json
+from risk.utils.logging import setLevel
+from os.path import exists, join
+from os import mkdir
+from itertools import product
+from logging import INFO
+from time import time
 
 
 def parse_arguments():
@@ -84,18 +95,76 @@ def config_name(config, player_id):
     return f"player{player_id}-{config[player_id]['type']}-{config[player_id]['strat']}"
 
 
-if __name__ == "__main__":
+def work_for_config(combo, id, attack_rate, turns, eval_path):
+    options = create_options()
+    summary_stats = dict(
+        (
+            family,
+            dict(
+                (strategy, {"runtime": [], "score": []}) for strategy in options[family]
+            ),
+        )
+        for family in options.keys()
+    )
+
+    config = convert_option_to_config(options.keys(), combo)
+    info(f"Running simulation with configuration: {config}")
+
+    starting_state = load_game_state_from_file(
+        join(
+            eval_path, "starting_state.state"
+        )
+    )
+
+    combo_start = time()
+    new_state, tape, scorer = simulate_turns(
+        starting_state,
+        turns,
+        SimulationConfiguration(
+            attack_rate=attack_rate,
+            load_ai_from_file=True,
+            configuration=config,
+            score=True,
+        ),
+    )
+    combo_end = time() - combo_start
+    info(f"Completed simulation in {combo_end:.2f} seconds.")
+    info(f"Final Turn: {new_state.current_turn}")
+
+    recorder = tape
+    state = new_state
+    results = {}
+    scores = scorer.get_total_scores(False)
+
+    info("Final Scores:")
+    for player_id, (family, strat) in enumerate(zip(options.keys(), combo)):
+        score = scores[player_id]
+        runtime = state.players[player_id].runtime
+        info(
+            f"Player {player_id}: {score} points with a runtime of {runtime:.2f} seconds"
+        )
+        results[config_name(config, str(player_id))] = {
+            "score": score,
+            "runtime": runtime,
+        }
+        summary_stats[family][strat]["score"].append(score)
+        summary_stats[family][strat]["runtime"].append(runtime)
+    results["total_time"] = combo_end
+
+    with open(join(eval_path, f"combo_{id:04d}.stack"), "w") as f:
+        f.write(str(recorder.stack))
+    with open(join(eval_path, f"combo_{id:04d}.state"), "w") as f:
+        f.write(repr(state))
+    with open(join(eval_path, f"combo_{id:04d}.config"), "w") as f:
+        f.write(json.dumps(config, indent=4))
+    with open(join(eval_path, f"combo_{id:04d}.scores"), "w") as f:
+        f.write(json.dumps(results, indent=4))
+
+    return summary_stats, combo_end
+
+
+def work():
     args = parse_arguments()
-
-    import random
-    import json
-    from risk.utils.logging import setLevel
-    from os.path import exists, join
-    from os import mkdir
-    from itertools import product
-    from logging import INFO
-    from time import time
-
     setLevel(INFO)
 
     options = create_options()
@@ -134,75 +203,42 @@ if __name__ == "__main__":
     with open(join(eval_path, "configs.json"), "w") as f:
         f.write(json.dumps(configurations, indent=4))
 
-    starting_state = GameState.create_new_game(50, players, 50)
+    starting_state = GameState.create_new_game(40, players, 50)
     starting_state.initialise()
     starting_state.update_player_statistics()
 
     with open(join(eval_path, "starting_state.state"), "w") as f:
         f.write(repr(starting_state))
 
-    all_runs_start = time()
     runs = []
     summary_stats = dict(
         (
             family,
             dict(
-                (strategy, {"runtime": [], "score": []})
-                for strategy in options[family]
+                (strategy, {"runtime": [], "score": []}) for strategy in options[family]
             ),
         )
         for family in options.keys()
     )
 
-    for id, combo in enumerate(combos):
+    pool = Parallel(n_jobs=-2, verbose=10)
 
-        config = convert_option_to_config(options.keys(), combo)
-        info(f"Running simulation with configuration: {config}")
+    all_runs_start = time()
+    results = pool(
+        delayed(work_for_config)(config, id, args.attack_rate, args.turns, eval_path)
+        for id, config in enumerate(combos)
+    )
 
-        combo_start = time()
-        new_state, tape, scorer = simulate_turns(
-            starting_state,
-            args.turns,
-            SimulationConfiguration(
-                attack_rate=args.attack_rate,
-                load_ai_from_file=True,
-                configuration=config,
-                score=True,
-            ),
-        )
-        combo_end = time() - combo_start
-        info(f"Completed simulation in {combo_end:.2f} seconds.")
-        info(f"Final Turn: {new_state.current_turn}")
-
-        recorder = tape
-        state = new_state
-        results = {}
-        scores = scorer.get_total_scores(False)
-
-        info("Final Scores:")
-        for player_id, (family, strat) in enumerate(zip(options.keys(), combo)):
-            score = scores[player_id]
-            runtime = state.players[player_id].runtime
-            info(
-                f"Player {player_id}: {score} points with a runtime of {runtime:.2f} seconds"
-            )
-            results[config_name(config, str(player_id))] = {
-                "score": score,
-                "runtime": runtime,
-            }
-            summary_stats[family][strat]["score"].append(score)
-            summary_stats[family][strat]["runtime"].append(runtime)
-        results["total_time"] = combo_end
+    for result, combo_end in results:
+        for family in options.keys():
+            for strat in options[family]:
+                summary_stats[family][strat]["score"].extend(
+                    result[family][strat]["score"]
+                )
+                summary_stats[family][strat]["runtime"].extend(
+                    result[family][strat]["score"]
+                )
         runs.append(combo_end)
-
-        with open(join(eval_path, f"combo_{id:04d}.stack"), "w") as f:
-            f.write(str(recorder.stack))
-        with open(join(eval_path, f"combo_{id:04d}.state"), "w") as f:
-            f.write(repr(state))
-        with open(join(eval_path, f"combo_{id:04d}.config"), "w") as f:
-            f.write(json.dumps(config, indent=4))
-        with open(join(eval_path, f"combo_{id:04d}.scores"), "w") as f:
-            f.write(json.dumps(results, indent=4))
 
     all_runs_end = time() - all_runs_start
     info(f"Completed all {len(combos)} simulations in {all_runs_end:.2f} seconds.")
@@ -234,3 +270,7 @@ if __name__ == "__main__":
             "detailed_stats": condensed_stats,
         }
         f.write(json.dumps(summary, indent=4))
+
+
+if __name__ == "__main__":
+    work()
