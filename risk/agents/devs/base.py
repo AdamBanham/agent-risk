@@ -4,7 +4,7 @@ Base constructs for random DEVS agents.
 
 from risk.utils.logging import debug
 from abc import abstractmethod
-from xdevs.models import Atomic, Port
+from xdevs.models import Atomic, Port, Coupled
 
 from typing import Set, List, Dict, Collection
 import random
@@ -230,15 +230,19 @@ class Builder[T](Atomic):
     def __init__(self, name: str, parameters: Dict[str, type]):
         super().__init__(name)
 
+        self._states = {}
         self.keys = set()
+        self._step = None
+        
         for key, p_type in parameters.items():
             setattr(self, f"i_{key}", Port(p_type, f"i_{key}"))
             self.add_in_port(getattr(self, f"i_{key}"))
             self.keys.add(key)
-        self._states = {}
+
+        self.i_reset = Port(bool, "i_reset")
+        self.add_in_port(self.i_reset)
 
         self.o_step = Port(object, "o_step")
-        self._step = None
 
         self.add_out_port(self.o_step)
 
@@ -262,6 +266,14 @@ class Builder[T](Atomic):
 
     def deltext(self, e):
         debug("Builder external transition")
+        if self.i_reset:
+            self.i_reset.empty()
+            self._states = {}
+            for port in self.in_ports:
+                if port:
+                    port.empty()
+            return self.passivate()
+        
         for port in self.in_ports:
             if port:
                 value = port.get()
@@ -427,11 +439,13 @@ class Computer[I, O](Atomic):
         super().__init__(name)
 
         self.i_input = Port(object, "i_input")
+        self.i_reset = Port(bool, "i_reset")
         self.o_output = Port(object, "o_output")
 
         self._input = None
 
         self.add_in_port(self.i_input)
+        self.add_in_port(self.i_reset)
         self.add_out_port(self.o_output)
 
     def initialize(self):
@@ -444,6 +458,13 @@ class Computer[I, O](Atomic):
 
     def deltext(self, e):
         debug(f"Computer {self.name} external transition")
+        if self.i_reset:
+            self.i_reset.empty()
+            self._input = None
+            for port in self.in_ports:
+                if port:
+                    port.empty()
+            return self.passivate()
         if self.i_input:
             self._input = self.i_input.get()
             debug(f"Computer {self.name} received input: {self._input}")
@@ -494,32 +515,42 @@ class ComputeOnMany[O](Atomic):
             self.add_in_port(getattr(self, f"i_{key}"))
             self._keys.add(key)
 
+        self.i_reset = Port(object, "i_reset")
+        self.add_in_port(self.i_reset)
+
         self.o_output = Port(object, "o_output")
+        self.add_out_port(self.o_output)
 
         self._input = {}
-
-        self.add_out_port(self.o_output)
 
     def initialize(self):
         self.passivate()
 
     def deltint(self):
-        debug("Computer internal transition")
+        debug(f"Computer {self.name} internal transition")
         self._input = {}
         self.passivate()
 
     def deltext(self, e):
-        debug("Computer external transition")
+        if self.i_reset:
+            self.i_reset.empty()
+            self._input = {}
+            for port in self.in_ports:
+                if port:
+                    port.empty()
+            self.passivate()
+
+        debug(f"Computer {self.name} external transition")
         for port in self.in_ports:
             if port:
                 value = port.get()
-                debug(f"Computer received input on port {port.name}: {value}")
+                debug(f"Computer {self.name} received input on port {port.name}: {value}")
                 self._input[port.name[2:]] = value
 
         all_params = all(self._input.get(key) is not None for key in self._keys)
 
         if all_params:
-            debug(f"Computer has all parameters, computing output using {self._input}")
+            debug(f"Computer {self.name} has all parameters, computing output using {self._input}")
             self.activate()
 
     @abstractmethod
@@ -533,12 +564,12 @@ class ComputeOnMany[O](Atomic):
         raise NotImplementedError("Subclasses must implement the compute method.")
 
     def lambdaf(self):
-        debug("Computer output function")
+        debug(f"Computer {self.name} output function")
         all_params = all(self._input.get(key) is not None for key in self._keys)
 
         if all_params:
             output = self.compute(self._input)
-            debug(f"Computer produced output: {output}")
+            debug(f"Computer {self.name} produced output: {output}")
             self.o_output.add(output)
 
     def exit(self):
@@ -570,11 +601,13 @@ class ConditionalXor[I](Atomic):
         super().__init__(name)
 
         self.i_input = Port(object, "i_input")
+        self.i_reset = Port(bool, "i_reset")
         self.o_true = Port(object, "o_true")
         self.o_false = Port(bool, "o_false")
 
         self._input = None
         self.add_in_port(self.i_input)
+        self.add_in_port(self.i_reset)
         self.add_out_port(self.o_true)
         self.add_out_port(self.o_false)
 
@@ -587,6 +620,12 @@ class ConditionalXor[I](Atomic):
         self.passivate()
 
     def deltext(self, e):
+        if self.i_reset:
+            self.i_reset.empty()
+            for port in self.in_ports:
+                if port:
+                    port.empty()
+            return self.passivate()
         debug(f"ConditionalXor {self.name} external transition")
         if self.i_input:
             self._input = self.i_input.get()
@@ -656,3 +695,44 @@ class Storage[S](Atomic):
     @property
     def storage(self) -> List[S]:
         return self._storage
+
+
+class ResetAll(Atomic):
+    """
+    An atomic to trigger resets on all other given atomics.
+    """
+
+    def __init__(self, name,):
+        super().__init__(name)
+
+        self.i_reset = Port(bool, "i_reset")
+        self.add_in_port(self.i_reset)
+
+        self.o_trigger = Port(bool, "o_trigger")
+        self.add_out_port(self.o_trigger)
+
+    def initialize(self):
+        self.passivate()
+
+    def deltint(self):
+        self.passivate()
+
+    def deltext(self, e):
+        if self.i_reset:
+            self.activate()
+
+    def lambdaf(self):
+        if self.i_reset:
+            self.i_reset.empty()
+            self.o_trigger.add(True)
+
+    def exit(self):
+        return super().exit()
+    
+    def add_resetables(self, model:Coupled, resetables:Collection):
+
+        for rest in resetables:
+            if hasattr(rest, "i_reset"):
+                model.add_coupling(self.i_reset, rest.i_reset)
+            else:
+                raise ValueError(f"Given reset {rest} does not have port i_reset")

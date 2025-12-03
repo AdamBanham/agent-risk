@@ -29,7 +29,7 @@ def find_movement_sequence(
     """
     # Validate inputs
     if not src or not tgt or amount <= 0:
-        raise ValueError("Invalid parameters for find_movement_sequence")
+        raise ValueError(f"Invalid parameters for find_movement_sequence :: {src=}, {tgt=}, {amount=}")
         return None
 
     # Check if source and target have the same owner
@@ -44,7 +44,7 @@ def find_movement_sequence(
 
     # If source and target are the same, no movement needed
     if src.id == tgt.id:
-        ("Source and target territories are the same")
+        debug("utils::find_movement_sequence::Source and target territories are the same")
         return []
 
     # If source and target are adjacent, direct movement
@@ -54,7 +54,7 @@ def find_movement_sequence(
     # Use BFS to find shortest path through owned territories
     path = _find_path_bfs(src, tgt)
     if not path:
-        raise ValueError("No valid path found between source and target territories")
+        raise ValueError(f"No valid path found between source {src.id} and target {tgt.id} territories")
         return None
 
     # Convert path to movement sequence
