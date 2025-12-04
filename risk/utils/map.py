@@ -216,7 +216,7 @@ class SafeGraph(Graph[SafeNode, Edge]):
         if node:
             return node.value
         return False
-    
+
     def clone(self):
         return SafeGraph(nodes=deepcopy(self.nodes), edges=deepcopy(self.edges))
 
@@ -377,6 +377,20 @@ def construct_network_view(map: Graph[Node, Edge], player: int) -> NetworkGraph:
             network_edges.append(Edge(src=edge.src, dest=edge.dest, value=networks))
 
     return NetworkGraph(nodes=network_nodes, edges=network_edges)
+
+
+def get_value(map: Graph, terr: int):
+    """
+    A shortcut to getting the value of a given territory.
+
+    :param map: the map to check against
+    :param terr: the territory to check for
+    :returns: the value of te node or None
+    """
+    node = map.get_node(terr)
+    if node:
+        return node.value
+    return None 
 
 
 if __name__ == "__main__":

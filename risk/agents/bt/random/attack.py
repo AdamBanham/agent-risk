@@ -11,12 +11,15 @@ import random
 from risk.state.territory import Territory
 from risk.agents.plans import AttackStep, AttackPlan
 from risk.state import GameState
+from risk.utils import map as mapping
 
 from ..bases import (
     StateWithPlan,
     func_name,
     CheckPlan,
     Selector,
+    ExecuteIf,
+    Checker
 )
 
 
@@ -25,8 +28,8 @@ class AttackState(StateWithPlan):
     pos_attacks: int = 0
     territories: Set[int] = field(default_factory=set)
     adjacents: Set[int] = field(default_factory=set)
-    terr: Territory = None
-    adjacent: Territory = None
+    terr: int = None
+    adjacent: int = None
     troops: int = 0
     attack_prob: float = 0.5
 
@@ -55,9 +58,9 @@ class FindsAdjacent(Behaviour):
     Finds adjacent territories for a given territory.
     """
 
-    def __init__(self, game_state: GameState, attr_name):
+    def __init__(self, map: mapping.Graph, attr_name):
         super().__init__("Select Adjacent")
-        self.game_state = game_state
+        self.map = map
         self.attr_name = attr_name
 
     def initialise(self):
@@ -69,8 +72,12 @@ class FindsAdjacent(Behaviour):
 
     def update(self):
         state: AttackState = self.bd.state
-        terr = self.game_state.get_territory(getattr(state, self.attr_name))
-        state.adjacents = set(t.id for t in terr.adjacent_territories)
+        terr = getattr(state, self.attr_name)
+        state.adjacents = set(
+            t.id
+            for t in self.map.get_adjacent_nodes(terr)
+            if t.owner != self.map.get_node(terr).owner
+        )
         return Status.SUCCESS
 
 
@@ -79,9 +86,9 @@ class SelectTroops(Behaviour):
     Selects a random amount of troops.
     """
 
-    def __init__(self, game_state: GameState):
+    def __init__(self, map: mapping.Graph):
         super().__init__("Select Troops")
-        self.game_state = game_state
+        self.map = map
 
     def initialise(self):
         self.logger.debug(f"{self.__class__.__name__}::{self.name}::{func_name()}")
@@ -92,8 +99,8 @@ class SelectTroops(Behaviour):
 
     def update(self):
         state: AttackState = self.bd.state
-        terr = self.game_state.get_territory(state.terr)
-        state.troops = random.choice(list(range(1, 1 + terr.armies)))
+        terr = self.map.get_node(state.terr)
+        state.troops = random.randint(1, terr.value - 1)
         return Status.SUCCESS
 
 
@@ -144,12 +151,17 @@ class RandomAttacks(Sequence):
             attack_prob=attack_prob,
         )
         self.state.plan = AttackPlan(pos_attacks)
+        map = game_state.map
 
         checker = ShouldAttack(game_state, "attacks")
-        select_terr = Selector("attacks", "territories")
-        find_adj = FindsAdjacent(game_state, "terr")
+        select_terr = Selector(
+            "attacks", "territories",
+            condition=lambda n: mapping.get_value(map, n) > 2,
+            with_replacement=False
+        )
+        find_adj = FindsAdjacent(map, "terr")
         select_adj = Selector("attacks", "adjacents", "adjacent")
-        select_troops = SelectTroops(game_state)
+        select_troops = SelectTroops(map)
         add_to_plan = AddToPlan()
 
         # Add children directly to this sequence
@@ -157,20 +169,29 @@ class RandomAttacks(Sequence):
             [
                 Retry(
                     "Keep Building Plan",
-                    Inverter(
-                        "keep flipping?",
-                        Sequence(
-                            "Find a step",
-                            False,
-                            [
-                                checker,
-                                select_terr,
-                                find_adj,
-                                select_adj,
-                                select_troops,
-                                add_to_plan,
-                            ],
-                        ),
+                    ExecuteIf(
+                        "has terrs left",
+                        [
+                            Checker(
+                                "attacks", "territories",
+                                lambda terrs: len(terrs) == 0
+                            )
+                        ],
+                        Inverter(
+                            "keep flipping?",
+                            Sequence(
+                                "Find a step",
+                                True,
+                                [
+                                    checker,
+                                    select_terr,
+                                    find_adj,
+                                    select_adj,
+                                    select_troops,
+                                    add_to_plan,
+                                ],
+                            )
+                        )
                     ),
                     -1,
                 )
@@ -225,9 +246,16 @@ if __name__ == "__main__":
     state = GameState.create_new_game(10, 2, 30)
     state.initialise()
 
-    terrs = set([t.id for t in state.get_territories_owned_by(0)])
+    map = state.map 
+    safe_map = mapping.construct_safe_view(map, 0)
 
-    placer = RandomAttacks(0, 10, terrs, state, 0.85)
+    placer = RandomAttacks(
+        0,
+        10,
+        [t.id for t in safe_map.frontline_nodes if mapping.get_value(map, t.id) > 1],
+        state,
+        0.85,
+    )
 
     print(str(placer))
 

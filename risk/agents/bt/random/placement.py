@@ -43,9 +43,7 @@ class SelectTroops(Behaviour):
 
     def update(self):
         state: PlacementState = self.placement.state
-        state.troops = random.choice(
-            list(range(1, 1 + state.placements - state.placed))
-        )
+        state.troops = 1
         return Status.SUCCESS
 
     def terminate(self, new_status):
