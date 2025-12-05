@@ -39,10 +39,8 @@ class CreatePlacements(Goal):
         self.placements = placements
 
     def achieved(self, state, plan: Plan):
-        curr_plan = deepcopy(plan)
         troops = 0
-        while not curr_plan.is_done():
-            step = curr_plan.pop_step()
+        for step in plan.steps:
             if isinstance(step, TroopPlacementStep):
                 troops += step.troops
 

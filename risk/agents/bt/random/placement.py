@@ -1,16 +1,15 @@
 from py_trees.behaviour import Behaviour
 from py_trees.composites import Sequence
-from py_trees.decorators import Inverter, Retry
+from py_trees.decorators import Retry
 from py_trees.common import Status
 import py_trees
 
 from dataclasses import dataclass, field
 from typing import Set
-import random
 
-from risk.state.territory import Territory
-from risk.agents.plans import PlacementPlan, TroopPlacementStep
+from risk.agents.plans import PlacementPlan, TroopPlacementStep, Planner
 from risk.state import GameState
+from risk.utils.logging import debug
 from ..bases import (
     StateWithPlan, func_name,
     CheckPlan, Selector
@@ -22,7 +21,7 @@ class PlacementState(StateWithPlan):
     placements: int = 0
     territories: Set[int] = field(default_factory=Set)
     placed: int = 0
-    terr: Territory = None
+    terr: int = None
     troops: int = 0
 
 
@@ -86,7 +85,7 @@ class RandomPlacements(Sequence):
         territories: Set[int],
         game_state: GameState
     ):
-        super().__init__(name="Placement Decision Making", memory=False)
+        super().__init__(name="Placement Decision Making", memory=True)
 
         # Initialize the placement state for the blackboard
         self.placement_state = PlacementState(
@@ -106,18 +105,15 @@ class RandomPlacements(Sequence):
                     "Keep Building Plan",
                     Sequence(
                         "Find a step",
-                        False,
+                        True,
                         [
-                            checker,
                             select_terr,
                             select_troops,
                             add_to_plan,
-                            Inverter(
-                                "keep going?", CheckPlan(game_state, "placements")
-                            ),
+                            checker,
                         ],
                     ),
-                    -1,
+                    placements,
                 )
             ]
         )
@@ -158,30 +154,63 @@ class RandomPlacements(Sequence):
         """
         Constructs a plan for the phasement phase.
         """
-        while self.status != Status.SUCCESS:
-            self.tick_once()
+        while self.status not in [Status.SUCCESS, Status.FAILURE]:
+            debug(f"{self.name} ticking...")
+            for _ in self.tick():
+                debug("\n" + str(self))
+
+        debug(str(self.plan))
         return self.plan
 
     def __str__(self):
         from py_trees.display import ascii_tree
 
-        return ascii_tree(self)
+        return ascii_tree(self, show_status=True)
 
+
+class PlacementPlanner(Planner):
+    """
+    Implements random placement.
+    """
+
+    def __init__(self, player: int, placements: int):
+        super().__init__()
+        self.player = player 
+        self.placements = placements
+
+    def construct_plan(self, state):
+
+        terrs = state.get_territories_owned_by(self.player)
+        terrs = [t.id for t in terrs]
+
+        placer = RandomPlacements(self.player, self.placements, terrs, state)
+        plan = placer.construct_plan()
+
+        return plan
+    
 
 if __name__ == "__main__":
     from py_trees import logging
+    from risk.utils.logging import setLevel
+    import random
+    from logging import DEBUG
+    setLevel(DEBUG)
 
     logging.level = logging.Level.DEBUG
     state = GameState.create_new_game(10, 2, 30)
     state.initialise()
+    state.update_player_statistics()
 
     terrs = [t.id for t in state.get_territories_owned_by(0)]
 
-    placer = RandomPlacements(0, 10, terrs, state)
+    for _ in range(5):
+        pick = random.randint(1, 5)
+        placer = PlacementPlanner(0, pick)
+        plan = placer.construct_plan(state)
 
-    print(str(placer))
+        debug(str(plan))
+        assert len(plan.steps) == pick, f"Expected plan to have {pick} placements"
+        for step in plan.steps:
+            debug(step) 
 
-    plan = placer.construct_plan()
-
-    print(str(plan))
-    print(str(repr(plan.steps)))
+        input("continue?")

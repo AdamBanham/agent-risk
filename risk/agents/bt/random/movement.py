@@ -7,7 +7,7 @@ from dataclasses import dataclass, field
 from typing import List, Set
 
 from risk.state.territory import Territory
-from risk.agents.plans import MovementPlan, MovementStep
+from risk.agents.plans import MovementPlan, MovementStep, Planner
 from risk.state import GameState
 from ..bases import StateWithPlan, func_name, Selector
 from risk.utils import map as mapping
@@ -106,7 +106,7 @@ class RandomMovements(Sequence):
         map: mapping.Graph,
         network_map: mapping.NetworkGraph,
     ):
-        super().__init__(name="Movement Decision Making", memory=False)
+        super().__init__(name="Movement Decision Making", memory=True)
 
         # Initialize the movement state for the blackboard
         self.movement_state = MovementState(
@@ -165,14 +165,41 @@ class RandomMovements(Sequence):
         """
         Constructs a plan for the movement phase.
         """
-        for tick in self.tick():
+        while self.status not in [Status.SUCCESS, Status.FAILURE]:
             debug(f"{self.name} ticking...")
+            for _ in self.tick():
+                debug("\n" + str(self))
+
+        debug(str(self.plan))
         return self.plan
 
     def __str__(self):
         from py_trees.display import ascii_tree
 
         return ascii_tree(self, show_status=True)
+    
+
+class MovementPlanner(Planner):
+    """
+    Implements random move from safe to frontline.
+    """
+
+    def __init__(self, player: int, moves: int):
+        super().__init__()
+        self.player = player 
+        self.moves = moves
+
+    def construct_plan(self, state):
+        map = state.map.clone()
+        network_map = mapping.construct_network_view(map, self.player)
+        placer = RandomMovements(
+            self.player, self.moves, 
+            [t.id for t in network_map.nodes if t.safe],
+            map, network_map
+        )
+        plan = placer.construct_plan()
+
+        return plan
 
 
 if __name__ == "__main__":
@@ -182,19 +209,30 @@ if __name__ == "__main__":
     setLevel(DEBUG)
 
     logging.level = logging.Level.DEBUG
-    state = GameState.create_new_game(30, 2, 100)
-    state.initialise()
 
-    map = state.map
-    network_map = mapping.construct_network_view(map, 0)
+    for _ in range(10):
+        state = GameState.create_new_game(30, 2, 100)
+        state.initialise()
+        state.update_player_statistics()
 
-    placer = RandomMovements(
-        0, 3, [t.id for t in network_map.nodes if t.safe], map, network_map
-    )
+        map = state.map
+        safe_map = mapping.construct_safe_view(map, 0)
+        while len(safe_map.safe_nodes) < 1:
+            state = GameState.create_new_game(30, 2, 100)
+            state.initialise()
+            state.update_player_statistics()
+            map = state.map
+            safe_map = mapping.construct_safe_view(map, 0)
 
-    print(str(placer))
+        planner = MovementPlanner(
+            0, 1
+        )
+        plan = planner.construct_plan(state)
 
-    plan = placer.construct_plan()
-
-    print(str(plan))
-    print(str(repr(plan.steps)))
+        debug(plan)
+        assert len(plan.steps) > 0, "Expected one movement"
+        for step in plan.steps:
+            debug(step)
+            assert safe_map.get_node(step.source).value, "Expected move from safe node"
+        
+        input("continue?")

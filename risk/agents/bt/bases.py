@@ -41,10 +41,10 @@ class CheckPlan(Behaviour):
         state: StateWithPlan = self.bd.state
         if not state.plan.goal_achieved(self.game_state):
             debug("Plan not Acheived.")
-            return Status.SUCCESS
+            return Status.FAILURE
         else:
             debug("Plan Acheived.")
-            return Status.FAILURE
+            return Status.SUCCESS
 
     def terminate(self, new_status):
         debug(f"{self.__class__.__name__}::{self.name}::{func_name()}")
@@ -337,7 +337,7 @@ class ExecuteIf(Selection):
         checks: List[Checker],
         child: Behaviour,
     ):
-        super().__init__(name, False, [])
+        super().__init__(name, True, [])
 
         self.add_children(checks + [child])
 
