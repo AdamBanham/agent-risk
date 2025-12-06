@@ -27,6 +27,7 @@ class MovementState(StateWithPlan):
     terr: Territory = None
     troops: int = 0
 
+
 class GenerateMovementRoute(Behaviour):
     """
     Generates a movement route and adds it to the plan.
@@ -177,7 +178,7 @@ class RandomMovements(Sequence):
         from py_trees.display import ascii_tree
 
         return ascii_tree(self, show_status=True)
-    
+
 
 class MovementPlanner(Planner):
     """
@@ -186,16 +187,18 @@ class MovementPlanner(Planner):
 
     def __init__(self, player: int, moves: int):
         super().__init__()
-        self.player = player 
+        self.player = player
         self.moves = moves
 
     def construct_plan(self, state):
         map = state.map.clone()
         network_map = mapping.construct_network_view(map, self.player)
         placer = RandomMovements(
-            self.player, self.moves, 
+            self.player,
+            self.moves,
             [t.id for t in network_map.nodes if t.safe],
-            map, network_map
+            map,
+            network_map,
         )
         plan = placer.construct_plan()
 
@@ -206,6 +209,7 @@ if __name__ == "__main__":
     from py_trees import logging
     from risk.utils.logging import setLevel
     from logging import DEBUG
+
     setLevel(DEBUG)
 
     logging.level = logging.Level.DEBUG
@@ -224,9 +228,7 @@ if __name__ == "__main__":
             map = state.map
             safe_map = mapping.construct_safe_view(map, 0)
 
-        planner = MovementPlanner(
-            0, 1
-        )
+        planner = MovementPlanner(0, 1)
         plan = planner.construct_plan(state)
 
         debug(plan)
@@ -234,5 +236,5 @@ if __name__ == "__main__":
         for step in plan.steps:
             debug(step)
             assert safe_map.get_node(step.source).value, "Expected move from safe node"
-        
+
         input("continue?")
