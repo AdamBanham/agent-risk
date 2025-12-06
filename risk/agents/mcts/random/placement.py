@@ -1,46 +1,49 @@
 from risk.agents.plans import Planner
 from risk.state.game_state import GameState
 from risk.state.plan import Plan
-from risk.utils.rewards import calculate_player_position_rewards
-from risk.utils.copy import copy_game_state
-from risk.utils.replay import simulate_turns, SimulationConfiguration
-from risk.utils.logging import debug, info
+from risk.utils.logging import debug
 from ...plans import PlacementPlan, TroopPlacementStep
 
-from mcts.base.base import BaseState, BaseAction
+from mcts.base.base import BaseState
 from mcts.searcher.mcts import MCTS
+from ..base import NoAction, BaseAgentAction
+from ..base import extractStatistics
 
-from typing import List
+from typing import List, Collection
 import random
 
-class PlacementAction(BaseAction):
+
+class NoPlacement(NoAction):
+    """
+    Noop for placement.
+    """
+
+    def __init__(self):
+        super().__init__()
+
+    def execute(self, state: "PlacementState"):
+        return PlacementState(
+            state.placements_left, state.terrs, state._actions + [self]
+        )
+
+
+class PlacementAction(BaseAgentAction):
     """
     An action representing a placement decision.
     """
 
-    def __init__(self, territory_id: int, num_armies: int, act: bool):
+    def __init__(self, territory_id: int, num_armies: int):
+        super().__init__(False)
         self.territory_id = territory_id
         self.num_armies = num_armies
-        self.act = act
 
-    def execute(self, state: 'PlacementState') -> 'PlacementState':
-        if self.act:
-            return PlacementState(
-                state.placements_left - self.num_armies, state.terrs
-            )
-        else:
-            return PlacementState(
-                state.placements_left, state.terrs, acting=False
-            )
-
-    def is_acting(self) -> bool:
-        return self.act
+    def execute(self, state: "PlacementState") -> "PlacementState":
+        return PlacementState(
+            state.placements_left - 1, state.terrs, state._actions + [self]
+        )
 
     def to_step(self):
-        if self.act:
-            return TroopPlacementStep(self.territory_id, self.num_armies)
-        else:
-            return None
+        return TroopPlacementStep(self.territory_id, self.num_armies)
 
     def __str__(self):
         return str((self.territory_id, self.num_armies))
@@ -50,14 +53,11 @@ class PlacementAction(BaseAction):
 
     def __eq__(self, other):
         if isinstance(other, PlacementAction):
-            return (
-                self.territory_id == other.territory_id
-                and self.num_armies == other.num_armies
-            )
+            return other.id == self.id
         return False
 
     def __hash__(self):
-        return hash((self.territory_id, self.num_armies))
+        return hash((self.id, self.territory_id, self.num_armies))
 
 
 class PlacementState(BaseState):
@@ -66,50 +66,42 @@ class PlacementState(BaseState):
     """
 
     def __init__(
-        self, placements_left: int, terrs: set[int], acting: bool = True,
+        self,
+        placements_left: int,
+        terrs: set[int],
+        actions: Collection[BaseAgentAction] = None,
     ):
         self.placements_left = placements_left
-        self.acting = acting
         self.terrs = terrs
-        if self.placements_left <= 0 or not self.acting:
-            self._actions = []
-        else:
-            self._actions = []
-            for drop in range(1, self.placements_left + 1):
-                debug(f"Possible placement: {drop} troops")
-                self._actions.extend([
-                    PlacementAction(terr, drop, True)
-                    for terr in self.terrs
-                ])
-            self._actions.append(PlacementAction(-1, 0, False)) 
-            random.shuffle(self._actions)
+        self._actions = [a for a in actions] if actions else []
 
     def get_current_player(self):
-        return 1.0
+        return 1.0  # Maximise
 
     def get_possible_actions(self) -> List[PlacementAction]:
-        return self._actions
+        options = []
+
+        if self.placements_left == 0:
+            options.append(NoPlacement())
+        else:
+            for terr in self.terrs:
+                options.append(PlacementAction(terr, 1))
+            options.append(NoPlacement())
+
+        random.shuffle(options)
+        return options
 
     def take_action(self, action: PlacementAction) -> "PlacementState":
         return action.execute(self)
 
     def is_terminal(self) -> bool:
-        return self.placements_left <= 0 or not self.acting
+        if len(self._actions) > 0:
+            last = self._actions[-1]
+            return last.is_terminal()
+        return False
 
     def get_reward(self) -> float:
-        base = 1.0 / (1.0 + self.placements_left)
-        jitter = 0.25 + random.random() * (base - 0.25)
-        return base + jitter
-
-
-def extractStatistics(searcher, action) -> dict:
-    """Return simple statistics for ``action`` from ``searcher``."""
-    statistics = {}
-    statistics["rootNumVisits"] = searcher.root.numVisits
-    statistics["rootTotalReward"] = searcher.root.totalReward
-    statistics["actionNumVisits"] = searcher.root.children[action].numVisits
-    statistics["actionTotalReward"] = searcher.root.children[action].totalReward
-    return statistics
+        return len(self._actions)
 
 
 class RandomPlacements(Planner):
@@ -117,60 +109,59 @@ class RandomPlacements(Planner):
     A planner that creates random placement plans.
     """
 
-    def __call__(self, *args, **kwds):
-        return super().__call__(*args, **kwds)
+    def __init__(self, player: int, placements: int):
+        super().__init__()
+        self.player = player
+        self.placements = placements
 
-    def construct_plan(self, state: GameState, placements: int) -> Plan:
+    def construct_plan(self, state: GameState) -> Plan:
         # Implementation of random placement plan construction
-        plan = PlacementPlan(placements)
-        max_runtime = 50 # milliseconds
-        terrs = set(
-            terr.id 
-            for terr 
-            in state.get_territories_owned_by(state.current_player_id)
-        )
-        mcts_state = PlacementState(placements, terrs)
-        mcts = MCTS(time_limit=max_runtime)
-        action, reward = mcts.search(mcts_state, need_details=True)
+        plan = PlacementPlan(self.placements)
+        terrs = set(terr.id for terr in state.get_territories_owned_by(self.player))
+        max_runtime = 100  # milliseconds
 
-        debug(extractStatistics(mcts, action))
+        actions = []
+        mcts_state = PlacementState(self.placements, terrs)
+        for i in range(self.placements+1):
+            debug(f"starting mcts for placement {i+1}/{self.placements}...")
+            mcts = MCTS(time_limit=max(10, max_runtime // self.placements))
+            action, reward = mcts.search(mcts_state, need_details=True)
+            actions.append(action)
+            mcts_state = mcts_state.take_action(action)
+            debug(f"mcts finished, taking {action} with expected reward of {reward}")
+            debug(extractStatistics(mcts, action))
 
-        # recursively extract actions
-        seq_actions = []
-        node = mcts.root.children[action]
-        seq_actions.append(action)
-        depth = 0
-        debug(f"Depth {depth}: Selected Action: {action}")
-        while len(node.children.values()) > 0:
-            for child in node.children.values():
-                debug(
-                    f"Child: {child}, Total Reward: {child.totalReward}, Num Visits: {child.numVisits}"
-                )
-            action, node = max(node.children.items(), key=lambda n: n[1].totalReward)
-            depth += 1
-            debug(f"Depth {depth}: Selected Action: {action}")
-            seq_actions.append(action)
+        debug(f"Generated actions for placement plan: {actions}")
 
         # Convert actions to plan steps
-        for action in seq_actions:
+        for action in actions:
             step = action.to_step()
-            plan.add_step(step)
+            if step:
+                plan.add_step(step)
         return plan
 
 
 if __name__ == "__main__":
     from risk.utils.logging import setLevel
-    from logging import INFO, DEBUG
+    from logging import DEBUG
 
     setLevel(DEBUG)
 
     state = GameState.create_new_game(25, 2, 50)
     state.initialise()
+    state.update_player_statistics()
 
-    planner = RandomPlacements()
-    plan = planner.construct_plan(state, 4)
+    for _ in range(10):
+        pick = random.randint(1, 10)
+        player = random.randint(0, 1)
+        planner = RandomPlacements(player, pick)
+        plan = planner.construct_plan(state)
 
-    print("****")
-    print(f"Generated Placement Plan: {plan}")
-    for step in plan.steps:
-        print(step)
+        print(plan)
+        assert len(plan.steps) == pick, f"Expected {pick} placements"
+        for step in plan.steps:
+            print(step)
+            terr = state.get_territory(step.territory)
+            assert terr.owner == player, f"Expected to pick territories for {player}"
+
+        input("cotinue?")

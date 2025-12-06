@@ -23,13 +23,13 @@ class MCSTRandomAgent(BaseAgent):
 
     def __init__(self, player_id: int, attack_probability: float = 0.6):
         super().__init__(
-            player_id, "MCTS-Random-Agent-{}".format(player_id), attack_probability
+            player_id, "mcts-random-agent-{}".format(player_id), attack_probability
         )
 
     def decide_placement(self, state: GameState, goal: Goal = None) -> List:
-        info(f"mcts-random-agent-{self.player_id} planning placement")
-        planner = RandomPlacements()
-        plan = planner.construct_plan(state, state.placements_left)
+        info(f"{self.name} planning placement...")
+        planner = RandomPlacements(self.player_id, state.placements_left)
+        plan = planner.construct_plan(state)
 
         events = []
         while not plan.is_done():
@@ -37,9 +37,9 @@ class MCSTRandomAgent(BaseAgent):
         return events
 
     def decide_attack(self, state: GameState, goal: Goal = None) -> List:
-        info(f"mcts-random-agent-{self.player_id} planning attack")
+        info(f"{self.name} planning attack...")
         planner = RandomAttacks(
-            10, player=self.player_id, attack_probability=self.attack_probability
+            self.player_id, 10, self.attack_probability
         )
         plan = planner.construct_plan(state)
 
@@ -49,8 +49,8 @@ class MCSTRandomAgent(BaseAgent):
         return events
 
     def decide_movement(self, state: GameState, goal: Goal = None) -> List:
-        info(f"mcts-random-agent-{self.player_id} planning movement")
-        planner = RandomMovements(player=self.player_id)
+        info(f"{self.name} planning movement...")
+        planner = RandomMovements(1, self.player_id)
         plan = planner.construct_plan(state)
 
         events = []

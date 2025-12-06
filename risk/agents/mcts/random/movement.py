@@ -8,69 +8,59 @@ from risk.utils.movement import (
     find_safe_frontline_territories,
 )
 from risk.utils.logging import debug, info
+from risk.utils import map as mapping
 from risk.agents.plans import MovementPlan, RouteMovementStep, MovementStep
 
-from typing import List, Set, Dict
+from typing import List, Set, Collection
 from copy import deepcopy
 
 from mcts.base.base import BaseState, BaseAction
 from mcts.searcher.mcts import MCTS
+from ..base import NoAction, BaseAgentAction
+from ..base import extractStatistics
 
 
-class MovementAction(BaseAction):
+class NoMove(NoAction):
+    """
+    Noop for movement.
+    """
+
+    def __init__(self):
+        super().__init__()
+
+    def execute(self, state: "MovementState"):
+        return MovementState(
+            state.moves, state.terrs, state.map, state.networks, state._actions + [self]
+        )
+
+
+class MovementAction(BaseAgentAction):
 
     def __init__(
         self,
         from_territory_id: int,
         to_territory_id: int,
         num_armies: int,
-        act: bool = True,
     ):
-        self.from_territory_id = from_territory_id
-        self.to_territory_id = to_territory_id
-        self.num_armies = num_armies
-        self.act = act
+        super().__init__(False)
+        self.src = from_territory_id
+        self.tgt = to_territory_id
+        self.troops = num_armies
 
     def execute(self, state: "MovementState") -> "MovementState":
-        if self.act:
-            new_armies = deepcopy(state.armies)
-            new_armies[self.from_territory_id] -= self.num_armies
-            new_armies[self.to_territory_id] += self.num_armies
-            return MovementState(
-                state.terrs,
-                state.connected,
-                new_armies,
-                state.moves - 1,
-            )
         return MovementState(
+            state.moves - 1,
             state.terrs,
-            state.connected,
-            state.armies,
-            state.moves,
-            acting=False,
+            state.map,
+            state.networks,
+            state._actions + [self],
         )
-
-    def is_acting(self) -> bool:
-        return self.act
 
     def to_step(self, game_state: GameState):
-        if self.act:
-            movements = find_movement_sequence(
-                game_state.get_territory(self.from_territory_id),
-                game_state.get_territory(self.to_territory_id),
-                self.num_armies,
-            )
-            moves = []
-            if movements is not None:
-                for move in movements:
-                    moves.append(MovementStep(move.src.id, move.tgt.id, move.amount))
-            return RouteMovementStep(moves, self.num_armies)
-        return None
+        return MovementStep(self.src, self.tgt, self.troops)
 
     def __str__(self):
-        return str(
-            (self.from_territory_id, self.to_territory_id, self.num_armies, self.act)
-        )
+        return str((self.src, self.tgt, self.troops))
 
     def __repr__(self):
         return str(self)
@@ -78,14 +68,14 @@ class MovementAction(BaseAction):
     def __eq__(self, other):
         if isinstance(other, MovementAction):
             return (
-                self.from_territory_id == other.from_territory_id
-                and self.to_territory_id == other.to_territory_id
-                and self.num_armies == other.num_armies
+                self.src == other.src
+                and self.tgt == other.tgt
+                and self.troops == other.troops
             )
         return False
 
     def __hash__(self):
-        return hash((self.from_territory_id, self.to_territory_id, self.num_armies))
+        return hash((self.id, self.src, self.tgt, self.troops))
 
 
 class MovementState(BaseState):
@@ -95,67 +85,51 @@ class MovementState(BaseState):
 
     def __init__(
         self,
+        moves: int,
         terrs: Set[int],
-        connected: Dict[int, Set[int]],
-        armies: Dict[int, int],
-        moves: int = 0,
-        acting: bool = True,
+        map: mapping.Graph,
+        networks: mapping.NetworkGraph,
+        actions: Collection[BaseAgentAction] = None,
     ):
         self.terrs = terrs
-        self.armies = armies
-        self.connected = connected
-        self.acting = acting
         self.moves = moves
-        self._actions = self._generate_actions()
-
-    def _generate_actions(self) -> List[MovementAction]:
-        actions = []
-        if self.acting and self.moves > 0:
-            for from_terr in self.terrs:
-                for to_terr in self.connected[from_terr]:
-                    max_movable = self.armies[from_terr] - 1
-                    if max_movable > 0:
-                        num_armies = max_movable
-                        actions.append(
-                            MovementAction(from_terr, to_terr, num_armies, act=True)
-                        )
-            # Add a no-op action to end movement phase
-            actions.append(MovementAction(-1, -1, 0, act=False))
-            random.shuffle(actions)
-        return actions
+        self.map = map.clone()
+        self.networks = networks
+        self._actions = [a for a in actions] if actions else []
 
     def get_current_player(self):
-        return 1
+        return 1  # Maximise
 
     def get_possible_actions(self):
-        return self._actions
+        options = []
+
+        if self.moves > 0:
+            # for each safe, make an action to one of its
+            # connected frontlines
+            for terr in self.terrs:
+                troops = mapping.get_value(self.map, terr) - 1
+
+                if troops > 0:
+                    network = mapping.get_value(self.networks, terr)
+                    for front in self.networks.frontlines_in_network(network):
+                        options.append(MovementAction(terr, front.id, troops))
+
+        options.append(NoMove())
+        random.shuffle(options)
+        debug(f"Produced action set of size: {len(options)}")
+        return options
 
     def take_action(self, action):
         return action.execute(self)
 
     def is_terminal(self):
-        if not self.acting:
-            return True
-        if self.moves == 0:
-            return True
-        if len(self._actions) == 0:
-            return True
+        if len(self._actions) > 0:
+            last = self._actions[-1]
+            return last.is_terminal()
         return False
 
     def get_reward(self):
-        base = 1.0 / (1.0 + self.moves)
-        jitter = 0.25 + random.random() * (base - 0.25)
-        return base + jitter
-
-
-def extractStatistics(searcher, action) -> dict:
-    """Return simple statistics for ``action`` from ``searcher``."""
-    statistics = {}
-    statistics["rootNumVisits"] = searcher.root.numVisits
-    statistics["rootTotalReward"] = searcher.root.totalReward
-    statistics["actionNumVisits"] = searcher.root.children[action].numVisits
-    statistics["actionTotalReward"] = searcher.root.children[action].totalReward
-    return statistics
+        return len(self._actions)
 
 
 class RandomMovements(Planner):
@@ -170,89 +144,82 @@ class RandomMovements(Planner):
 
     def construct_plan(self, state: GameState) -> Plan:
         # Implementation of random movement plan construction
-        safes, frontlines = find_safe_frontline_territories(state, self.player)
-        connections = dict(
-            (
-                terr.id,
-                [
-                    o.id
-                    for o in find_connected_frontline_territories(
-                        terr, frontlines, safes + frontlines
-                    )
-                ],
-            )
-            for terr in safes + frontlines
-        )
+        # Get all territories owned by this agent
+        map = state.map
+        safe_map = mapping.construct_safe_view(map, self.player)
+        network_map = mapping.construct_network_view(map, self.player)
+        safes = safe_map.safe_nodes
 
-        starting_state = MovementState(
-            terrs=set(terr.id for terr in safes),
-            connected=connections,
-            armies=dict((terr.id, terr.armies) for terr in safes + frontlines),
-            moves=self.moves,
-            acting=True,
-        )
-        debug(f"Is starting state terminal? {starting_state.is_terminal()}")
-
-        max_runtime = 50  # milliseconds
+        max_runtime = 100  # milliseconds
         plan = MovementPlan(self.moves)
 
-        if starting_state.is_terminal():
+        if len(safes) < 1:
             return plan
 
-        mcts = MCTS(time_limit=max_runtime)
-        action, reward = mcts.search(starting_state, need_details=True)
+        actions = []
+        mcts_state = MovementState(self.moves, {n.id for n in safes}, map, network_map)
 
-        debug(extractStatistics(mcts, action))
+        for i in range(self.moves + 1):
+            if mcts_state.is_terminal():
+                break
 
-        # recursively extract actions
-        seq_actions = []
-        node = mcts.root.children[action]
-        seq_actions.append(action)
-        depth = 0
-        debug(f"Depth {depth}: Selected Action: {action}")
-        while len(node.children.values()) > 0:
-            for child in node.children.values():
-                debug(
-                    f"Child: {child}, Total Reward: {child.totalReward}, Num Visits: {child.numVisits}"
-                )
-            action, node = max(node.children.items(), key=lambda n: n[1].totalReward)
-            depth += 1
-            debug(f"Depth {depth}: Selected Action: {action}")
-            seq_actions.append(action)
+            debug(f"starting mcts for attacking {i+1}/{self.moves+1}...")
+            mcts = MCTS(time_limit=max(10, max_runtime // self.moves + 1))
+            action, reward = mcts.search(mcts_state, need_details=True)
+            actions.append(action)
+            mcts_state = mcts_state.take_action(action)
+            debug(f"mcts finished, taking {action} with expected reward of {reward}")
+            debug(extractStatistics(mcts, action))
+
+        debug(f"Generated actions for attacks plan: {actions}")
 
         # Convert actions to plan steps
-        for action in seq_actions:
+        for action in reversed(actions):
             step = action.to_step(state)
-            if step is not None:
-                plan.add_step(step)
+            if step:
+                route = find_movement_sequence(
+                    state.get_territory(step.source),
+                    state.get_territory(step.destination),
+                    step.troops,
+                )
+
+                if route:
+                    route = [
+                        MovementStep(move.src.id, move.tgt.id, step.troops)
+                        for move in route
+                    ]
+
+                    plan.add_step(RouteMovementStep(route, step.troops))
+                else:
+                    raise ValueError(
+                        f"No route found for movement from {action.src.id} to {action.tgt.id} of {action.amount} troops."
+                    )
         return plan
 
 
 if __name__ == "__main__":
     from risk.utils.logging import setLevel
-    from logging import INFO
+    from logging import DEBUG
 
-    from risk.utils.replay import simulate_turns
+    setLevel(DEBUG)
 
-    setLevel(INFO)
+    for _ in range(10):
+        state = GameState.create_new_game(50, 2, 250)
+        state.initialise()
+        state.update_player_statistics()
 
-    state = GameState.create_new_game(50, 2, 250)
-    state.initialise()
-    state, _ = simulate_turns(state, 50)
-
-    with open("mcts_movement.state", "w") as f:
-        f.write(repr(state))
-
-    planner = RandomMovements(moves=3, player=0)
-    plan = planner.construct_plan(state)
-
-    if len(plan.steps) == 0:
-        print("No movement plan generated for player 0")
-        print("trying the other player...")
-        planner = RandomMovements(moves=3, player=1)
+        moves = 1
+        player = random.randint(0, 1)
+        planner = RandomMovements(moves, player)
         plan = planner.construct_plan(state)
 
-    print("****")
-    print(f"Generated Movement Plan: {plan}")
-    for step in plan.steps:
-        print(step)
+        map = state.map
+        networks = mapping.construct_network_view(map, player)
+
+        debug(f"Constructed Plan: {plan}")
+        assert len(plan.steps) <= moves, f"Expected no more than {moves} movements"
+        seen = set()
+        for step in plan.steps:
+            debug(step)
+
+        input("continue?")

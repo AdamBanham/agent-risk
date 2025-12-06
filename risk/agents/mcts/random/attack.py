@@ -2,50 +2,58 @@ from risk.agents.plans import Planner
 from risk.state.game_state import GameState
 from risk.state.plan import Plan
 from risk.agents.plans import AttackPlan, AttackStep
-from risk.utils.logging import debug, info
-from risk.utils.movement import find_safe_frontline_territories
+from risk.utils.logging import debug
+from risk.utils import map as mapping
 
-from typing import Dict, Set, List
+from typing import Set, List, Collection
 import random
 
-from mcts.base.base import BaseState, BaseAction
+from mcts.base.base import BaseState
 from mcts.searcher.mcts import MCTS
+from ..base import NoAction, BaseAgentAction
+from ..base import extractStatistics
 
 
-class AttackAction(BaseAction):
+class NoAttack(NoAction):
+    """
+    Noop for attacking.
+    """
+
+    def __init__(self):
+        super().__init__()
+
+    def execute(self, state: "AttackState"):
+        return AttackState(
+            state.attacks, state.terrs, state.map, state._actions + [self]
+        )
+
+
+class AttackAction(BaseAgentAction):
+    """
+    Action for attacking.
+    """
 
     def __init__(
         self,
         attacker: int,
         defender: int,
         num_attackers: int,
-        act: bool = True,
     ):
-        super().__init__()
+        super().__init__(False)
         self.attacker = attacker
         self.defender = defender
         self.num_attackers = num_attackers
-        self.act = act
-
-    def is_acting(self) -> bool:
-        return self.act
 
     def to_step(self):
-        if self.act:
-            return AttackStep(self.attacker, self.defender, self.num_attackers)
-        return None
+        return AttackStep(self.attacker, self.defender, self.num_attackers)
 
     def execute(self, state: "AttackState") -> "AttackState":
-        if self.act:
-            new_armies = state.armies.copy()
-            new_armies[self.attacker] -= self.num_attackers
-            return AttackState(
-                state.terrs,
-                new_armies,
-                attacks=state.attacks - 1,
-            )
-        else:
-            return AttackState(state.terrs, state.armies, acting=False)
+        return AttackState(
+            state.attacks - 1,
+            state.terrs.difference(set([self.attacker])),
+            state.map,
+            state._actions + [self],
+        )
 
     def __str__(self):
         return str((self.attacker, self.defender, self.num_attackers))
@@ -63,70 +71,59 @@ class AttackAction(BaseAction):
         return False
 
     def __hash__(self):
-        return hash((self.attacker, self.defender, self.num_attackers))
+        return hash((self.id, self.attacker, self.defender, self.num_attackers))
 
 
 class AttackState(BaseState):
 
     def __init__(
         self,
-        terrs: Dict[int, Set[int]],
-        armies: Dict[int, int],
-        acting: bool = True,
-        attacks: int = 0,
+        attacks: int,
+        terrs: Set[int],
+        map: mapping.Graph,
+        actions: Collection[BaseAgentAction] = None,
     ):
         super().__init__()
-        self.terrs = terrs
-        self.armies = armies
-        self.acting = acting
         self.attacks = attacks
-
-    def is_acting(self) -> bool:
-        return self.acting
-
-    def _generate_actions(self) -> List[AttackAction]:
-        actions = []
-        if self.acting:
-            for attacker in self.terrs:
-                for defender in self.terrs[attacker]:
-                    max_attackers = self.armies[attacker] - 1
-                    if max_attackers > 0:
-                        num_attackers = max_attackers
-                        for attacking in range(1, num_attackers + 1):
-                            actions.append(
-                                AttackAction(attacker, defender, attacking, act=True)
-                            )
-            # Add a no-op action to end attack phase
-            actions.append(AttackAction(-1, -1, 0, act=False))
-            random.shuffle(actions)
-        return actions
+        self.terrs = terrs
+        self.map = map.clone()
+        self._actions = [a for a in actions] if actions else []
 
     def get_current_player(self):
-        return 1
+        return 1  # Maximise
 
     def get_possible_actions(self) -> List[AttackAction]:
-        return self._generate_actions()
+        options = []
+
+        if self.attacks == 0:
+            options.append(NoAttack())
+        else:
+            # for each terr, add an attack on enemy adjacent
+            for terr in self.terrs:
+                node = self.map.get_node(terr)
+                for adj in self.map.get_adjacent_nodes(terr):
+                    if adj.owner != node.owner:
+                        troops = node.value - 1
+                        if troops > 1:
+                            troops = random.randint(1, troops)
+
+                        options.append(AttackAction(node.id, adj.id, troops))
+
+        random.shuffle(options)
+        return options
 
     def take_action(self, action: AttackAction) -> "AttackState":
         return action.execute(self)
 
     def is_terminal(self) -> bool:
-        return not self.acting or len(self.get_possible_actions()) == 0 or self.attacks <= 0
+        if len(self._actions) > 0:
+            last = self._actions[-1]
+            return last.is_terminal()
+        return False
 
     def get_reward(self) -> float:
-        base = 1.0 / (1.0 + self.attacks)
-        jitter = 0.25 + random.random() * (base - 0.25)
-        return base + jitter
+        return len(self._actions[:-1])
 
-
-def extractStatistics(searcher, action) -> dict:
-    """Return simple statistics for ``action`` from ``searcher``."""
-    statistics = {}
-    statistics["rootNumVisits"] = searcher.root.numVisits
-    statistics["rootTotalReward"] = searcher.root.totalReward
-    statistics["actionNumVisits"] = searcher.root.children[action].numVisits
-    statistics["actionTotalReward"] = searcher.root.children[action].totalReward
-    return statistics
 
 class RandomAttacks(Planner):
     """
@@ -134,78 +131,89 @@ class RandomAttacks(Planner):
     """
 
     def __init__(
-        self, pos_attacks: int = 0, player: int = 0, attack_probability: float = 0.5
+        self, player: int = 0, pos_attacks: int = 0, attack_probability: float = 0.5
     ):
         super().__init__()
-        self.pos_attacks = pos_attacks
         self.player = player
+        self.pos_attacks = pos_attacks
         self.attack_probability = attack_probability
 
     def construct_plan(self, state: GameState) -> Plan:
-        # flip for the number of attacks 
-        num_attacks = 1
+        # flip for the number of attacks
+        max_runtime = 100  # milliseconds
+        num_attacks = 0
         pick = random.uniform(0, 1)
-        while pick <= self.attack_probability:
+        while pick <= self.attack_probability and num_attacks < self.pos_attacks:
             num_attacks += 1
             pick = random.uniform(0, 1)
 
-        owned_terrs = state.get_territories_owned_by(self.player)
-        terrs = dict(
-            (terr.id, set(adj.id for adj in terr.adjacent_territories))
-            for terr in owned_terrs
-        )
-        plan = AttackPlan(self.pos_attacks) 
-        
-        starting_state = AttackState(
-            terrs=terrs,
-            armies={terr.id: terr.armies for terr in owned_terrs},
-            attacks=num_attacks,
-            acting=True,
+        # pick a frontline territory with more than one troop
+        map = state.map
+        safe_map = mapping.construct_safe_view(map, self.player)
+        terrs = set(
+            n.id for n in safe_map.frontline_nodes if map.get_node(n.id).value > 2
         )
 
-        debug(f"Is starting state terminal? {starting_state.is_terminal()}")
-        max_runtime = 15  # milliseconds
+        plan = AttackPlan(num_attacks)
+        actions = []
+        mcts_state = AttackState(num_attacks, terrs, map)
 
-        if starting_state.is_terminal():
+        if num_attacks == 0:
             return plan
-        seq_actions = []
 
-        for attack in range(num_attacks):
-            debug(f"Starting MCTS for attack {attack + 1}/{num_attacks}")
-
-            if starting_state.is_terminal():
-                debug("Reached terminal state, ending attack planning.")
-                break
-
-            mcts = MCTS(time_limit=max_runtime)
-            action, reward = mcts.search(starting_state, need_details=True)
-            seq_actions.append(action)
-
+        for i in range(num_attacks + 1):
+            debug(f"starting mcts for attacking {i+1}/{num_attacks+1}...")
+            mcts = MCTS(time_limit=max(10, max_runtime // num_attacks + 1))
+            action, reward = mcts.search(mcts_state, need_details=True)
+            actions.append(action)
+            mcts_state = mcts_state.take_action(action)
+            debug(f"mcts finished, taking {action} with expected reward of {reward}")
             debug(extractStatistics(mcts, action))
-            starting_state = starting_state.take_action(action)
+
+        debug(f"Generated actions for attacks plan: {actions}")
 
         # Convert actions to plan steps
-        debug(f"Constructed sequence of actions: {seq_actions}")
-        for action in seq_actions:
+        for action in actions:
             step = action.to_step()
-            if step is not None:
+            if step:
                 plan.add_step(step)
         return plan
-    
+
 
 if __name__ == "__main__":
     from risk.state.game_state import GameState
     from risk.utils.logging import setLevel
-    from logging import INFO, DEBUG
+    from logging import DEBUG
 
     setLevel(DEBUG)
 
-    state = GameState.create_new_game(50, 2, 150)
+    state = GameState.create_new_game(25, 2, 50)
     state.initialise()
+    state.update_player_statistics()
 
-    planner = RandomAttacks(3, 1, 0.7)
-    plan = planner.construct_plan(state)
+    map = state.map
 
-    info(f"Constructed Plan: {plan}")
-    for step in plan.steps:
-        print(step)
+    for _ in range(10):
+        player = random.randint(0, 1)
+        planner = RandomAttacks(player, 5, 0.7)
+        plan = planner.construct_plan(state)
+
+        debug(f"Constructed Plan: {plan}")
+        assert len(plan.steps) <= 5, "Expected no more than 5 attacks"
+        seen = set()
+        for step in plan.steps:
+            debug(step)
+
+            atk_node = map.get_node(step.attacker)
+            def_node = map.get_node(step.defender)
+            troops = step.troops
+            assert atk_node.id not in seen, "Expected only one attack from each terr"
+            assert atk_node.owner == player, "Expected attacker to belong to player"
+            assert def_node.owner != player, "Expected defender to not belong to player"
+            assert (
+                troops > 0 and troops < atk_node.value
+            ), "Expected troops to higher than 0 and less than value of attacker"
+
+            seen.add(atk_node.id)
+
+        input("continue?")
