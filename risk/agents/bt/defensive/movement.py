@@ -80,12 +80,14 @@ class BalanceAmount(Behaviour):
 
         if moveable <= 0:
             debug("no moveable troops!!!")
+            state.nodes.discard(src)
             return Status.FAILURE
 
         needed = state.network_target - state.armies[state.tgt]
 
         if needed <= 0:
             debug("the tgt already has enough troops!!!")
+            state.missing.discard(state.tgt)
             return Status.FAILURE
 
         amount = min(moveable, needed)
@@ -141,7 +143,7 @@ class Balancer(Sequence):
     """
 
     def __init__(self):
-        super().__init__("Balance Troops", False)
+        super().__init__("Balance Troops", True)
 
         self.add_children(
             [
@@ -164,7 +166,7 @@ class Balancer(Sequence):
                         ],
                         Sequence(
                             "Balance Network",
-                            False,
+                            True,
                             [
                                 Selector(
                                     "movements",
@@ -186,7 +188,7 @@ class Balancer(Sequence):
                             ],
                         ),
                     ),
-                    -1,
+                    10000,
                 ),
                 
             ]
@@ -217,14 +219,15 @@ class Movements(Sequence):
     """
 
     def __init__(self, player: int, map: Graph):
-        super().__init__("Defensive movements", False)
+        super().__init__("Defensive movements", True)
 
         network_map = mapping.construct_network_view(map, player)
+        networks = set(network_map.networks)
 
         self.state = MovementState(
             player=player,
             map=network_map,
-            networks=set(network_map.networks),
+            networks=networks,
             armies={t.id: map.get_node(t.id).value for t in map.nodes},
             actions=[],
         )
@@ -244,7 +247,7 @@ class Movements(Sequence):
                         "Check other networks?",
                         Sequence(
                             "Checking network",
-                            False,
+                            True,
                             [
                                 Selector(
                                     "movements",
@@ -260,7 +263,7 @@ class Movements(Sequence):
                                 ),
                             ],
                         ),
-                        -1,
+                        len(networks),
                     )
                 )
             ]
@@ -290,9 +293,16 @@ class Movements(Sequence):
         """
         Constructs a plan for the phasement phase.
         """
-        while self.status != Status.SUCCESS:
-            self.tick_once()
+        while self.status not in [Status.SUCCESS, Status.FAILURE]:
+            debug(f"{self.name} ticking...")
+            for _ in self.tick():
+                debug("\n" + str(self))
         return self.state.actions
+    
+    def __str__(self):
+        from py_trees.display import ascii_tree
+
+        return ascii_tree(self, show_status=True)
 
 
 class MovementPlanner(Planner):

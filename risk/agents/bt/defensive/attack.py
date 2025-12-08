@@ -115,13 +115,15 @@ class Attacks(Sequence):
     def __init__(self, player: int, max_attacks: int, map: mapping.Graph):
         super().__init__(
             "Plan Attacks",
-            False,
+            True,
         )
+
+        fronts = mapping.construct_safe_view(map, player).frontline_nodes
 
         self.state = AttackState(
             player=player,
             fronts=set(
-                t.id for t in mapping.construct_safe_view(map, player).frontline_nodes
+                t.id for t in fronts
             ),
             map=map,
             actions=[],
@@ -133,7 +135,7 @@ class Attacks(Sequence):
                     "Keep Attacking",
                     Sequence(
                         "Find Attack",
-                        False,
+                        True,
                         [
                             ExecuteIf(
                                 "No Fronts Left",
@@ -146,7 +148,7 @@ class Attacks(Sequence):
                                 ],
                                 Sequence(
                                     "Build Attack",
-                                    False,
+                                    True,
                                     [
                                         Selector(
                                             "attacks",
@@ -173,7 +175,7 @@ class Attacks(Sequence):
                             )
                         ],
                     ),
-                    -1,
+                    len(fronts),
                 )
             ]
         )
@@ -191,9 +193,16 @@ class Attacks(Sequence):
         """
         Constructs a plan for the attack phase.
         """
-        while self.status != Status.SUCCESS:
-            self.tick_once()
+        while self.status not in [Status.SUCCESS, Status.FAILURE]:
+            debug(f"{self.name} ticking...")
+            for _ in self.tick():
+                debug("\n" + str(self))
         return self.state.actions
+    
+    def __str__(self):
+        from py_trees.display import ascii_tree
+
+        return ascii_tree(self, show_status=True)
 
 
 class AttackPlanner(Planner):
@@ -228,11 +237,11 @@ class AttackPlanner(Planner):
 
 
 if __name__ == "__main__":
-    from logging import DEBUG
-    from risk.utils.logging import setLevel
+    from logging import DEBUG, INFO
+    from risk.utils.logging import setLevel, info
     import random
 
-    setLevel(DEBUG)
+    setLevel(INFO)
 
     state = GameState.create_new_game(50, 2, 150)
     state.initialise()
@@ -243,11 +252,11 @@ if __name__ == "__main__":
 
     state.update_player_statistics()
 
-    print("Current Game State:")
-    print(state.map)
+    info("Current Game State:")
+    info(state.map)
 
     planner = AttackPlanner(
-        state.current_player_id, max_attacks=5, attack_probability=0.5
+        state.current_player_id, max_attacks=5, attack_probability=0.8
     )
     plan = planner.construct_plan(state)
 
@@ -256,12 +265,12 @@ if __name__ == "__main__":
         defender = state.get_territory(defender)
         return (attacker.armies - 1) > max(defender.armies + 5, defender.armies * 3)
 
-    debug(f"Constructed Placement Plan: {plan}")
+    info(f"Constructed Placement Plan: {plan}")
     attacked = False
     while not plan.is_done():
         step: AttackStep = plan.pop_step()
         attacked = attacked or terr.id == step.attacker
-        debug(f"Executing Step: {step}")
+        info(f"Executing Step: {step}")
         assert safe(step.attacker, step.defender), "Attack is not safe"
 
     assert attacked, "No attacks were planned from the selected territory"
