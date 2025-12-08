@@ -153,8 +153,9 @@ class RandomAttack(Planner):
             for t in game_state.get_territories_owned_by(self.player_id)
         }
         armies = {
-            t.id: list(range(1, t.armies))
+            t.id: list(range(1, t.armies - 1))
             for t in game_state.get_territories_owned_by(self.player_id)
+            if t.armies > 1
         }
         planner = AtackModel(
             "random_attack_model", max_attacks, terrs, adjacents, armies
