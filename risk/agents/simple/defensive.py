@@ -107,6 +107,10 @@ class DefensiveAgent(BaseAgent):
             armies = {t.id: current_map.get_node(t.id).value for t in group.nodes}
             total_armies = sum(armies.values())
             fronts = group.frontlines_in_network(network)
+
+            if len(fronts) < 1:
+                continue
+
             moveable = total_armies - (group.size - len(fronts))
             ideal_troops = moveable // len(fronts)
             missing = dict(
