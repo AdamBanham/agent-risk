@@ -51,6 +51,7 @@ def add_to_plan(dom, plan: AttackPlan = None):
     plan.add_step(step)
     state.attacks += 1
     state.plan = plan
+    state.territories = state.territories.difference(set([state.terr]))
     return dom
 
 
@@ -118,10 +119,10 @@ class RandomAttacks:
     ) -> AttackPlan:
 
         attack = 0
-        pick = random.random()
+        pick = random.uniform(0, 1)
         while attack < max_attacks and pick < atk_prob:
             attack += 1
-            pick = random.random()
+            pick = random.uniform(0, 1)
 
         dom = create_state(player, attack, game_state)
         create_planner()
@@ -132,8 +133,9 @@ class RandomAttacks:
 
 if __name__ == "__main__":
 
-    game_state = GameState.create_new_game(20, 5, 50)
+    game_state = GameState.create_new_game(20, 5, 200)
     game_state.initialise()
+    game_state.update_player_statistics()
 
     ghop.verbose = 4
 
@@ -144,6 +146,12 @@ if __name__ == "__main__":
     )
 
     print(f"Generated Attack Plan: {str(plan)}")
+    assert len(plan) <= max_attacks, f"Expected no more than {max_attacks} attacks"
+    seen = set()
     for step in plan.steps:
         print(step)
-    assert len(plan) <= max_attacks
+        atk_node = game_state.map.get_node(step.attacker)
+        assert atk_node.owner == 0, "Expected the attacker to be owned by the player"
+        assert atk_node.value > step.troops, "Expected territory to have more troops than attacking"
+        assert atk_node.id not in seen, "Expected only one attack from a territory"
+        seen.add(atk_node.id)
