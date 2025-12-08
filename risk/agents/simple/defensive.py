@@ -154,4 +154,4 @@ class DefensiveAgent(BaseAgent):
                         break
             all_events.extend(reversed(events))
 
-        return all_events
+        return reversed(all_events)
