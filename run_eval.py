@@ -22,7 +22,8 @@ from time import time
 def parse_arguments():
     """Parse command line arguments for game parameters."""
     parser = argparse.ArgumentParser(
-        description="Run the Agent Risk pygame simulation with AI agents from a known state.",
+        description="This runner performs an evaluation over all known "
+        "angents and their possible strategies.",
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
 
