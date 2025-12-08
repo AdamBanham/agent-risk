@@ -7,7 +7,7 @@ import random
 
 from xdevs.models import Atomic, Coupled, Port
 from xdevs.sim import Coordinator
-from ..base import Selector, Reworker, SelectFrom
+from ..base import Selector, Reworker, SelectFrom, SeenByFilter
 
 
 class Builder(Atomic):
@@ -74,6 +74,21 @@ class Builder(Atomic):
         return super().exit()
 
 
+class SeenAttackers(SeenByFilter[int, int]):
+    """
+    Filters out already selected attackers.
+    """
+
+    def __init__(self):
+        super().__init__("attack-filter", set())
+
+    def filter(self, items: Set[int]):
+        if items:
+            terr = random.choice(list(items))
+            return set([terr])
+        return items
+
+
 class AtackModel(Coupled):
     """
     A coupled model that implements a random attack planner.
@@ -96,14 +111,17 @@ class AtackModel(Coupled):
         self.select_armies = SelectFrom[int, Set[int]]("select_armies", armies)
         self.builder = Builder("builder")
         self.reworker = Reworker[AttackStep]("reworker", terrs, reworks=attacks)
+        self.filter = SeenAttackers()
 
         self.add_component(self.selector)
         self.add_component(self.select_adj)
         self.add_component(self.select_armies)
         self.add_component(self.builder)
         self.add_component(self.reworker)
+        self.add_component(self.filter)
 
-        self.add_coupling(self.reworker.o_request, self.selector.i_terrs)
+        self.add_coupling(self.reworker.o_request, self.filter.i_filter)
+        self.add_coupling(self.filter.o_filtered, self.selector.i_terrs)
         self.add_coupling(self.selector.o_terr, self.select_adj.i_terrs)
         self.add_coupling(self.selector.o_terr, self.select_armies.i_terrs)
         self.add_coupling(self.selector.o_terr, self.builder.i_terr)
@@ -144,7 +162,7 @@ class RandomAttack(Planner):
         plan = AttackPlan(self.max_attacks)
 
         terrs = {
-            t.id 
+            t.id
             for t in game_state.get_territories_owned_by(self.player_id)
             if t.armies > 1
         }
@@ -153,7 +171,7 @@ class RandomAttack(Planner):
             for t in game_state.get_territories_owned_by(self.player_id)
         }
         armies = {
-            t.id: list(range(1, t.armies - 1))
+            t.id: list(range(1, t.armies))
             for t in game_state.get_territories_owned_by(self.player_id)
             if t.armies > 1
         }
@@ -174,13 +192,20 @@ if __name__ == "__main__":
 
     setLevel(DEBUG)
 
-    state = GameState.create_new_game(52, 2, 50)
+    state = GameState.create_new_game(20, 2, 200)
     state.initialise()
     state.update_player_statistics()
 
-    planner = RandomAttack(0, 5)
-    plan = planner.construct_plan(state)
+    for _ in range(10):
+        planner = RandomAttack(0, 5, 0.85)
+        plan = planner.construct_plan(state)
 
-    print(plan)
-    for step in plan.steps:
-        print(step)
+        debug(plan)
+        assert len(plan.steps) <= 5, "Expected no more than 5 attacks"
+        for step in plan.steps:
+            debug(step)
+            atk_node = state.map.get_node(step.attacker)
+            assert atk_node.owner == 0, "Expected attacker to be owned by player"
+            assert (
+                atk_node.value > step.troops
+            ), "Expected that attacking troops is less than territories armies"
