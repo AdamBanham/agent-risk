@@ -93,7 +93,7 @@ class BalanceAmount(Behaviour):
             debug("no moveable troops!!!")
             return Status.FAILURE
 
-        needed = tgt_node.value - state.targets[state.tgt]
+        needed = state.targets[state.tgt] - tgt_node.value
 
         if needed <= 0:
             debug("the tgt already has enough troops!!!")
