@@ -8,6 +8,7 @@ from risk.utils.map import Graph
 from dataclasses import dataclass, field
 from typing import Set, Dict, List
 from copy import deepcopy
+import random
 
 from py_trees.behaviour import Behaviour
 from py_trees.composites import Sequence
@@ -53,6 +54,11 @@ class BuildMovementAction(BuildAction):
             debug(f"Target {state.tgt} been routed enough troops.")
             debug(f"Unchecked remaining: {state.unchecked}")
 
+        if src_node.value <= state.targets[state.src]:
+            state.nodes.remove(state.src)
+            debug(f"Source {state.src} has routed enough troops.")
+            debug(f"Remaining source nodes: {state.nodes}") 
+
         return MovementStep(
             source=state.src, destination=state.tgt, troops=state.amount
         )
@@ -81,17 +87,13 @@ class BalanceAmount(Behaviour):
             debug("source and target are the same!!!")
             return Status.FAILURE
 
-        if src_node.value < state.targets[src]:
+        if src_node.value <= state.targets[src]:
             debug("source does not have enough troops to help tgt!!!")
             state.nodes.discard(state.src)
             debug(f"Remaining nodes to source from: {state.nodes}")
             return Status.FAILURE
-
+        
         moveable = src_node.value - state.targets[src]
-
-        if moveable <= 0:
-            debug("no moveable troops!!!")
-            return Status.FAILURE
 
         needed = state.targets[state.tgt] - tgt_node.value
 
@@ -102,6 +104,10 @@ class BalanceAmount(Behaviour):
             return Status.FAILURE
 
         amount = min(moveable, needed)
+
+        if amount <= 0:
+            debug("calculated move amount is zero or negative!!!")
+            raise ValueError(f"Calculated move amount is zero or negative:: {amount}, moveable: {moveable}, needed: {needed}")
 
         state.amount = amount
 
@@ -125,9 +131,8 @@ class BalanceTarget(Behaviour):
         state: MovementState = self.blackboard.state
         network = state.network_map.view(state.network)
 
-        moveable = (
-            sum(state.map.get_node(t.id).value for t in network.nodes) - network.size
-        )
+        moveable =  sum(state.map.get_node(t.id).value for t in network.nodes) \
+            - network.size
         fronts = network.frontlines_in_network(state.network)
 
         if not fronts:
@@ -138,26 +143,38 @@ class BalanceTarget(Behaviour):
 
         def sum_of_adjacents(node: mapping.SafeNode) -> int:
             total = 0
-            armies = map.get_node(node.id).value
             for neighbor in map.get_adjacent_nodes(node.id):
                 if neighbor.owner != state.player:
-                    total += armies / neighbor.value
+                    total += (1.0 / neighbor.value) * 10
             return total
 
         weights = [sum_of_adjacents(node) for node in fronts]
-        total_weight = sum(weights)
-        weights = [w / total_weight for w in weights]
-        troops = [min(1, int(moveable * w)) for w in weights]
+        top_most = random.randint(1, min(3, len(fronts)))
+        options = sorted(
+            zip(fronts, weights),
+            key=lambda x: x[1],
+            reverse=True,
+        )[:top_most]
 
+         # normalize weights and assign troops
+        total_weight = sum(w for f, w in options)
+        options = [(f, w / total_weight) for f, w in options]
+        options = [(f, max(1, int(moveable * w))) for f, w in options]
+
+        # sort by most important frontline first
         ordered_fronts = sorted(
-            zip(fronts, troops),
+            options,
             key=lambda x: x[1],
             reverse=True,
         )
 
         state.targets = {t.id: n for t, n in ordered_fronts}
         state.unchecked = set(list(state.targets.keys()))
-        state.nodes = list(t.id for t in network.nodes if map.get_node(t.id).value > 1)
+
+        state.nodes = set()
+        for node in network.nodes:
+            if map.get_node(node.id).value > state.targets.get(node.id, 1):
+                state.nodes.add(node.id)
 
         for node in network.nodes:
             if node.id not in state.targets:
@@ -177,7 +194,7 @@ class Balancer(Sequence):
     """
 
     def __init__(self):
-        super().__init__("Balance Troops", False)
+        super().__init__("Balance Troops", True)
 
         self.add_children(
             [
@@ -196,10 +213,15 @@ class Balancer(Sequence):
                                 "unchecked",
                                 lambda s: len(s) == 0,
                             ),
+                            Checker(
+                                "movements",
+                                "nodes",
+                                lambda s: len(s.difference(self.state.unchecked)) == 0,
+                            )
                         ],
                         Sequence(
                             "Balance Network",
-                            False,
+                            True,
                             [
                                 Selector(
                                     "movements",
@@ -210,7 +232,7 @@ class Balancer(Sequence):
                                     "movements",
                                     "nodes",
                                     "src",
-                                    lambda s: s != self.state.tgt,
+                                    condition=lambda s: s != self.state.tgt,
                                 ),
                                 BalanceAmount(),
                                 BuildMovementAction(),
@@ -222,7 +244,7 @@ class Balancer(Sequence):
                             ],
                         ),
                     ),
-                    -1,
+                    200000,
                 ),
             ]
         )
@@ -252,7 +274,7 @@ class Movements(Sequence):
     """
 
     def __init__(self, player: int, map: Graph):
-        super().__init__("Defensive movements", False)
+        super().__init__("Aggressive movements", True)
 
         network_map = mapping.construct_network_view(map, player)
 
@@ -297,7 +319,7 @@ class Movements(Sequence):
                             ]
                         ),
                     ),
-                    -1
+                    len(set(network_map.networks))
                 )
             ]
         )
@@ -327,9 +349,18 @@ class Movements(Sequence):
         Constructs a plan for the phasement phase.
         """
 
-        while self.status != Status.SUCCESS:
-            self.tick_once()
+        while self.status not in [Status.SUCCESS, Status.FAILURE]:
+            debug(f"{self.name} ticking...")
+            for _ in self.tick():
+                debug("\n" + str(self))
+
+        debug(str(self.state.actions))
         return self.state.actions
+    
+    def __str__(self):
+        from py_trees.display import ascii_tree
+
+        return ascii_tree(self, show_status=True)
 
 
 class MovementPlanner(Planner):
