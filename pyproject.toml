@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "agent-risk"
 version = "0.1.0"
-description = "A modular event-driven simulation framework inspired by the board game Risk using pygame with AI agents"
+description = "A modular event-driven simulation framework inspired by the board game Risk using pygame with simulated players"
 readme = "README.md"
 requires-python = ">=3.8"
 classifiers = [
