@@ -1,5 +1,7 @@
 from ...plans import Planner, AttackPlan, AttackStep
 from risk.state import GameState
+from risk.utils.logging import debug 
+from risk.utils import map as mapping
 
 from typing import Set, Dict
 import random
@@ -190,10 +192,13 @@ class RandomAttack(Planner):
             max_attacks += 1
             pick = random.uniform(0, 1)
 
-        terrs = game_state.get_territories_owned_by(self.player_id)
+        map = game_state.map
+        smap = mapping.construct_safe_view(game_state.map, self.player_id)
+        fronts = set(n.id for n in smap.frontline_nodes)
+        terrs = [ n for n in map.nodes if n.id in fronts and n.owner == self.player_id ]
         terr_ids = set(t.id for t in terrs)
-        armies = {t.id: t.armies for t in terrs}
-        adjacents = {t.id: set(adj.id for adj in t.adjacent_territories) for t in terrs}
+        armies = {t.id: t.value for t in terrs}
+        adjacents = {t.id: set(adj.id for adj in map.get_adjacent_nodes(t.id) if adj.owner != t.owner) for t in terrs}
         sim_problem = construct_simulator(terr_ids, armies, adjacents, max_attacks)
 
         while sim_problem.step():
@@ -203,29 +208,17 @@ class RandomAttack(Planner):
         planner_token = sim_problem.var("planner").marking[0]
         for action in planner_token.value.actions:
             plan.add_step(action)
+
+        self._sim = sim_problem
+
         return plan
 
 
 if __name__ == "__main__":
-    # from os.path import join, exists
-    # layout_path = join(".", "bpmn_attack.layout")
-    # sim = construct_simulator(
-    #     {1, 2, 3},
-    #     {1: 2, 2: 1, 3: 1},
-    #     {1: {2, 3}, 2: {1}, 3: {1}},
-    #     2
-    # )
-
-    # from simpn.visualisation import Visualisation
-
-    # if exists(layout_path):
-    #     vis = Visualisation(sim, layout_file=layout_path)
-    # else:
-    #     vis = Visualisation(sim)
-    # vis.show()
-
-    # vis.save_layout(layout_path)
-
+    from risk.utils.logging import setLevel 
+    from logging import DEBUG
+    setLevel(DEBUG)
+    
     game_state = GameState.create_new_game(20, 2, 200)
     game_state.initialise()
     game_state.update_player_statistics()
@@ -233,12 +226,16 @@ if __name__ == "__main__":
     planner = RandomAttack(1, 10, 0.9)
     plan = planner.construct_plan(game_state)
 
-    print("Generated Attack Plan:", str(plan))
+    debug("Generated Attack Plan:" + str(plan))
     assert len(plan.steps) <= 10, "Expected no more than ten attacks"
     for step in plan.steps:
-        print(step)
+        debug(step)
         atk_node = game_state.map.get_node(step.attacker)
         assert atk_node.owner == 1, "Expected attacker to be owned by player"
         assert (
             atk_node.value > step.troops
         ), "Expected attacking troops to be less than territory"
+
+    from simpn.visualisation import Visualisation
+    vis = Visualisation(planner._sim)
+    vis.show()

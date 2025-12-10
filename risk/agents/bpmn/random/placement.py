@@ -4,9 +4,10 @@ from risk.state import GameState
 from typing import Set
 import random
 
-
 from simpn.helpers import BPMN, Place
 from simpn.simulator import SimTokenValue, SimToken
+from risk.utils.logging import debug
+from risk.utils import map as mapping
 from ..bases import ExpressiveSimProblem as SimProblem
 
 
@@ -81,10 +82,7 @@ def create_simulator(terrs: Set[int], placements: int):
             terrs = planner.terrs
 
             chosen_terr = random.choice(list(terrs))
-            if planner.placements > 1:
-                pick_placements = random.randint(1, planner.placements)
-            else:
-                pick_placements = 1
+            pick_placements = 1
             step = TroopPlacementStep(chosen_terr, pick_placements)
 
             new_planner.actions.append(step)
@@ -119,19 +117,23 @@ class RandomPlacement(Planner):
         sim = create_simulator(terrs, self.placements_left)
 
         while sim.step() is not None:
-            pass
+            debug("stepping simulator...")
 
         final = sim.var("planner").marking[0]
 
         for step in final.value.actions:
             plan.add_step(step)
 
-        self._sim = sim  # Store simulator for potential debugging
+        self._sim = sim
 
         return plan
 
 
 if __name__ == "__main__":
+    from risk.utils.logging import setLevel 
+    from logging import DEBUG
+    setLevel(DEBUG)
+
     state = GameState.create_new_game(52, 2, 50)
     state.initialise()
     state.update_player_statistics()
@@ -139,9 +141,12 @@ if __name__ == "__main__":
     planner = RandomPlacement(0, 5)
     plan = planner.construct_plan(state)
 
-    print(plan)
+    debug(plan)
+    assert len(plan.steps) == 5, "Expected 5 placement steps"
     for step in plan.steps:
-        print(step)
+        debug(step)
+        node = state.map.get_node(step.territory)
+        assert node.owner == 0, "Expected territory to be owned by player 0"
 
     from simpn.visualisation import Visualisation
 

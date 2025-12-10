@@ -19,7 +19,7 @@ class BPMNRandomAgent(BaseAgent):
 
     def __init__(self, player_id: int, attack_probability: float = 0.5):
         super().__init__(
-            player_id, "BPMN-Random-Agent-{}".format(player_id), attack_probability
+            player_id, "bpmn-random-agent-{}".format(player_id), attack_probability
         )
 
     def decide_placement(self, game_state, goal):

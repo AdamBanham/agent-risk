@@ -1,8 +1,8 @@
 from ...plans import Planner, MovementPlan, RouteMovementStep, MovementStep
 from risk.state import GameState
 from risk.utils.movement import find_movement_sequence, Movement
-from risk.utils.movement import find_safe_frontline_territories
-from risk.utils.movement import find_connected_frontline_territories
+from risk.utils import map as mapping
+from risk.utils.logging import debug
 
 from typing import Set, Dict
 import random
@@ -181,18 +181,22 @@ class RandomMovement(Planner):
 
     def construct_plan(self, game_state: GameState) -> MovementPlan:
         # Implementation of random movement plan generation
-        safes, frontlines = find_safe_frontline_territories(
-            game_state=game_state, player_id=self.player_id
-        )
+
+        map = game_state.map
+        smap = mapping.construct_safe_view(game_state.map, self.player_id)
+        network_map = mapping.construct_network_view(map, self.player_id)
+
+        safes = smap.safe_nodes
         safes_ids = set(t.id for t in safes)
-        frontlines_ids = set(t.id for t in frontlines)
+        frontlines_ids = set(t.id for t in smap.frontline_nodes)
         connections = dict(
             (
                 s.id,
                 set(
                     o.id
-                    for o in find_connected_frontline_territories(
-                        s, frontlines, safes + frontlines
+                    for o in 
+                    network_map.frontlines_in_network(
+                        mapping.get_value(network_map, s.id)
                     )
                 ),
             )
@@ -202,7 +206,7 @@ class RandomMovement(Planner):
         sim = construct_simulator(
             safes=safes_ids,
             frontlines=frontlines_ids,
-            armies={t.id: t.armies for t in safes + frontlines},
+            armies={t.id: t.value for t in map.nodes},
             connections=connections,
             max_moves=self.max_moves,
         )
@@ -211,6 +215,7 @@ class RandomMovement(Planner):
             pass
 
         plan = MovementPlan(self.max_moves)
+        self._sim = sim
         planner = sim.var("planner").marking[0]
 
         for movement in planner.value.actions:
@@ -233,22 +238,25 @@ class RandomMovement(Planner):
 
 if __name__ == "__main__":
     from os.path import exists, join
+    from risk.utils.logging import setLevel 
+    from logging import DEBUG
+    setLevel(DEBUG)
+    
+    game_state = GameState.create_new_game(50, 2, 200)
+    game_state.initialise()
+    game_state.update_player_statistics()
 
     layout_file = join(".", "bpmn_random_movement.layout")
-    sim = construct_simulator(
-        safes={1, 2, 3},
-        frontlines={4, 5, 6},
-        armies={1: 5, 2: 3, 3: 2, 4: 4, 5: 6, 6: 1},
-        connections={
-            1: {4, 5},
-            2: {5},
-            3: {6},
-            4: {1, 5},
-            5: {1, 2, 4, 6},
-            6: {3, 5},
-        },
-        max_moves=1,
-    )
+    
+    planner = RandomMovement(1, 5)
+    plan = planner.construct_plan(game_state)
+
+    debug("Generated Movement Plan:" + str(plan))
+    assert len(plan.steps) <= 5, "Expected no more than five movements"
+    for step in plan.steps:
+        debug(step)
+
+    sim = planner._sim
 
     from simpn.visualisation import Visualisation
 
