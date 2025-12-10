@@ -23,24 +23,10 @@ def parse_arguments():
     )
 
     parser.add_argument(
-        "--ai-delay",
-        type=float,
-        default=0.1,
-        help="Delay between AI actions in seconds (default: 0.1)",
-    )
-
-    parser.add_argument(
         "--attack-rate",
         type=float,
         default=0.85,
         help="AI attack probability 0.0-1.0 (default: 0.85)",
-    )
-
-    parser.add_argument(
-        "--sim-delay",
-        type=float,
-        default=0.2,
-        help="Delay between simulation steps in seconds (default: 0.2)",
     )
 
     parser.add_argument(
@@ -69,8 +55,9 @@ if __name__ == "__main__":
 
     setLevel(INFO)
 
-    test_state = GameState.create_new_game(200, 8, 200)
+    test_state = GameState.create_new_game(52, 8, 200)
     test_state.initialise()
+    test_state.update_player_statistics()
 
     def get_name(info):
         return f"{info['type']}-{info['strat']}"
