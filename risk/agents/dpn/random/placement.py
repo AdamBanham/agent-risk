@@ -1,5 +1,6 @@
 from ...plans import Planner, PlacementPlan, TroopPlacementStep
 from risk.state import GameState
+from risk.utils.logging import debug
 
 from typing import Set
 import random
@@ -14,10 +15,10 @@ def create_simulator(placements: int, terrs: Set[int]) -> SimProblem:
 
     problem = SimProblem()
 
-    class Start(Place):
+    class Placements(Place):
         model = problem
-        name = "start"
-        amount = 1
+        name = "placements"
+        amount = placements
 
     class Territories(Place):
         model = problem
@@ -27,51 +28,19 @@ def create_simulator(placements: int, terrs: Set[int]) -> SimProblem:
     for terr in terrs:
         territories.put(SimTokenValue(f"terr-{terr}", territory=terr))
 
-    class SetPlacements(Transition):
-        model = problem
-        name = "set-placements"
-        incoming = ["start"]
-        outgoing = ["placements"]
-
-        def behaviour(tok_val):
-            new_val = SimTokenValue(tok_val, placements=placements)
-            return [SimToken(new_val)]
-
-    class CompletePlan(GuardedTransition):
-        model = problem
-        name = "complete-plan"
-        incoming = ["placements"]
-        outgoing = ["done"]
-
-        def guard(tok_val: SimTokenValue):
-            if tok_val.placements == 0:
-                return True
-            return False
-
-        def behaviour(tok_val: SimTokenValue):
-            return [SimToken(tok_val)]
-
-    class GeneratePlacement(GuardedTransition):
+    class GeneratePlacement(Transition):
         model = problem
         name = "generate-placement"
         incoming = ["placements", "territories"]
-        outgoing = ["placements", "territories", "actions"]
-
-        def guard(tok_val: SimTokenValue, terr_val: SimTokenValue):
-            if tok_val.placements > 0:
-                return True
-            return False
+        outgoing = ["territories", "actions"]
 
         def behaviour(tok_val: SimTokenValue, terr_val: SimTokenValue):
-            pick = random.randint(1, tok_val.placements)
-            new_val = tok_val.clone()
-            new_val.placements -= pick
             action_val = SimTokenValue(
-                f"place-{pick}-on-{terr_val.territory}",
+                f"place-{1}-on-{terr_val.territory}",
                 territory=terr_val.territory,
-                troops=pick,
+                troops=1,
             )
-            return [SimToken(new_val), SimToken(terr_val), SimToken(action_val)]
+            return [SimToken(terr_val.clone()), SimToken(action_val)]
 
     return problem
 
@@ -107,17 +76,31 @@ class RandomPlacement(Planner):
 
 
 if __name__ == "__main__":
+    from logging import DEBUG
+    from risk.utils.logging import setLevel
+    setLevel(DEBUG)
+
     state = GameState.create_new_game(52, 2, 50)
     state.initialise()
+    state.update_player_statistics()
 
     for placement in [random.randint(0, 10) for _ in range(10)]:
-        planner = RandomPlacement(player_id=random.randint(0,1), placements=placement)
-        plan = planner.construct_plan(state)
+        player = random.randint(0, 1)
+        planner = RandomPlacement(player_id=player, placements=placement)
 
-        print(plan)
+        plan = planner.construct_plan(state)
+        debug(plan)
         count = 0
+        assert len(plan.steps) == placement, \
+            "Expected {} placements, got {}".format(
+                placement, len(plan.steps)
+        )
         for step in plan.steps:
-            print(step)
+            debug(step)
+            assert state.map.get_node(step.territory).owner == planner.player_id, \
+                "Territory {} not owned by player {}".format(player)
             count += step.troops
-        print("Total troops placed:", count)
-        assert count == placement
+        assert count == placement, \
+            "Expected {} total troops, got {}".format(
+            placement, count
+        )

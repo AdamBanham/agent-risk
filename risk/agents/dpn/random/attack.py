@@ -1,5 +1,7 @@
 from ...plans import Planner, AttackPlan, AttackStep
 from risk.state import GameState
+from risk.utils import map as mapping
+from risk.utils.logging import debug
 
 from simpn.helpers import Place, Transition
 from simpn.simulator import SimTokenValue, SimToken
@@ -22,7 +24,7 @@ def create_simulator(
     class Start(Place):
         model = problem
         name = "start"
-        amount = 1
+        amount = attacks
 
     class Territories(Place):
         model = problem
@@ -39,41 +41,15 @@ def create_simulator(
             )
         )
 
-    class Attacks(Place):
-        model = problem
-        name = "attacks"
-
-    attacks_place = problem.var("attacks")
-    for i in range(attacks):
-        attacks_place.put(SimTokenValue(f"attack-{i}"))
-
-    class Actions(Place):
-        model = problem
-        name = "actions"
-
-    class Complete(Place):
-        model = problem
-        name = "complete"
-
-    class InitatePlan(Transition):
-        model = problem
-        name = "initiate-plan"
-        incoming = ["start"]
-        outgoing = ["planning"]
-
-        def behaviour(tok_val):
-            return [SimToken(tok_val)]
-
     class PickTerritory(GuardedTransition):
         model = problem
         name = "pick-territory"
-        incoming = ["planning", "territories", "attacks"]
-        outgoing = ["planning", "territories", "actions"]
+        incoming = ["start", "territories", ]
+        outgoing = [ "actions"]
 
         def guard(
             tok_val: SimTokenValue,
             terr_val: SimTokenValue,
-            attack_val: SimTokenValue,
         ):
             if terr_val.armies >= 2 and len(terr_val.adjacents) > 0:
                 return True
@@ -82,39 +58,19 @@ def create_simulator(
         def behaviour(
             tok_val: SimTokenValue,
             terr_val: SimTokenValue,
-            attack_val: SimTokenValue,
         ):
             pick = random.choice(list(terr_val.adjacents))
             army = random.choice(range(1, terr_val.armies))
-            new_terr_val = terr_val.clone()
-            new_terr_val.armies -= army
             return [
-                SimToken(tok_val),
-                SimToken(new_terr_val),
                 SimToken(
                     SimTokenValue(
                         f"attack-from-{terr_val.territory}-to-{pick}",
-                        attack=attack_val.id,
                         from_terr=terr_val.territory,
                         to_terr=pick,
                         troops=army,
                     )
                 ),
             ]
-
-    class CompletePlan(GuardedTransition):
-        model = problem
-        name = "complete-plan"
-        incoming = ["planning"]
-        outgoing = ["complete"]
-
-        def guard(tok_val: SimTokenValue):
-            if len(attacks_place.marking) > 0:
-                return False
-            return True
-
-        def behaviour(tok_val: SimTokenValue):
-            return [SimToken(tok_val)]
 
     return problem
 
@@ -133,17 +89,17 @@ class RandomAttacks(Planner):
     def construct_plan(self, state: GameState) -> "AttackPlan":
 
         attacks = 1
-        pick = random.random()
+        pick = random.uniform(0, 1)
         while pick < self.attack_prob and attacks <= self.max_attacks:
             attacks += 1
-            pick = random.random()
+            pick = random.uniform(0, 1)
 
-        terrs = state.get_territories_owned_by(self.player_id)
+        terrs = mapping.construct_safe_view(state.map, self.player_id).frontline_nodes 
         adjacents = dict(
-            (terr.id, set(o.id for o in terr.adjacent_territories)) 
+            (terr.id, set(o.id for o in state.map.get_adjacent_nodes(terr.id) if o.owner != self.player_id)) 
             for terr in terrs
         )
-        armies = dict((terr.id, terr.armies) for terr in terrs)
+        armies = dict((terr.id, mapping.get_value(state.map, terr.id)) for terr in terrs)
         terrs = set(terr.id for terr in terrs)
 
         sim = create_simulator(
@@ -155,7 +111,6 @@ class RandomAttacks(Planner):
 
         while sim.step():
             pass
-
 
         plan = AttackPlan(self.max_attacks)
         for tok in sim.var("actions").marking:
@@ -171,14 +126,61 @@ class RandomAttacks(Planner):
 
 
 if __name__ == "__main__":
-    state = GameState.create_new_game(52, 2, 50)
+    from logging import DEBUG
+    from risk.utils.logging import setLevel
+    from simpn.visualisation import Visualisation
+    setLevel(DEBUG)
+
+    state = GameState.create_new_game(52, 2, 250)
     state.initialise()
     state.update_player_statistics()
 
-    planner = RandomAttacks(player_id=0, max_attacks=5, attack_prob=0.7)
-    plan = planner.construct_plan(state)
+    for _ in range(5):
+        player = random.randint(0, 1)
+        attacks = random.randint(1, 10)
+        planner = RandomAttacks(player_id=player, max_attacks=attacks, attack_prob=0.7)
+        plan = planner.construct_plan(state)
 
-    print(f"Generated Attack Plan: {plan}")
-    for step in plan.steps:
-        print(step)
+        ## uncomment to show the conceptual model emulator
+        # terrs = mapping.construct_safe_view(state.map, player).frontline_nodes 
+        # adjacents = dict(
+        #     (terr.id, set(o.id for o in state.map.get_adjacent_nodes(terr.id) if o.owner != player)) 
+        #     for terr in terrs
+        # )
+        # armies = dict((terr.id, mapping.get_value(state.map, terr.id)) for terr in terrs)
+        # terrs = set(terr.id for terr in terrs)
+
+        # sim = create_simulator(
+        #     attacks,
+        #     terrs,
+        #     adjacents,
+        #     armies,
+        # )
+        # vis = Visualisation(sim)
+        # vis.show()
+
+        map = state.map
+
+        debug(f"Generated Attack Plan: {plan}")
+        assert len(plan.steps) <= attacks, \
+            "Expected at most {} attacks, got {}".format(
+                attacks, len(plan.steps)
+            )
+        for step in plan.steps:
+            debug(step)
+            atk_node = map.get_node(step.attacker)
+            def_node = map.get_node(step.defender)
+            assert atk_node.owner == player, \
+                "Attacking territory {} not owned by player {}".format(
+                    step.attacker, player
+                )
+            assert def_node.owner != player, \
+                "Defending territory {} owned by player {}".format(
+                    step.defender, player
+                )
+            assert atk_node.value > step.troops, \
+                "Attacking territory {} does not have enough armies for attacking with {}".format(
+                    step.attacker, step.troops
+                )
+            
 

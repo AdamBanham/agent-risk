@@ -19,11 +19,11 @@ class DPNRandomAgent(BaseAgent):
 
     def __init__(self, player_id: int, attack_probability: float = 0.5):
         super().__init__(
-            player_id, "DPN-Random-Agent-{}".format(player_id), attack_probability
+            player_id, "dpn-agent-random-{}".format(player_id), attack_probability
         )
 
     def decide_placement(self, game_state, goal):
-        info("dpn-agent-random deciding placement")
+        info(f"{self.name} deciding placement")
         planner = RandomPlacement(self.player_id, game_state.placements_left)
         plan = planner.construct_plan(game_state)
 
@@ -34,7 +34,7 @@ class DPNRandomAgent(BaseAgent):
         return events
 
     def decide_attack(self, game_state, goal):
-        info("dpn-agent-random deciding attack")
+        info(f"{self.name} deciding attack")
         planner = RandomAttacks(
             self.player_id, 10, self.attack_probability
         )
@@ -47,7 +47,7 @@ class DPNRandomAgent(BaseAgent):
         return events
 
     def decide_movement(self, game_state, goal):
-        info("dpn-agent-random deciding movement")
+        info(f"{self.name} deciding movement")
         planner = RandomMovement(
             self.player_id, 1
         )
