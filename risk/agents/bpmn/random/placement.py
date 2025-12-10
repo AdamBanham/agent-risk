@@ -116,8 +116,8 @@ class RandomPlacement(Planner):
         terrs = set(t.id for t in game_state.get_territories_owned_by(self.player_id))
         sim = create_simulator(terrs, self.placements_left)
 
-        while sim.step() is not None:
-            debug("stepping simulator...")
+        while sim.step():
+            pass
 
         final = sim.var("planner").marking[0]
 
