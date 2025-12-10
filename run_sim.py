@@ -1,5 +1,5 @@
-from risk.state.game_state import GameState, Player, Territory, GamePhase
-from risk.state.territory import TerritoryState
+from risk.state.game_state import GameState
+from risk.utils.loading import load_game_state_from_file
 from risk.utils.replay import simulate_turns, SimulationConfiguration
 
 import argparse
@@ -8,7 +8,10 @@ import argparse
 def parse_arguments():
     """Parse command line arguments for game parameters."""
     parser = argparse.ArgumentParser(
-        description="Run the Agent Risk pygame simulation with AI agents from a known state.",
+        description="Starts and runs the simulation of risk from a " \
+        "given state file, or from a new game. Only runs the engines, no UI.\n" \
+        "Saves out both the stack and state as simulated_run.stack and " \
+        "simulated_run.state respectively.",
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
 
@@ -16,15 +19,8 @@ def parse_arguments():
         "-s",
         "--state",
         type=str,
-        default="test.state",
+        default=False,
         help="Path to the state file to load (default: test.state)",
-    )
-
-    parser.add_argument(
-        "--ai-delay",
-        type=float,
-        default=0.1,
-        help="Delay between AI actions in seconds (default: 0.1)",
     )
 
     parser.add_argument(
@@ -32,13 +28,6 @@ def parse_arguments():
         type=float,
         default=0.85,
         help="AI attack probability 0.0-1.0 (default: 0.85)",
-    )
-
-    parser.add_argument(
-        "--sim-delay",
-        type=float,
-        default=0.2,
-        help="Delay between simulation steps in seconds (default: 0.2)",
     )
 
     parser.add_argument(
@@ -64,9 +53,14 @@ if __name__ == "__main__":
     from logging import INFO
     setLevel(INFO)
 
-    test_state = GameState.create_new_game(200, 8, 200)
-    test_state.initialise()
+    if not args.state:
+        test_state = GameState.create_new_game(52, 8, 100)
+        test_state.initialise()
+    else:
+        test_state = load_game_state_from_file(args.state)
+        test_state.initialise(False)
 
+    test_state.update_player_statistics()
     current_turn = test_state.current_turn
 
     new_state, tape, scorer = simulate_turns(
@@ -91,7 +85,7 @@ if __name__ == "__main__":
     
     scorer.plot_scores()
 
-    with open("simulation_world.stack", "w") as f:
+    with open("simulated_run.stack", "w") as f:
         f.write(str(recorder.stack))
-    with open("simulation_world.state", "w") as f:
+    with open("simulated_run.state", "w") as f:
         f.write(repr(state))
