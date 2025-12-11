@@ -18,3 +18,21 @@ Returns:
       6 'player': 5
     583 'player': 6
 ```
+
+To get an understanding of the types of errors occuring, use
+the following command:
+
+```bash
+grep -or --color ".*Error:" | grep -o --color ":.*Error:" | sort | uniq -c
+```
+
+Returns:
+
+```bash
+  count | error 
+    5482 :IndexError:
+    3 :TypeError:
+    1 :UnboundLocalError:
+    1 :ValueError:
+    20 :ZeroDivisionError:
+```
