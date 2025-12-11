@@ -4,6 +4,7 @@ from risk.utils.movement import find_movement_sequence
 from risk.utils.movement import find_safe_frontline_territories
 from risk.utils.movement import find_connected_frontline_territories
 from risk.utils.logging import debug
+from risk.utils import map as mapping
 
 from typing import Set, Dict
 
@@ -139,30 +140,31 @@ class RandomMovement(Planner):
         self.max_moves = max_moves
 
     def construct_plan(self, game_state: GameState) -> MovementPlan:
-        safes, frontlines = find_safe_frontline_territories(
-            game_state=game_state, player_id=self.player_id
+        map = game_state.map.clone()
+        smap = mapping.construct_safe_view(game_state.map, self.player_id)
+        netmap = mapping.construct_network_view(game_state.map, self.player_id)
+
+        safes_ids = set(
+            t.id for t in smap.safe_nodes if mapping.get_value(map, t.id) > 1
         )
-        safes_ids = set(t.id for t in safes)
         connections = dict(
             (
-                s.id,
+                s,
                 set(
                     o.id
-                    for o in find_connected_frontline_territories(
-                        s, frontlines, safes + frontlines
+                    for o in netmap.frontlines_in_network(
+                        mapping.get_value(netmap, s)
                     )
                 ),
             )
-            for s in safes
-        )
-        armies = {s.id: [s.armies - 1] for s in safes}
-        safes_ids = set(
-            s
             for s in safes_ids
-            if len(connections.get(s)) > 0 and armies.get(s, [0])[0] > 0
         )
+        armies = {s: [mapping.get_value(map, s) - 1] for s in safes_ids}
 
         plan = MovementPlan(self.max_moves)
+
+        if len(smap.frontline_nodes) == 0:
+            return plan
 
         if len(safes_ids) == 0:
             return plan

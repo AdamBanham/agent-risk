@@ -1,6 +1,7 @@
 from ...plans import Planner, AttackPlan, AttackStep
 from risk.state import GameState
 from risk.utils.logging import debug
+from risk.utils import map as mapping
 
 from typing import Set, Dict
 import random
@@ -161,19 +162,19 @@ class RandomAttack(Planner):
 
         plan = AttackPlan(self.max_attacks)
 
-        terrs = {
-            t.id
-            for t in game_state.get_territories_owned_by(self.player_id)
-            if t.armies > 1
-        }
+        map = game_state.map.clone()
+        smap = mapping.construct_safe_view(map, self.player_id)
+
+        terrs = {t.id for t in smap.frontline_nodes if mapping.get_value(map, t.id) > 1}
         adjacents = {
-            t.id: {adj.id for adj in t.adjacent_territories}
-            for t in game_state.get_territories_owned_by(self.player_id)
+            t: {
+                adj.id for adj in map.get_adjacent_nodes(t) if adj.owner != self.player_id
+            }
+            for t in terrs
         }
         armies = {
-            t.id: list(range(1, t.armies))
-            for t in game_state.get_territories_owned_by(self.player_id)
-            if t.armies > 1
+            t: list(range(1, mapping.get_value(map, t)))
+            for t in terrs
         }
         planner = AtackModel(
             "random_attack_model", max_attacks, terrs, adjacents, armies
