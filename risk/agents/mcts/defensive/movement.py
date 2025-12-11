@@ -197,6 +197,11 @@ class MovementPlanner(Planner):
 
         max_runtime = 100  # milliseconds
         actions:List[Movement] = []
+        smap = mapping.construct_safe_view(state.map, self.player)
+
+        if len(smap.frontline_nodes) == 0:
+            return MovementPlan(0)
+
         network_map = mapping.construct_network_view(state.map, self.player)
         targets = {}
 

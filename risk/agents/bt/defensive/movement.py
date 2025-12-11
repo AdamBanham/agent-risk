@@ -319,6 +319,10 @@ class MovementPlanner(Planner):
 
     def construct_plan(self, state: GameState) -> MovementPlan:
 
+        smap = mapping.construct_safe_view(state.map, self.player_id)
+        if len(smap.frontline_nodes) == 0:
+            return MovementPlan(0)
+
         constructor = Movements(self.player_id, state.map)
         actions = constructor.construct()
 

@@ -123,6 +123,10 @@ class MovementPlanner(Planner):
     def construct_plan(self, state):
         plan = MovementPlan(self.moves)
 
+        safe_map = mapping.construct_safe_view(state.map, self.player)
+        if len(safe_map.frontline_nodes) == 0:
+            return plan
+
         sim = create_problem(
             self.player,
             state.map,

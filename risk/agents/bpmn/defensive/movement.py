@@ -251,6 +251,10 @@ class MovementPlanner(Planner):
 
     def construct_plan(self, state):
 
+        smap = mapping.construct_safe_view(state.map, self.player)
+        if len(smap.frontline_nodes) == 0:
+            return MovementPlan(0)
+
         sim = construct_problem(
             self.player,
             state.map,
