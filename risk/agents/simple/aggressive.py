@@ -150,6 +150,9 @@ class AggressiveAgent(BaseAgent):
 
             # work out the distribution of troops to each frontline territory
             fronts = network_view.frontlines_in_network(network)
+            if len(fronts) == 0:
+                continue
+
             movable_armies = sum(
                 map.get_node(node.id).value for node in network_view.nodes
             )
