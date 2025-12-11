@@ -1,5 +1,6 @@
 from risk.agents.htn import gtpyhop as ghop
 from risk.state.game_state import GameState
+from risk.utils import map as mapping
 from ..bases import HTNStateWithPlan
 from ...plans import AttackPlan, AttackStep
 
@@ -23,6 +24,7 @@ def select_terr(dom, territories: Set[int] = None):
     state: AttackState = dom.attacking
     if territories:
         state.terr = random.choice(list(territories))
+        dom.territories = territories.difference(set([state.terr]))
         return dom
 
 
@@ -77,13 +79,19 @@ def halt_attack(dom, arg, attacks):
     else:
         return False
 
-### helpers
 
+### helpers
 def create_state(player: int, attacks: int, game_state: GameState) -> object:
 
-    terrs = game_state.get_territories_owned_by(player)
-    adjacents = {t.id: set(o.id for o in t.adjacent_territories) for t in terrs}
-    armies = {t.id: t.armies for t in terrs}
+    map = game_state.map.clone()
+    smap = mapping.construct_safe_view(game_state.map, player)
+
+    terrs = {t.id for t in smap.frontline_nodes}
+    adjacents = {
+        t: set(o.id for o in map.get_adjacent_nodes(t) if o.owner != player)
+        for t in terrs
+    }
+    armies = {t: mapping.get_value(map, t) for t in terrs}
 
     dom = ghop.State(
         "attack_domain",
@@ -92,7 +100,7 @@ def create_state(player: int, attacks: int, game_state: GameState) -> object:
                 player=player,
                 attacks=0,
                 adjacents=adjacents,
-                territories=set(t.id for t in terrs),
+                territories=terrs,
                 armies=armies,
                 plan=AttackPlan(attacks),
             )
@@ -152,6 +160,8 @@ if __name__ == "__main__":
         print(step)
         atk_node = game_state.map.get_node(step.attacker)
         assert atk_node.owner == 0, "Expected the attacker to be owned by the player"
-        assert atk_node.value > step.troops, "Expected territory to have more troops than attacking"
+        assert (
+            atk_node.value > step.troops
+        ), "Expected territory to have more troops than attacking"
         assert atk_node.id not in seen, "Expected only one attack from a territory"
         seen.add(atk_node.id)

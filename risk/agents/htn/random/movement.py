@@ -1,16 +1,13 @@
 from risk.agents.htn import gtpyhop as ghop
 from risk.state import plan
-from risk.state.game_state import GameState, Territory
+from risk.state.game_state import GameState
 from risk.utils.logging import debug
 from ..bases import HTNStateWithPlan
 from ...plans import MovementPlan, RouteMovementStep, MovementStep
-from ....utils.movement import (
-    find_safe_frontline_territories,
-    find_movement_sequence,
-    find_connected_frontline_territories,
-)
+from ....utils.movement import find_movement_sequence
+from risk.utils import map as mapping
 
-from typing import Dict, Dict, Set
+from typing import Dict, Set
 from dataclasses import dataclass, field
 import random
 
@@ -30,10 +27,14 @@ class MovementState(HTNStateWithPlan):
     tgt: int = None
     src: int = None
     curr: int = None
+
+
 ###
 def c_select_troops(dom):
     state: MovementState = dom.planning
-    debug(f"Selecting troops from safe territory {state.safe} with {state.armies[state.safe]} armies")
+    debug(
+        f"Selecting troops from safe territory {state.safe} with {state.armies[state.safe]} armies"
+    )
     max_troops = state.armies[state.safe] - 1
     if max_troops > 0:
         state.troops = max_troops
@@ -46,16 +47,18 @@ def c_create_route(dom):
         state.routes += 1
         state.armies[state.safe] -= state.troops
         state.armies[state.front] += state.troops
-        state.ret = state.ret + [ (state.safe, state.front, state.troops) ]
+        state.ret = state.ret + [(state.safe, state.front, state.troops)]
         state.safe = None
         state.front = None
         state.troops = 0
         return dom
-    
+
+
 def c_set_safe(dom, safe: int):
     state: MovementState = dom.planning
     state.safe = safe
     return dom
+
 
 def c_set_unsafe(dom, safe: int):
     state: MovementState = dom.planning
@@ -63,15 +66,19 @@ def c_set_unsafe(dom, safe: int):
     state.safes = state.safes - {safe}
     return dom
 
+
 def c_set_frontline(dom, frontline: int):
     state: MovementState = dom.planning
     state.front = frontline
     return dom
 
+
 ### actions
 def select_troops(dom):
     state: MovementState = dom.planning
-    debug(f"Selecting troops from safe territory {state.safe} with {state.armies[state.safe]} armies")
+    debug(
+        f"Selecting troops from safe territory {state.safe} with {state.armies[state.safe]} armies"
+    )
     max_troops = state.armies[state.safe] - 1
     if max_troops > 0:
         state.troops = max_troops
@@ -84,16 +91,18 @@ def create_route(dom):
         state.routes += 1
         state.armies[state.safe] -= state.troops
         state.armies[state.front] += state.troops
-        state.ret = state.ret + [ (state.safe, state.front, state.troops) ]
+        state.ret = state.ret + [(state.safe, state.front, state.troops)]
         state.safe = None
         state.front = None
         state.troops = 0
         return dom
-    
+
+
 def set_safe(dom, safe: int):
     state: MovementState = dom.planning
     state.safe = safe
     return dom
+
 
 def set_unsafe(dom, safe: int):
     state: MovementState = dom.planning
@@ -101,19 +110,22 @@ def set_unsafe(dom, safe: int):
     state.safes = state.safes - {safe}
     return dom
 
+
 def set_frontline(dom, frontline: int):
     state: MovementState = dom.planning
     state.front = frontline
     return dom
-    
+
+
 ### method-tasks: find moveable safes
 def m_find_frontlines(dom):
     state: MovementState = dom.planning
     frontlines = state.connections[state.safe]
     if frontlines:
         front = frontlines.pop()
-        return [('set_frontline', front), ('select_troops',), ('create_route',)]
-    return [('find_safe',)]
+        return [("set_frontline", front), ("select_troops",), ("create_route",)]
+    return [("find_safe",)]
+
 
 def m_find_safe(dom):
     state: MovementState = dom.planning
@@ -122,10 +134,12 @@ def m_find_safe(dom):
         safe = safes.pop()
         debug(f"Considering safe territory {safe} with {state.armies[safe]} armies")
         if state.armies[safe] > 1:
-            return [('set_safe', safe), 
-                    ("select_front",),]
+            return [
+                ("set_safe", safe),
+                ("select_front",),
+            ]
         else:
-            return [('set_unsafe', safe), ('find_safe',)]
+            return [("set_unsafe", safe), ("find_safe",)]
     else:
         return False
 
@@ -133,7 +147,7 @@ def m_find_safe(dom):
 ### top level
 def routing(dom, arg, moves):
     state: MovementState = dom.planning
-    if state.safes and state.frontlines and state.routes < moves:          
+    if state.safes and state.frontlines and state.routes < moves:
         return [
             ("find_safe",),
             ("planning", arg, moves),
@@ -155,16 +169,17 @@ def halt(dom, arg, moves):
 
 def create_state(player: int, moves: int, game_state: GameState) -> object:
 
-    safe, frontline = find_safe_frontline_territories(game_state, player)
-    terrs = safe + frontline
+    map = game_state.map.clone()
+    smap = mapping.construct_safe_view(map, player)
+    netmap = mapping.construct_network_view(map, player)
+    safes = set(t.id for t in smap.safe_nodes if mapping.get_value(map, t.id) > 1)
+    fronts = set(t.id for t in smap.frontline_nodes)
+
     connections = {
-        t.id: set(
-            o.id for o in find_connected_frontline_territories(t, frontline, terrs)
-        )
-        for t in safe
+        t: set(o.id for o in netmap.frontlines_in_network(mapping.get_value(netmap, t)))
+        for t in safes
     }
-    terrs = dict((t.id, t) for t in terrs)
-    armies = {t.id: t.armies for t in terrs.values()}
+    armies = {t.id: mapping.get_value(map, t.id) for t in netmap.nodes}
 
     dom = ghop.State(
         "movements",
@@ -172,8 +187,8 @@ def create_state(player: int, moves: int, game_state: GameState) -> object:
             "planning": MovementState(
                 player=player,
                 moves=moves,
-                safes=set(t.id for t in safe),
-                frontlines=set(t.id for t in frontline),
+                safes=safes,
+                frontlines=fronts,
                 connections=connections,
                 plan=MovementPlan(moves),
                 armies=armies,
@@ -222,18 +237,15 @@ class RandomMovements:
             for safe, front, troops in res.planning.ret:
                 debug(f"Moving {troops} troops from {safe} to {front}")
                 movements = find_movement_sequence(
-                            game_state.get_territory(safe), 
-                            game_state.get_territory(front), 
-                            troops
+                    game_state.get_territory(safe),
+                    game_state.get_territory(front),
+                    troops,
                 )
                 movements = [
-                    MovementStep(step.src.id, step.tgt.id, step.amount) for step in movements
+                    MovementStep(step.src.id, step.tgt.id, step.amount)
+                    for step in movements
                 ]
-                plan.add_step(
-                    RouteMovementStep(
-                        movements, troops
-                    )
-                )
+                plan.add_step(RouteMovementStep(movements, troops))
 
         return plan
 
