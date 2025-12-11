@@ -193,7 +193,7 @@ class AttackPlanner(Planner):
         terrs = sorted(terrs, key=lambda x: x[1], reverse=True)
         attacker = terrs[0]
         if attacker[1] < 0.25:
-            attacker = None
+            return plan
         else:
             attacker = attacker[0]
             troops = attacker.value
