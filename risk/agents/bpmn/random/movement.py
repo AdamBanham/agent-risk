@@ -184,6 +184,10 @@ class RandomMovement(Planner):
 
         map = game_state.map
         smap = mapping.construct_safe_view(game_state.map, self.player_id)
+
+        if len(smap.frontline_nodes) == 0:
+            return MovementPlan(self.max_moves)
+
         network_map = mapping.construct_network_view(map, self.player_id)
 
         safes = smap.safe_nodes
