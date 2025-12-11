@@ -157,7 +157,10 @@ class AggressiveAgent(BaseAgent):
             weights = [sum_of_adjacents(node) for node in fronts]
 
             # sort them to keep only the top three positions
-            top_most = random.randint(1, min(3, len(fronts)))
+            if len(fronts) > 1:
+                top_most = random.randint(1, min(3, len(fronts)))
+            else:
+                top_most = 1
             options = sorted(
                 zip(fronts, weights),
                 key=lambda x: x[1],
