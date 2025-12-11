@@ -164,6 +164,9 @@ class FilterToWeakest(Filter[Set[int], Set[int]]):
         attacker = self.map.get_node(self._attacker)
 
         defenders = list( d for d in defenders if self.map.get_node(d).owner != self.player)
+        if not defenders:
+            return set()
+        
         def strength(defender):
             return self.map.get_node(defender).value
         
@@ -176,7 +179,7 @@ class FilterToWeakest(Filter[Set[int], Set[int]]):
             def_str = strength(defender)
             safe_troops = max(def_str + 5, def_str * 3)
             if attacker.value - 1 < safe_troops:
-                return []
+                return set()
 
         return set(defenders[:1])
 
