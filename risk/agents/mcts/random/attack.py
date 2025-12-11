@@ -108,7 +108,8 @@ class AttackState(BaseState):
                             troops = random.randint(1, troops)
 
                         options.append(AttackAction(node.id, adj.id, troops))
-
+        if not options:
+            options.append(NoAttack())
         random.shuffle(options)
         return options
 
@@ -162,6 +163,8 @@ class RandomAttacks(Planner):
             return plan
 
         for i in range(num_attacks + 1):
+            if mcts_state.is_terminal():
+                break
             debug(f"starting mcts for attacking {i+1}/{num_attacks+1}...")
             mcts = MCTS(time_limit=max(10, max_runtime // num_attacks + 1))
             action, reward = mcts.search(mcts_state, need_details=True)

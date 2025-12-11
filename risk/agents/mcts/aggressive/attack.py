@@ -162,9 +162,7 @@ class AttackState(BaseState):
         return self._terminal or self.attacker is None or self.troops < 2
 
     def get_reward(self):
-        nodes = self.map.nodes_for_player(self.player)
-        armies = sum(n.value for n in nodes)
-        return len(nodes) * (1 / armies)
+        return self.attacks
 
 
 class AttackPlanner(Planner):
