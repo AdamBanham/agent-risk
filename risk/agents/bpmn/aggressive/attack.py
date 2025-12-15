@@ -100,8 +100,15 @@ def construct_problem(fronts: Set[int], map: mapping.Graph, player: int, attacks
                 return o.value
 
             adjacents = sorted(adjacents, key=strength)
+            defender = adjacents[0].id if adjacents else None
 
-            val.defender = adjacents[0].id if adjacents else None
+            if defender is not None:
+                safe_troops = max(
+                    adjacents[0].value + 5, adjacents[0].value * 3
+                )
+
+                if val.troops >= safe_troops:
+                    val.defender = adjacents[0].id if adjacents else None
 
             return [SimToken((val, res))]
 
