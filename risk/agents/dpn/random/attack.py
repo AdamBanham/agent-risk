@@ -11,6 +11,11 @@ from ..bases import GuardedTransition
 import random
 from typing import Dict, Set
 
+def priority(bindings):
+    debug(f"Num of bindings: {len(bindings)}")
+    bindings = list(bindings)
+    random.shuffle(bindings)
+    return random.choice(bindings)
 
 def create_simulator(
     attacks: int,
@@ -19,7 +24,9 @@ def create_simulator(
     armies: Dict[int, int],
 ) -> SimProblem:
 
-    problem = SimProblem()
+    problem = SimProblem(
+        binding_priority=priority
+    )
 
     class Start(Place):
         model = problem
@@ -60,7 +67,9 @@ def create_simulator(
             terr_val: SimTokenValue,
         ):
             pick = random.choice(list(terr_val.adjacents))
-            army = random.choice(range(1, terr_val.armies))
+            army = terr_val.armies - 1 
+            if army > 1:
+                army = random.randint(1, army)
             return [
                 SimToken(
                     SimTokenValue(
@@ -88,9 +97,9 @@ class RandomAttacks(Planner):
 
     def construct_plan(self, state: GameState) -> "AttackPlan":
 
-        attacks = 1
+        attacks = 0
         pick = random.uniform(0, 1)
-        while pick < self.attack_prob and attacks <= self.max_attacks:
+        while pick < self.attack_prob and attacks < self.max_attacks:
             attacks += 1
             pick = random.uniform(0, 1)
 
@@ -135,6 +144,8 @@ if __name__ == "__main__":
     state.initialise()
     state.update_player_statistics()
 
+    showed = False
+
     for _ in range(5):
         player = random.randint(0, 1)
         attacks = random.randint(1, 10)
@@ -142,22 +153,24 @@ if __name__ == "__main__":
         plan = planner.construct_plan(state)
 
         ## uncomment to show the conceptual model emulator
-        # terrs = mapping.construct_safe_view(state.map, player).frontline_nodes 
-        # adjacents = dict(
-        #     (terr.id, set(o.id for o in state.map.get_adjacent_nodes(terr.id) if o.owner != player)) 
-        #     for terr in terrs
-        # )
-        # armies = dict((terr.id, mapping.get_value(state.map, terr.id)) for terr in terrs)
-        # terrs = set(terr.id for terr in terrs)
+        if not showed:
+            terrs = mapping.construct_safe_view(state.map, player).frontline_nodes 
+            adjacents = dict(
+                (terr.id, set(o.id for o in state.map.get_adjacent_nodes(terr.id) if o.owner != player)) 
+                for terr in terrs
+            )
+            armies = dict((terr.id, mapping.get_value(state.map, terr.id)) for terr in terrs)
+            terrs = set(terr.id for terr in terrs)
 
-        # sim = create_simulator(
-        #     attacks,
-        #     terrs,
-        #     adjacents,
-        #     armies,
-        # )
-        # vis = Visualisation(sim)
-        # vis.show()
+            sim = create_simulator(
+                attacks,
+                terrs,
+                adjacents,
+                armies,
+            )
+            vis = Visualisation(sim)
+            vis.show()
+            showed = True
 
         map = state.map
 

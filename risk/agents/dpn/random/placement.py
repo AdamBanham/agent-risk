@@ -10,10 +10,17 @@ from simpn.simulator import SimTokenValue, SimToken
 from ..bases import ExpressiveSimProblem as SimProblem
 from ..bases import GuardedTransition
 
+def priority(bindings):
+    debug(f"Num of bindings: {len(bindings)}")
+    bindings = list(bindings)
+    random.shuffle(bindings)
+    return random.choice(bindings)
 
 def create_simulator(placements: int, terrs: Set[int]) -> SimProblem:
 
-    problem = SimProblem()
+    problem = SimProblem(
+        binding_priority=priority
+    )
 
     class Placements(Place):
         model = problem
@@ -83,6 +90,14 @@ if __name__ == "__main__":
     state = GameState.create_new_game(52, 2, 50)
     state.initialise()
     state.update_player_statistics()
+
+    terrs = state.get_territories_owned_by(0)
+    terrs = set([t.id for t in terrs])
+    sim = create_simulator(3, terrs)
+
+    from simpn.visualisation import Visualisation
+    vis = Visualisation(sim)
+    vis.show()
 
     for placement in [random.randint(0, 10) for _ in range(10)]:
         player = random.randint(0, 1)

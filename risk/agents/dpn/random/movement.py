@@ -8,11 +8,18 @@ from risk.utils.movement import (
     find_movement_sequence
 )
 
+import random
+
 from simpn.helpers import Place
 from simpn.simulator import SimTokenValue, SimToken
 from ..bases import ExpressiveSimProblem as SimProblem
 from ..bases import GuardedTransition
 
+def priority(bindings):
+    debug(f"Num of bindings: {len(bindings)}")
+    bindings = list(bindings)
+    random.shuffle(bindings)
+    return random.choice(bindings)
 
 
 def create_simulator(
@@ -21,7 +28,9 @@ def create_simulator(
     max_moves: int,
 ) -> SimProblem:
 
-    problem = SimProblem()
+    problem = SimProblem(
+        binding_priority=priority
+    )
 
     class Start(Place):
         model = problem
