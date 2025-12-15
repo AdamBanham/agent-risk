@@ -72,6 +72,8 @@ if __name__ == "__main__":
 
     try:
         for run in range(args.runs):
+            test_state.starting_player = run % len(ai_config.keys())
+            test_state.current_player_id = test_state.starting_player
             _, _, scorer = simulate_turns(
                 test_state,
                 args.turns,
@@ -79,7 +81,7 @@ if __name__ == "__main__":
                     attack_rate=args.attack_rate, load_ai_from_file=True, score=True
                 ),
             )
-
+            info(f"starting player was {test_state.starting_player}")
             info(f"[RUN {run+1:04d}] Final Scores:")
             for player_id, score in scorer.get_total_scores().items():
                 info(f"Player {player_id}: {score} points")
