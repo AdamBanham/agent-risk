@@ -101,14 +101,15 @@ def construct_simulator(
         outgoing = ["selected", "planner"]
 
         def behaviour(tok_val, planner: SimTokenValue):
-            # Placeholder for random attack selection logic
             new_planner = planner.clone()
 
             terr = random.choice(
                 [t for t in planner.terrs if planner.armies[t] > 1]
             )
             adjacent = random.choice(list(planner.adjacents[terr]))
-            army = random.choice(list(range(1, planner.armies[terr])))
+            army = planner.armies[terr] - 1
+            if army > 1:
+                army = random.randint(1, army)
 
             new_planner.selected = {
                 "from": terr,
@@ -149,7 +150,6 @@ def construct_simulator(
 
         def behaviour(tok_val, planner: SimTokenValue):
             new_tok_val = planner.clone()
-            # Here you would implement the logic to build the attack action
             new_tok_val.actions.append(
                 AttackStep(
                     attacker=planner.selected["from"],
@@ -186,7 +186,7 @@ class RandomAttack(Planner):
 
     def construct_plan(self, game_state: GameState) -> AttackPlan:
         # Implementation of random attack plan generation
-        max_attacks = 1
+        max_attacks = 0
         pick = random.uniform(0, 1)
         while pick <= self.attack_prob and max_attacks < self.max_attacks:
             max_attacks += 1

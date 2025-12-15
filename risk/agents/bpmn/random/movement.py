@@ -214,6 +214,7 @@ class RandomMovement(Planner):
             connections=connections,
             max_moves=self.max_moves,
         )
+        sim.store_checkpoint("start")
 
         while sim.step():
             pass
@@ -264,6 +265,7 @@ if __name__ == "__main__":
 
     from simpn.visualisation import Visualisation
 
+    sim.restore_checkpoint("start")
     if exists(layout_file):
         vis = Visualisation(sim, layout_file=layout_file)
     else:

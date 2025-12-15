@@ -138,6 +138,12 @@ if __name__ == "__main__":
     state.initialise()
     state.update_player_statistics()
 
+    from simpn.visualisation import Visualisation
+
+    sim = create_simulator({n.id for n in state.map.nodes if n.owner == 0}, 5)
+    vis = Visualisation(sim)
+    vis.show()
+
     planner = RandomPlacement(0, 5)
     plan = planner.construct_plan(state)
 
@@ -148,7 +154,3 @@ if __name__ == "__main__":
         node = state.map.get_node(step.territory)
         assert node.owner == 0, "Expected territory to be owned by player 0"
 
-    from simpn.visualisation import Visualisation
-
-    vis = Visualisation(planner._sim)
-    vis.show()
