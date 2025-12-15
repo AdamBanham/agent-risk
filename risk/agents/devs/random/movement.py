@@ -206,7 +206,8 @@ if __name__ == "__main__":
     setLevel(DEBUG)
 
     state = GameState.create_new_game(50, 2, 200)
-    state, _ = simulate_turns(state, 150)
+    state.initialise()
+    state.update_player_statistics()
 
     planner = RandomMovement(player_id=0, max_moves=1)
     plan = planner.construct_plan(state)

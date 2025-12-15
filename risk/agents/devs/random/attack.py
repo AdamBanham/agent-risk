@@ -154,7 +154,7 @@ class RandomAttack(Planner):
 
     def construct_plan(self, game_state: GameState) -> AttackPlan:
         # Implementation of random attack plan generation
-        max_attacks = 1
+        max_attacks = 0
         pick = random.uniform(0, 1)
         while pick <= self.attack_prob and max_attacks < self.max_attacks:
             max_attacks += 1
