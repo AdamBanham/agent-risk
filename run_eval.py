@@ -118,44 +118,60 @@ def work_for_config(combo, id, attack_rate, turns, eval_path):
     )
 
     combo_start = time()
-    new_state, tape, scorer = simulate_turns(
-        starting_state,
-        turns,
-        SimulationConfiguration(
-            attack_rate=attack_rate,
-            load_ai_from_file=True,
-            configuration=config,
-            score=True,
-        ),
-    )
-    combo_end = time() - combo_start
-    info(f"Completed simulation in {combo_end:.2f} seconds.")
-    info(f"Final Turn: {new_state.current_turn}")
-
-    recorder = tape
-    state = new_state
     results = {}
-    scores = scorer.get_total_scores(False)
-
-    info("Final Scores:")
     for player_id, (family, strat) in enumerate(zip(options.keys(), combo)):
-        score = scores[player_id]
-        runtime = state.players[player_id].runtime
-        info(
-            f"Player {player_id}: {score} points with a runtime of {runtime:.2f} seconds"
-        )
         results[config_name(config, str(player_id))] = {
-            "score": score,
-            "runtime": runtime,
+            "score": 0,
+            "runtime": 0,
         }
-        summary_stats[family][strat]["score"].append(score)
-        summary_stats[family][strat]["runtime"].append(runtime)
+        summary_stats[family][strat]["score"].append(0)
+        summary_stats[family][strat]["runtime"].append(0)
+
+    # run replications for each starting player
+    for starting in range(7):
+        starting_state.starting_player = starting
+        starting_state.current_player_id = starting
+
+        rep_start = time()
+        new_state, tape, scorer = simulate_turns(
+            starting_state,
+            turns,
+            SimulationConfiguration(
+                attack_rate=attack_rate,
+                load_ai_from_file=True,
+                configuration=config,
+                score=True,
+            ),
+        )
+        rep_end = time() - rep_start
+        info(f"Completed simulation in {rep_end:.2f} seconds.")
+        info(f"Final Turn: {new_state.current_turn}")
+
+        recorder = tape
+        state = new_state
+        scores = scorer.get_total_scores(False)
+
+        info("Final Scores:")
+        for player_id, (family, strat) in enumerate(zip(options.keys(), combo)):
+            score = scores[player_id]
+            runtime = state.players[player_id].runtime
+            info(
+                f"Player {player_id}: {score} points with a runtime of {runtime:.2f} seconds"
+            )
+            results[config_name(config, str(player_id))]["score"] += score / 7.0
+            results[config_name(config, str(player_id))]["runtime"] += runtime / 7.0
+            summary_stats[family][strat]["score"][-1] += score / 7.0
+            summary_stats[family][strat]["runtime"][-1] += runtime / 7.0
+
+        with open(join(eval_path, f"combo_{id:04d}_{starting}.stack"), "w") as f:
+            f.write(str(recorder.stack))
+        with open(join(eval_path, f"combo_{id:04d}_{starting}.state"), "w") as f:
+            f.write(repr(state))
+            
+    # end of replications    
+    combo_end = time() - combo_start
     results["total_time"] = combo_end
 
-    with open(join(eval_path, f"combo_{id:04d}.stack"), "w") as f:
-        f.write(str(recorder.stack))
-    with open(join(eval_path, f"combo_{id:04d}.state"), "w") as f:
-        f.write(repr(state))
     with open(join(eval_path, f"combo_{id:04d}.config"), "w") as f:
         f.write(json.dumps(config, indent=4))
     with open(join(eval_path, f"combo_{id:04d}.scores"), "w") as f:
