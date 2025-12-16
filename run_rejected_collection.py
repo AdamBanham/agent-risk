@@ -30,7 +30,7 @@ def parse_args() -> argparse.ArgumentParser:
     return parser.parse_args()
 
 CONFIG_FILE = "combo_{id:04d}.config"
-STACK_FILE = "combo_{id:04d}.stack"
+STACK_FILE = "combo_{id:04d}_{perm}.stack"
 
 REJECT_MATCH = "reject-(.*?)-.*P({id}).*?:(.*?),"
 
@@ -133,35 +133,35 @@ def work():
         in options.items()
     )
 
-
     # loop through all config files in the eval path
     if args.collect:
         id = 0
         while path.exists(path.join(args.path, CONFIG_FILE.format(id=id))):
             config = json.load(open(path.join(args.path, CONFIG_FILE.format(id=id))))
-            stack = open(path.join(args.path, STACK_FILE.format(id=id)), "r").read()
+            for perm in range(7):
+                stack = open(path.join(args.path, STACK_FILE.format(id=id, perm=perm)), "r").read()
 
-            # for each player, check their config and then collect rejects
-            for player in range(7):
-                player_config =  config[str(player)]
-                reject_results = rejected[player_config["type"]][player_config["strat"]]
+                # for each player, check their config and then collect rejects
+                for player in range(7):
+                    player_config =  config[str(player)]
+                    reject_results = rejected[player_config["type"]][player_config["strat"]]
 
-                matcher = re.compile(
-                    REJECT_MATCH.format(id=player),
-                    flags=re.I | re.M
-                )
-                matching = re.findall(matcher, stack)
-                if matching:
-                    for (type, mplayer, reason) in matching:
-                        try :
-                            type = type.lower().strip()
-                            reason = reason.lower().strip()
-                            if reason not in reject_results[type]:
-                                reject_results[type][reason] = 0
-                            reject_results[type][reason] += 1
-                        except Exception as e:
-                            print(f"Could not process rejection match {type} {mplayer} {reason}: {e}")
-                            raise e
+                    matcher = re.compile(
+                        REJECT_MATCH.format(id=player),
+                        flags=re.I | re.M
+                    )
+                    matching = re.findall(matcher, stack)
+                    if matching:
+                        for (type, mplayer, reason) in matching:
+                            try :
+                                type = type.lower().strip()
+                                reason = reason.lower().strip()
+                                if reason not in reject_results[type]:
+                                    reject_results[type][reason] = 0
+                                reject_results[type][reason] += 1
+                            except Exception as e:
+                                print(f"Could not process rejection match {type} {mplayer} {reason}: {e}")
+                                raise e
 
             id += 1
 

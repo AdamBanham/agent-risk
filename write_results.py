@@ -40,7 +40,7 @@ ELEMENTS = {
     "htn": {"random": "25", "defensive": "30", "aggressive": "34"},
     "mcts": {"random": "6", "defensive": "8", "aggressive": "8"},
     "bpmn": {"random": "24", "defensive": "32", "aggressive": "28"},
-    "dpn": {"random": "25", "defensive": "14", "aggressive": "16"},
+    "dpn": {"random": "10", "defensive": "14", "aggressive": "16"},
 }
 
 CC = {
