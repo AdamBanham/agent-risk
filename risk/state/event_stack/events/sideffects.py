@@ -301,3 +301,18 @@ class EndTurn(SideEffectEvent):
 
     def revert(self, state: "GameState") -> None:
         pass
+
+
+class PlayerRuntimeAdjust(SideEffectEvent):
+    """
+    Updates the runtime for a player.
+    """
+
+    def __init__(self, player: int, runtime: float):
+        super().__init__("AdjustPlayerRuntime", {"player": player, "runtime": runtime})
+
+    def apply(self, state):
+        state.players[self.context.player].runtime += self.context.runtime
+
+    def revert(self, state):
+        state.players[self.context.player].runtime -= self.context.runtime

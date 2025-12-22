@@ -40,7 +40,7 @@ class StackRenderer(Renderer):
     This rendering the current simulation event stack.
     """
 
-    def __init__(self, stack: EventStack):
+    def __init__(self, stack: EventStack, reversed: bool = False, picking: int = -1):
         super().__init__()
         self.stack = stack
         self.el_height = 30
@@ -48,6 +48,8 @@ class StackRenderer(Renderer):
         self.el_y_margin = 140
         self.el_indent_depth = 25
         self.el_width = 500
+        self.reversed = reversed
+        self.picking = picking
 
     def render(self, game_state: GameState, surface: Surface) -> None:
         """
@@ -58,7 +60,14 @@ class StackRenderer(Renderer):
                           interface)
         :param surface: Pygame surface to render the stack boxes onto
         """
-        stack = self.stack.substack(self.stack.size)
+        if not self.reversed:
+            stack = self.stack.substack(
+                self.stack.size if self.picking < 0 else self.picking
+            )
+        else:
+            stack = self.stack.topstack(
+                self.stack.size if self.picking < 0 else self.picking
+            )
 
         # Position boxes on the right side with margin
         x_pos = surface.get_width() - self.el_width - self.el_x_margin

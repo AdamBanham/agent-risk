@@ -17,6 +17,7 @@ from json import loads
 
 from typing import Dict, List, Optional
 from risk.utils.logging import debug, info
+from risk.state.event_stack.events.sideffects import PlayerRuntimeAdjust
 from time import time
 
 
@@ -47,13 +48,13 @@ class AiEngine(Engine):
             ret = agent.decide_placement(state, goal=None)
         runtime = time() - start
         agent.add_runtime(runtime)
-        state.players[agent.player_id].runtime += runtime
+        runtime_effect = PlayerRuntimeAdjust(agent.player_id, runtime)
         info(
             f"Agent {agent.name} "
             f"took {runtime:.2f} secs "
             f"(total: {agent.runtime:.2f} secs)"
         )
-        return ret
+        return ret + [runtime_effect]
 
     def add_ai_for_player(self, agent: BaseAgent, player_id: int) -> None:
         """
@@ -132,7 +133,8 @@ def add_random_ai_policy(
         attack_probability=attack_probability,
     )
     debug(
-        f"Add random agent policy for player {player_id} with attack probability {attack_probability}"
+        f"Add random agent policy for player {player_id} "
+        + f"with attack probability {attack_probability}"
     )
     engine.add_ai_for_player(agent, player_id)
 

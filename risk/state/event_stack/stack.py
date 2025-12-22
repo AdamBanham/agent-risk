@@ -204,6 +204,21 @@ class EventStack:
 
         return EventStack(self.name + f"-sub-{layers}", layers=self.stack[:layers])
 
+    def topstack(self, layers: int):
+        """
+        From the top to bottom, create a substack fo the current stack with
+        up to `layers` in it.
+        """
+        return EventStack(
+            self.name + f"-sub-{layers}", layers=self.stack[-1 * layers :]
+        )
+
+    def clear(self):
+        """
+        Clears the stack.
+        """
+        self.stack.clear()
+
     def __len__(self):
         return self.size
 

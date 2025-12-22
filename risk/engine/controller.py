@@ -4,7 +4,7 @@ processing loop.
 """
 
 from typing import Union
-from risk.utils.logging import debug    
+from risk.utils.logging import debug
 from ..engine.base import Engine, EngineProccesableError, EngineProcessingError
 from .base import DebugEngine, SideEffectEngine
 from ..state import GameState
@@ -186,11 +186,11 @@ class SimulationController:
         Get the current event stack.
         """
         return self.event_stack
-    
+
 
 from ..state.event_stack import PauseProcessingEvent
-import threading
 import asyncio
+
 
 class PauseEngine(Engine):
     """
@@ -205,7 +205,9 @@ class PauseEngine(Engine):
         self._thread = None
         self.delay = 0
 
-    async def _launch_pause(self: "PauseEngine", controller: SimulationController) -> None:
+    async def _launch_pause(
+        self: "PauseEngine", controller: SimulationController
+    ) -> None:
         """Launch a pause in processing for the specified duration."""
         import time
 
@@ -231,10 +233,19 @@ class PauseEngine(Engine):
                 self.delay = min(1, self.delay + delay)
             else:
                 self.delay = delay
-                self._thread = asyncio.create_task(
+                errored = False
+                try:
+                    asyncio.get_running_loop()
+                except:
+                    errored = True
+
+                if not errored:
+                    self._thread = asyncio.create_task(
+                        self._launch_pause(self.controller)
+                    )
+                else:
                     self._launch_pause(self.controller)
-                )
-                
+
         return super().process(state, element)
 
 
