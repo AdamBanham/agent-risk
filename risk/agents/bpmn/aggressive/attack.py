@@ -218,6 +218,7 @@ if __name__ == "__main__":
     setLevel(DEBUG)
 
     from simpn.visualisation import Visualisation
+    from simpn.visualisation.model_panel_mods import RecorderModule
 
     state = GameState.create_new_game(20, 2, 100)
     state.initialise()
@@ -226,32 +227,33 @@ if __name__ == "__main__":
     safemap = mapping.construct_safe_view(state.map, 0)
     fronts = safemap.frontline_nodes
 
-    problem = construct_problem(set(f.id for f in fronts), state.map.clone(), 0, 2)
+    problem = construct_problem(set(f.id for f in fronts), state.map.clone(), 0, 10)
 
+    recorder = RecorderModule("./bpmn-attack.gif", include_ui=True)
     if path.exists("test.layout"):
-        vis = Visualisation(problem, layout_file="test.layout")
+        vis = Visualisation(problem, layout_file="test.layout", extra_modules=[recorder])
     else:
-        vis = Visualisation(problem)
+        vis = Visualisation(problem, extra_modules=[recorder])
     vis.show()
     vis.save_layout("test.layout")
 
-    for _ in range(10):
-        new_state = copy_game_state(state)
-        terrs = list(fronts)
-        terr = random.choice(terrs)
-        new_state.get_territory(terr.id).armies += 100
-        info("Increased troops in territory {}".format(terr.id))
-        new_state.update_player_statistics()
+    # for _ in range(10):
+    #     new_state = copy_game_state(state)
+    #     terrs = list(fronts)
+    #     terr = random.choice(terrs)
+    #     new_state.get_territory(terr.id).armies += 100
+    #     info("Increased troops in territory {}".format(terr.id))
+    #     new_state.update_player_statistics()
 
-        pick = random.randint(1, 5)
-        planner = AttackPlanner(0, pick)
-        plan = planner.construct_plan(new_state)
+    #     pick = random.randint(1, 5)
+    #     planner = AttackPlanner(0, pick)
+    #     plan = planner.construct_plan(new_state)
 
-        info(plan)
-        assert len(plan.steps) > 0, "Expected one attack in the plan."
-        assert (
-            len(plan.steps) <= pick
-        ), "Expected at most {} attacks in the plan.".format(pick)
-        for step in plan.steps:
-            info(step)
-        input("Press Enter to continue...")
+    #     info(plan)
+    #     assert len(plan.steps) > 0, "Expected one attack in the plan."
+    #     assert (
+    #         len(plan.steps) <= pick
+    #     ), "Expected at most {} attacks in the plan.".format(pick)
+    #     for step in plan.steps:
+    #         info(step)
+    #     input("Press Enter to continue...")

@@ -218,6 +218,7 @@ if __name__ == "__main__":
     setLevel(DEBUG)
 
     from simpn.visualisation import Visualisation
+    from simpn.visualisation.model_panel_mods import RecorderModule
 
     game_state = GameState.create_new_game(50, 6, 200)
     game_state.initialise()
@@ -226,10 +227,12 @@ if __name__ == "__main__":
     game_state.get_territory(front.id).armies = 200
     game_state.update_player_statistics()
 
+    recorder = RecorderModule("./dpn-attack.gif", include_ui=True)
     vis = Visualisation(
         create_problem(
-            0, set([front.id]), game_state.map, 2
-        )
+            0, set([front.id]), game_state.map, 10
+        ),
+        extra_modules=[recorder],
     )
     vis.show()
 
