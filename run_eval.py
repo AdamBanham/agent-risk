@@ -253,7 +253,7 @@ def work():
                     result[family][strat]["score"]
                 )
                 summary_stats[family][strat]["runtime"].extend(
-                    result[family][strat]["score"]
+                    result[family][strat]["runtime"]
                 )
         runs.append(combo_end)
 
