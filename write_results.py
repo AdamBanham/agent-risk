@@ -162,7 +162,7 @@ def compute_summary(eval_path: str) -> Dict:
             r_var = sum((x - r_mean) ** 2 for x in runtimes) / len(runtimes)
             scores = summary_dict[family][strat]["score"]
             s_mean = sum(scores) / len(scores)
-            s_var = sum((x - s_mean) ** 2 for x in scores)
+            s_var = sum((x - s_mean) ** 2 for x in scores) / len(scores)
             condensed_stats[family][strat] = {
                 "std_runtime": math.sqrt(r_var),
                 "avg_runtime": r_mean,
