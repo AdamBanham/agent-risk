@@ -2,6 +2,9 @@ import argparse
 import json
 from os import path
 
+from typing import Dict
+import math
+
 TEMPLATE = """
         Base & \\\\
              & rand.  & {elements} & {cc} & {runtime} ($\\pm{}{r_std}$) & {score} ($\\pm{}{s_std}$) \\\\ 
@@ -97,7 +100,77 @@ def parse_arguments():
         " the root of the directory",
     )
 
+    parser.add_argument(
+        "--collect",
+        action="store_true",
+        help="Recompute the summary statistics rather than trusting summary.json"
+    )
+
     return parser.parse_args()
+
+
+DEFAULT_SIM_RUNS = 2187
+SCORE_FILE = "combo_{run:04d}.scores"
+CONFIG_FILE = "combo_{run:04d}.config"
+SCORING_NAME = "player{id}-{family}-{strat}"
+
+
+def compute_summary(eval_path: str) -> Dict:
+
+    summary_dict = dict(
+        (family, dict(
+            (strat, {
+                "runtime" : [],
+                "score" : []
+            })
+            for strat 
+            in PATTERNS
+        ))
+        for family 
+        in NOTATIONS.values()
+    )
+
+    for sim_run in range(DEFAULT_SIM_RUNS):
+
+        sim_config = json.load(open( 
+            path.join(eval_path, CONFIG_FILE.format(run=sim_run))
+        ))
+        sim_scores = json.load(open(
+            path.join(eval_path, SCORE_FILE.format(run=sim_run))
+        ))
+
+        for player in range(7):
+            family = sim_config[str(player)]["type"]
+            strat = sim_config[str(player)]["strat"]
+
+            scoring = sim_scores[SCORING_NAME.format(
+                id=player, family=family, strat=strat
+            )]
+
+            summary_dict[family][strat]["runtime"].append(scoring["runtime"])
+            summary_dict[family][strat]["score"].append(scoring["score"])
+
+        if sim_run % 10 == 0:
+            print(f"processed {sim_run+1}/{DEFAULT_SIM_RUNS+1}...")
+
+    condensed_stats = {}
+    for family in summary_dict.keys():
+        condensed_stats[family] = {}
+        for strat in summary_dict[family].keys():
+            runtimes = summary_dict[family][strat]["runtime"]
+            r_mean = sum(runtimes) / len(runtimes)
+            r_var = sum((x - r_mean) ** 2 for x in runtimes) / len(runtimes)
+            scores = summary_dict[family][strat]["score"]
+            s_mean = sum(scores) / len(scores)
+            s_var = sum((x - s_mean) ** 2 for x in scores)
+            condensed_stats[family][strat] = {
+                "std_runtime": math.sqrt(r_var),
+                "avg_runtime": r_mean,
+                "std_score": math.sqrt(s_var),
+                "avg_score": s_mean,
+            }
+
+    return condensed_stats
 
 
 if __name__ == "__main__":
@@ -108,12 +181,17 @@ if __name__ == "__main__":
         raise ValueError("Could not find the path to the given evaluation dir.")
 
     summary_path = path.join(args.path, "summary.json")
-
-    if not path.exists(summary_path):
-        raise ValueError("Unable to find the summary.json in evaluation dir.")
-
     all_data = json.load(open(summary_path))
-    summary_data = all_data["detailed_stats"]
+    if args.collect:
+        # recompute summary data 
+        summary_data = compute_summary(args.path)
+        print(summary_data)
+    else:
+        # use existing summary data instead
+        if not path.exists(summary_path):
+            raise ValueError("Unable to find the summary.json in evaluation dir.")
+
+        summary_data = all_data["detailed_stats"]
 
     ret = "\n"
     curr = None
