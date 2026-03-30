@@ -132,6 +132,9 @@ def compute_summary(eval_path: str) -> Dict:
 
     for sim_run in range(DEFAULT_SIM_RUNS):
 
+        if not path.exists(path.join(eval_path, CONFIG_FILE.format(run=sim_run))):
+            continue
+
         sim_config = json.load(open( 
             path.join(eval_path, CONFIG_FILE.format(run=sim_run))
         ))
@@ -158,11 +161,11 @@ def compute_summary(eval_path: str) -> Dict:
         condensed_stats[family] = {}
         for strat in summary_dict[family].keys():
             runtimes = summary_dict[family][strat]["runtime"]
-            r_mean = sum(runtimes) / len(runtimes)
-            r_var = sum((x - r_mean) ** 2 for x in runtimes) / len(runtimes)
+            r_mean = sum(runtimes) / len(runtimes) if len(runtimes) > 0 else 0
+            r_var = sum((x - r_mean) ** 2 for x in runtimes) / len(runtimes) if len(runtimes) > 0 else 0
             scores = summary_dict[family][strat]["score"]
-            s_mean = sum(scores) / len(scores)
-            s_var = sum((x - s_mean) ** 2 for x in scores) / len(scores)
+            s_mean = sum(scores) / len(scores) if len(scores) > 0 else 0
+            s_var = sum((x - s_mean) ** 2 for x in scores) / len(scores) if len(scores) > 0 else 0
             condensed_stats[family][strat] = {
                 "std_runtime": math.sqrt(r_var),
                 "avg_runtime": r_mean,
@@ -181,11 +184,20 @@ if __name__ == "__main__":
         raise ValueError("Could not find the path to the given evaluation dir.")
 
     summary_path = path.join(args.path, "summary.json")
-    all_data = json.load(open(summary_path))
+    if path.exists(summary_path):
+        all_data = json.load(open(summary_path))
+    else:
+        print("Unable to find summary.json, using dummy data for the timing of replications.")
+        all_data = {
+            "total_simulations": DEFAULT_SIM_RUNS,
+            "total_time": 1,
+            "individual_times": [1],
+            "detailed_stats": {}
+        }
     if args.collect:
         # recompute summary data 
         summary_data = compute_summary(args.path)
-        print(summary_data)
+        print("Recomputed summary data...")
     else:
         # use existing summary data instead
         if not path.exists(summary_path):

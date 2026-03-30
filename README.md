@@ -12,6 +12,18 @@ complex aspects of simulation studies.
 A brief demonstration of how the simulation unfolds is shown below:
 ![A gif of the simulation](demo.gif)
 
+## Associated Paper
+
+Title: **On the Modelling of Aggregated Behaviour for Simulation: An Event–Based Architecture**
+
+Authors: Adam Banham*[1], Claudia Szabo[1], Ryan Beruldsen[2]
+
+*corresponding author for artifact evaluation, contact: `adam.banham@adelaide.edu.au`.
+
+Organisations: [1]: Adelaide University, [2]: Defence Science and Technology Group, Department of Defence; Adelaide, Australia
+
+## Framework Description
+
 The simulation framework revolves around an event stack, which allows us to build
 out the simulation via engines.
 These engines react to elements popped off the stack to generate more elements,
@@ -42,16 +54,23 @@ In order to run the simulation, you will need an installation of Python `3.13.x`
 We used `pipenv` to record the required libraries and versions that need to be installed
 for the simulator to run.
 
+To install pipenv into your global Python interperator use the following command:
+
+```bash
+py -m pip install -U pip
+py -m pip install -U pipenv
+```
+
 Once `pipenv` is installed, run the following command to regenerate the development environment:
 
 ```bash
-pipenv sync
+py -m pipenv sync
 ```
 
 After the virtual environment is reproduced, activate the interpreter using:
 
 ```bash
-pipenv shell
+py -m pipenv shell
 ```
 
 ## Quick Start
@@ -59,8 +78,11 @@ pipenv shell
 To run the simulator and simulate a game of Risk, use the following command from the root directory:
 
 ```bash
-py run_game.py
+py run_game.py -g 52 -p 8
 ```
+
+**The simulation will prompt you to press `enter` once the setup process
+has completed to start the replication.**
 
 There are several arguments that can be passed to the runner.
 But most notable are `-g X` to set the number of regions in the game to `X`, `-p Y` to
@@ -69,6 +91,72 @@ of armies each player is given to `Z`.
 
 Many other arguments can be passed through to adjust the speed and verbosity of the
 simulator as well.
+
+## Reproduction Instructions
+
+This section outlines the process to reproduce `Tables 2 & 3` in the
+associated paper. Ensure that the development environment has been
+reproduced and that the quick start worked without any tracebacks.
+
+The first step for the reproduction is collecting replications to
+inform the reproductions of `results.tex` (`Table 2`) and
+`rejects.tex` (`Table 3`). The latest results are checked into this
+repository via these files.
+
+To collect tapes of replications, run the following command in the activated
+pipenv shell to reproduce replications as in the report:
+
+```bash
+py run_eval.py --turns 100
+```
+
+Or if you wish to run a testing reproduction over 10 turns (to reduced
+the ~19 hour wait for completion):
+
+```bash
+py run_eval.py
+```
+
+This evaluation script is threaded and will add a new folder in `eval`
+to capture for each replication design, seven replications shifting
+around the starting player for each replication. For each replication,
+a tape and the state as of the last turn is saved as a file
+`combo_[design]_[rep].[stack|state]`.
+
+Both the replication designs (`configs.json`) and the starting state
+(`starting_state.state`) of each replication is saved into files within
+the eval run folder as well.
+
+Once results are stored in an evaluation directory `eval/eval_run_XXXX`
+the latex tables can be produced by running the following commands.
+
+To transform an evaluation folder into `results.text` run:
+
+```bash
+py write_results.py --path .\eval\eval_runs_XXXX --collect
+```
+
+To transform an evlauation folder into `rejects.tex` run:
+
+```bash
+py write_rejects.py --path .\eval\eval_runs_XXXX --collect
+```
+
+Due to the nature of producing the initial state, reproduction
+of the exact replications used in the paper is not guaranteed.
+
+### Equipement and Expected Runtime
+
+We used the following commerically available hardware for running the
+replications for the evaluation.
+
+```
+CPU: AMD Ryzen 9 3900XT (12 physical cores/24 virtual)
+RAM: 64 GB DDR4 @ 1053 MHz
+```
+
+The replications took a total of `18.82` wall hours to complete and
+a single replication took on average `11.74` minutes to complete.
 
 ## Configuration
 
@@ -122,10 +210,21 @@ This will contain the configuration, scores, the tape, and the final state for e
 simulated run. Due to the size of this folder, this repo does not track the `./eval/`
 folder.
 
-A helper runner `write_results.py` can be pointed at the evaluation directory to collect 
-the results into a LaTeX table, i.e. `results.tex`.
+### write_results
 
-### run_rejected_collection
+A helper runner `write_results.py` can be pointed at the evaluation directory to collect the results into a LaTeX table, i.e. `results.tex`.
+
+This runner should be called in the following manner:
+
+```bash
+  py run_rejected_collection.py --path [eval_dir] --collect
+```
+
+The `--collect` arg will tell the runner to recompute the summary
+statistics json for the LaTeX table. This arg is useful for computing
+a table on a partial run of the evaluation.
+
+### write_rejects
 
 Similar to the helper, `write_results.py`, for the evaluation, this runner will parse
 the tapes are stored in an evaluation directory to collect rejected events.
