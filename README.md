@@ -2,11 +2,11 @@
 
 This repo contains a work-in-progress modular event-driven simulation framework
 (unnamed), which has been instantiated to simulate the board game called "Risk".
-This project stands be a test for a general framework for handling multi-agent simulations.
+This project stands as a test for a general framework for handling multi-agent simulations.
 
-The project tests several notations and techniques for handling the decision making of
+The project tests several notations and techniques for handling the decision-making of
 agents through a complex simulated world.
-The board game risk allowed us to evaluate the needs of modeller working with
+The board game Risk allowed us to evaluate the needs of modellers working with
 complex aspects of simulation studies.
 
 A brief demonstration of how the simulation unfolds is shown below:
@@ -18,31 +18,31 @@ These engines react to elements popped off the stack to generate more elements,
 which trigger further engines.
 A simulation ends once no more elements are left on this stack.
 
-Notably, a human can play within the simulation, but ideally all the actions are
+Notably, a human can play within the simulation, but ideally, all the actions are
 generated from automated agents.
 Automated agents react to the key phases on their turn via an engine, which prompts
-an agent to produce a plan of actions for that phase.
+an agent to produce a plan of action for that phase.
 
 Agents may put anything on the stack, as can the human player.
-Though humans have a bit more hand holding than automated agents.
+Though humans have a bit more hand-holding than automated agents.
 But the simulation's internal engines decide whether these elements popped off the
 stack are valid and result in side effects.
-Side effects are events that change the world state in a reversable manner, by convention
+Side effects are events that change the world state in a reversible manner, by convention
 the simulator should only modify the world state through a side effect being popped off
 the stack, such as placing new troops on a territory.
 The architecture does not enforce this convention, and agents should not put side effects
-on the stack but instead use a handful of events related to their possible actions.
-The types of events on the stack are colour coded and the current stack is shown in the
+on the stack, but instead use a handful of events related to their possible actions.
+The types of events on the stack are colour-coded, and the current stack is shown in the
 bottom right in the visualisation of the simulation.
 
 ## Development Environment
 
-In order to run the simulation, you will need a installation of Python `3.13.x`
+In order to run the simulation, you will need an installation of Python `3.13.x`
 (there might be a bit of leeway around version, but this is untested).
 We used `pipenv` to record the required libraries and versions that need to be installed
 for the simulator to run.
 
-Once `pipenv` is installed, run the following command to regenerate the developement environment:
+Once `pipenv` is installed, run the following command to regenerate the development environment:
 
 ```bash
 pipenv sync
@@ -62,7 +62,7 @@ To run the simulator and simulate a game of Risk, use the following command from
 py run_game.py
 ```
 
-There are several arguments that can passsed to the runner.
+There are several arguments that can be passed to the runner.
 But most notable are `-g X` to set the number of regions in the game to `X`, `-p Y` to
 set the number of agents in the simulation to `Y`, and `-s Z` to set the starting number
 of armies each player is given to `Z`.
@@ -74,8 +74,8 @@ simulator as well.
 
 To configure the simulation to use a specific agent type and strategy, the `ai.config`
 file should be changed.
-The file is a json formated configuration for each player, where each player is
-configured by two attributes (options are seperated by `|`):
+The file is a JSON-formatted configuration for each player, where each player is
+configured by two attributes (options are separated by `|`):
 
 ```json
 {
@@ -86,9 +86,9 @@ configured by two attributes (options are seperated by `|`):
 
 ## Other Runners
 
-In the root directory of the project there are a handful of other runners for starting the
-simulator, with a particular focus. Each of these runners have a different focus and
-may or may not use the visual respentation of the data in the simulation run, i.e.
+In the root directory of the project, there are a handful of other runners for starting the
+simulator, with a particular focus. Each of these runners has a different focus and
+may or may not use the visual representation of the data in the simulation run, i.e.
 no rendering of the current state.
 
 ### run_check_bias
@@ -123,12 +123,12 @@ simulated run. Due to the size of this folder, this repo does not track the `./e
 folder.
 
 A helper runner `write_results.py` can be pointed at the evaluation directory to collect 
-the results into a latex table, i.e. `results.tex`.
+the results into a LaTeX table, i.e. `results.tex`.
 
 ### run_rejected_collection
 
 Similar to the helper, `write_results.py`, for the evaluation, this runner will parse
-the tapes stored in an evaulation directory to collect rejected events.
+the tapes are stored in an evaluation directory to collect rejected events.
 
 The total number of rejected events will be split up between the agent type and strategy.
 After parsing all the tapes in the specified evaluation directory, it writes the results
@@ -156,7 +156,7 @@ By default, the agents used in the simulator will use the random strategy. By pa
 
 ### run_sim_from
 
-This runner enacts the simulator with a visual repsentation.
+This runner enacts the simulator with a visual representation.
 It loads the simulator pointed at a saved state of the simulation and ensures that one
 player in the simulation is a human player.
 This runner is useful for debugging a position or testing out the possible options for
@@ -167,9 +167,9 @@ position.
 This runner is an exemplar for running the simulator in a distributed manner.
 In this runner, the simulator and the visualisation are run in different processes and
 elements on the tape are shared between processes.
-This demonstrates that some amount of composablity could be achieved through the listening
+This demonstrates that some amount of composability could be achieved through the listening
 of the tape, ensuring truth across the possible sub-systems of a simulation.
-Another benefit of this runner is that the choppyness of the visualisation is limited as
+Another benefit of this runner is that the choppiness of the visualisation is limited as
 the visualisation is free to respond to user input while agents are planning.
 
 There are no arguments for this runner, as it is meant to be a demonstration of
@@ -177,11 +177,11 @@ distributed communication.
 
 ## Current Implementation
 
-This section covers some high-level diagrams of the architecture for the simulator.
+This section covers high-level diagrams of the simulator's architecture.
 
 ### Architecture design plans for the simulator
 
-At a very high-level the architecture of the simulator is shown below. Highlighting
+At a very high level, the architecture of the simulator is shown below. Highlighting
 that engines react to elements popped off an event stack within the simulator. The chain  
 reaction continues until no elements are returned to the event stack.
 
@@ -191,11 +191,11 @@ reaction continues until no elements are returned to the event stack.
 
 The diagram below highlights the internal steps taken within the simulator in response
 to a single element being popped from the event stack.
-The reaction displayed represents the starting of a simulation within our simulator for
-emulating the board game of risk.
-A popped element might be processed by none, one, or many engines, which each may produce
+The reaction displayed represents the start of a simulation within our simulator for
+emulating the board game of Risk.
+A popped element might be processed by none, one, or many engines, each of which may produce
 more elements to be pushed onto the top of the stack.
-Purple elements are internal phases, red elements are player phases, yellow elements are
+Purple elements are internal phases, red elements are player phases, and yellow elements are
 requests for actions, and green elements are side-effects.
 
 ![A demonstration of the event stack](./event_stack_evo.png)
@@ -256,7 +256,7 @@ Our simulation mostly follows the Wikipedia article for risk
 
 ## Architecture
 
-The simulator architecture uses the `pygame` python library
+The simulator architecture uses the `pygame` Python library
 (<https://pypi.org/project/pygame/> or <https://www.pygame.org/docs/>) for the visual
 representation of the simulation.
 
@@ -265,7 +265,7 @@ The architecture is split into several modules:
 - The `game` module handles running the event loop, rendering, and user input.
 - The `engine` module includes the engines that run the show and progress the simulation
 into new states.
-- The `agents` module describes the agent behaviours for players, We used several types
+- The `agents` module describes the agent behaviours for players. We used several types
 of formalisms to implement the behaviour for players, which included:
   - Hierarchical Task Networks
   - Behaviour Tree
@@ -275,23 +275,23 @@ of formalisms to implement the behaviour for players, which included:
   - DEVS
 - The `state` module handles the data structures for modelling the state of the game and
  any other required state to ensure that each step of a simulation can be replayed.
-- The `util` modules contains the shared logic for agents and utlity functions for query
+- The `util` module contains the shared logic for agents and utility functions for query
 and running the simulation.
 
 ## Gameplay Loop
 
-The flow of game will consisting of the following main phases
+The flow of the game will consist of the following main phases
 
-- `init`:- given $(g,p,s)$ setup the board state for agents to begin to play the
+- `init`:- given $(g,p,s)$, set up the board state for agents to begin to play the
 game. Where $g$ is the number of regions on the board, $p$ is the number of
-players, and $s$ is the size of each players army.
-- `game`:- The main event loop, which the game of risk unfolds. This phase
-consits of the following phases:
+players, and $s$ is the size of each player's army.
+- `game`:- The main event loop, in which the game of Risk unfolds. This phase
+consists of the following phases:
   - `game turn`:- this is the main action step of the game, it consists of
     giving each active player their turn. Each active player is given control
-    of the `player turn` phase consisting of:
-    - `get troops` :- the game calulates the number of placements for the current agent.
-    - `place troops` :- the agent decides where to place the new troops, placing all
+    of the `player turn` phase, consisting of:
+    - `get troops` :- the game calculates the number of placements for the current agent.
+    - `place troops` :- the agent decides where to place the new troops; placing all
     troops is not enforced by the simulator.
     - `attacking` :- the agent may choose to attack adjacent territories with their troops.
     - `moving` :-  the agent may choose to reorganise their troops between connected territories.
