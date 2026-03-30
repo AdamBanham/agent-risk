@@ -54,7 +54,7 @@ In order to run the simulation, you will need an installation of Python `3.13.x`
 We used `pipenv` to record the required libraries and versions that need to be installed
 for the simulator to run.
 
-To install pipenv into your global Python interperator use the following command:
+To install pipenv into your global Python interpreter, use the following command:
 
 ```bash
 py -m pip install -U pip
@@ -110,15 +110,15 @@ pipenv shell to reproduce replications as in the report:
 py run_eval.py --turns 100
 ```
 
-Or if you wish to run a testing reproduction over 10 turns (to reduced
-the ~19 hour wait for completion):
+Or if you wish to run a testing reproduction over 10 turns (to reduce
+the ~19-hour wait for completion):
 
 ```bash
 py run_eval.py
 ```
 
 This evaluation script is threaded and will add a new folder in `eval`
-to capture for each replication design, seven replications shifting
+to capture for each replication design, seven replications, shifting
 around the starting player for each replication. For each replication,
 a tape and the state as of the last turn is saved as a file
 `combo_[design]_[rep].[stack|state]`.
@@ -136,18 +136,18 @@ To transform an evaluation folder into `results.text` run:
 py write_results.py --path .\eval\eval_runs_XXXX --collect
 ```
 
-To transform an evlauation folder into `rejects.tex` run:
+To transform an evaluation folder into `rejects.tex` run:
 
 ```bash
 py write_rejects.py --path .\eval\eval_runs_XXXX --collect
 ```
 
 Due to the nature of producing the initial state, reproduction
-of the exact replications used in the paper is not guaranteed.
+the exact replications used in the paper are not guaranteed.
 
-### Equipement and Expected Runtime
+### Equipment and Expected Runtime
 
-We used the following commerically available hardware for running the
+We used the following commercially available hardware for running the
 replications for the evaluation.
 
 ```
@@ -197,7 +197,7 @@ In order to get a good understanding of bias for an agent and strategy, a turn c
 
 ### run_eval
 
-This runner handles the pairwise simulation of each agent and strategy. The only
+This runner handles the pairwise simulation for each agent-strategy pair. The only
 parameter that is notable for this runner is the number of turns that each simulation
 test should run for before collecting results.
 
@@ -280,7 +280,7 @@ This section covers high-level diagrams of the simulator's architecture.
 
 ### Architecture design plans for the simulator
 
-At a very high level, the architecture of the simulator is shown below. Highlighting
+At a very high level, the simulator's architecture is shown below. Highlighting
 that engines react to elements popped off an event stack within the simulator. The chain  
 reaction continues until no elements are returned to the event stack.
 
