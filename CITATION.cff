@@ -1,17 +1,12 @@
 @inproceedings{Banham2026,
  title = {On the Modelling of Aggregated Behaviour for Simulation: An Event–Based Architecture},
- author = {Adam Banham and 
-           Claudia Szabo and 
-           Ryan Beruldsen
- },
- editor = {
-
- },
+ author = {Banham, Adam and Szabo, Claudia and Beruldsen Ryan},
+ editor = { coming soon },
  booktitle = { 
   Proceedings of the 40th {ACM} {SIGSIM} Conference on Principles of
   Advanced Discrete Simulation, {SIGSIM-PADS}, Vienna, Austria,
   June 24-26, 2026
  },
- pages = {},
- doi = {},
+ pages = { coming soon },
+ doi = {coming soon}
 }
