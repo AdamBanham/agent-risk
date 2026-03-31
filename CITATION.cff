@@ -1,11 +1,19 @@
 cff-version: 1.2.0
 message: "If you use this software, please cite it as below."
 title: "On the Modelling of Aggregated Behaviour for Simulation: An Event–Based Architecture"
-version: 1.0
-data-released: 2026-03-31
-url: https://github.com/AdamBanham/agent-risk
+version: "1.0"
+date-released: "2026-03-31"
+url: "https://github.com/AdamBanham/agent-risk"
+authors:
+  - family-names: Banham
+    given-names: Adam
+  - family-names: Szabo
+    given-names: Claudia
+  - family-names: Beruldsen
+    given-names: Ryan
 preferred-citation:
   type: conference-paper
+  title: "On the Modelling of Aggregated Behaviour for Simulation: An Event–Based Architecture"
   authors:
     - family-names: Banham
       given-names: Adam
@@ -13,7 +21,11 @@ preferred-citation:
       given-names: Claudia
     - family-names: Beruldsen
       given-names: Ryan
-  booktitle: "Proceedings of the 40th ACM SIGSIM Conference on Principles of Advanced Discrete Simulation (SIGSIM-PADS)"
-  organization: June 24-46, Vienna, Austria, 2026
-  date-released: 2026-06-24
+  collection-title: "Proceedings of the 40th ACM SIGSIM Conference on Principles of Advanced Discrete Simulation (SIGSIM-PADS)"
+  conference:
+    name: "SIGSIM-PADS 2026"
+    city: Vienna
+    country: AT
+    date-start: "2026-06-24"
+    date-end: "2026-06-26"
   year: 2026
