@@ -13,11 +13,7 @@ preferred-citation:
       given-names: Claudia
     - family-names: Beruldsen
       given-names: Ryan
-  conference:
-    name: "Proceedings of the 40th ACM SIGSIM Conference on Principles of Advanced Discrete Simulation (SIGSIM-PADS)"
-    city: Vienna
-    country: AT
-    date-start: 2026-06-24
-    date-end: 2026-06-26
+  booktitle: "Proceedings of the 40th ACM SIGSIM Conference on Principles of Advanced Discrete Simulation (SIGSIM-PADS)"
+  organization: June 24-46, Vienna, Austria, 2026
   date-released: 2026-06-24
   year: 2026
