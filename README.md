@@ -1,5 +1,7 @@
 # Agent Risk
 
+[![DOI](https://zenodo.org/badge/1076648109.svg)](https://doi.org/10.5281/zenodo.19361251)
+
 This repo contains a work-in-progress modular event-driven simulation framework
 (unnamed), which has been instantiated to simulate the board game called "Risk".
 This project stands as a test for a general framework for handling multi-agent simulations.
