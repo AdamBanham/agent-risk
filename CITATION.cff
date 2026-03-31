@@ -1,12 +1,19 @@
-@inproceedings{Banham2026,
- title = {On the Modelling of Aggregated Behaviour for Simulation: An Event–Based Architecture},
- author = {Banham, Adam and Szabo, Claudia and Beruldsen Ryan},
- editor = { coming soon },
- booktitle = { 
-  Proceedings of the 40th {ACM} {SIGSIM} Conference on Principles of
-  Advanced Discrete Simulation, {SIGSIM-PADS}, Vienna, Austria,
-  June 24-26, 2026
- },
- pages = { coming soon },
- doi = {coming soon}
-}
+cff-version: 1.2.0
+message: "If you use this software, please cite it as below."
+title: "On the Modelling of Aggregated Behaviour for Simulation: An Event–Based Architecture"
+type: conference-paper
+authors:
+  - family-names: Banham
+    given-names: Adam
+  - family-names: Szabo
+    given-names: Claudia
+  - family-names: Beruldsen
+    given-names: Ryan
+conference:
+  name: "Proceedings of the 40th ACM SIGSIM Conference on Principles of Advanced Discrete Simulation (SIGSIM-PADS)"
+  city: Vienna
+  country: AT
+  date-start: 2026-06-24
+  date-end: 2026-06-26
+date-released: 2026-06-24
+year: 2026
